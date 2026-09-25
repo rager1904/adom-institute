@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Email Template{% endblock %}
+
+{% block content %}
+<section class="container-fluid py-3">
+    <div class="adom-card p-4">
+        <div class="d-flex justify-content-between align-items-start gap-3">
+            <div>
+                <h1 class="h4 mb-1">{{ template.name }}</h1>
+                <p class="text-muted mb-0">{{ template.get_template_type_display }} · {% if template.is_active %}Active{% else %}Inactive{% endif %}</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'communication:email_template_update' template.pk %}" class="btn btn-primary">Edit</a>
+                <a href="{% url 'communication:email_template_list' %}" class="btn btn-outline-secondary">Back</a>
+            </div>
+        </div>
+        <hr>
+        <h2 class="h6 text-uppercase text-muted">Subject</h2>
+        <p>{{ template.subject }}</p>
+        <h2 class="h6 text-uppercase text-muted">Content</h2>
+        <pre class="bg-light border rounded p-3 mb-0">{{ template.content }}</pre>
+    </div>
+</section>
+{% endblock %}

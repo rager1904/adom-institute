@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit SMS Template{% else %}Create SMS Template{% endif %} - Communication{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    {% if form.instance.pk %}
+                        <i class="fas fa-edit text-primary"></i> Edit SMS Template
+                    {% else %}
+                        <i class="fas fa-plus text-success"></i> Create SMS Template
+                    {% endif %}
+                </h1>
+                <a href="{% url 'communication:sms_template_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Templates
+                </a>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-sms"></i> SMS Template Details
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                
+                                {% if form.non_field_errors %}
+                                    <div class="alert alert-danger">
+                                        {% for error in form.non_field_errors %}
+                                            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                                <i class="fas fa-tag"></i> Template Name <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.name }}
+                                            {% if form.name.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.name.errors %}
+                                                        <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.template_type.id_for_label }}" class="form-label">
+                                                <i class="fas fa-list"></i> Template Type <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.template_type }}
+                                            {% if form.template_type.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.template_type.errors %}
+                                                        <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.content.id_for_label }}" class="form-label">
+                                        <i class="fas fa-comment"></i> SMS Content <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.content }}
+                                    <div class="form-text">
+                                        <span id="char-count">0</span> characters 
+                                        <span id="sms-count" class="ms-2">(0 SMS)</span>
+                                        <span id="char-limit" class="ms-2 text-muted">(160 chars per SMS)</span>
+                                    </div>
+                                    {% if form.content.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.content.errors %}
+                                                <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.variables.id_for_label }}" class="form-label">
+                                        <i class="fas fa-code"></i> Template Variables (JSON)
+                                    </label>
+                                    {{ form.variables }}
+                                    <div class="form-text">
+                                        Define available variables for this template in JSON format. Example: {"name": "User's full name", "phone": "Phone number"}
+                                    </div>
+                                    {% if form.variables.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.variables.errors %}
+                                                <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        {{ form.is_active }}
+                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                            <i class="fas fa-check-circle text-success"></i> Active Template
+                                        </label>
+                                    </div>
+                                    {% if form.is_active.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.is_active.errors %}
+                                                <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> 
+                                        {% if form.instance.pk %}Update Template{% else %}Create Template{% endif %}
+                                    </button>
+                                    <a href="{% url 'communication:sms_template_list' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Template Types
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled small">
+                                <li><span class="badge bg-success">Welcome</span> - Welcome SMS for new users</li>
+                                <li><span class="badge bg-warning">Attendance Alert</span> - Attendance notifications</li>
+                                <li><span class="badge bg-danger">Fee Reminder</span> - Fee payment reminders</li>
+                                <li><span class="badge bg-info">Exam Schedule</span> - Exam schedule notifications</li>
+                                <li><span class="badge bg-primary">Announcement</span> - General announcements</li>
+                                <li><span class="badge bg-dark">Custom</span> - Custom SMS templates</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-code"></i> Variable Examples
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>Common Variables:</h6>
+                            <ul class="list-unstyled small">
+                                <li><code>{{ "{{name}}" }}</code> - User's full name</li>
+                                <li><code>{{ "{{phone}}" }}</code> - Phone number</li>
+                                <li><code>{{ "{{school_name}}" }}</code> - School name</li>
+                                <li><code>{{ "{{date}}" }}</code> - Current date</li>
+                                <li><code>{{ "{{time}}" }}</code> - Current time</li>
+                            </ul>
+                            
+                            <h6>Fee Reminder Variables:</h6>
+                            <ul class="list-unstyled small">
+                                <li><code>{{ "{{amount}}" }}</code> - Fee amount</li>
+                                <li><code>{{ "{{due_date}}" }}</code> - Due date</li>
+                                <li><code>{{ "{{fee_type}}" }}</code> - Type of fee</li>
+                            </ul>
+                            
+                            <h6>Exam Variables:</h6>
+                            <ul class="list-unstyled small">
+                                <li><code>{{ "{{exam_name}}" }}</code> - Exam name</li>
+                                <li><code>{{ "{{exam_date}}" }}</code> - Exam date</li>
+                                <li><code>{{ "{{subject}}" }}</code> - Subject name</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> SMS Guidelines
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled small">
+                                <li><i class="fas fa-check text-success"></i> Keep messages concise</li>
+                                <li><i class="fas fa-check text-success"></i> 160 characters = 1 SMS</li>
+                                <li><i class="fas fa-check text-success"></i> 320 characters = 2 SMS</li>
+                                <li><i class="fas fa-check text-success"></i> Use clear, simple language</li>
+                                <li><i class="fas fa-check text-success"></i> Include essential information only</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-lightbulb"></i> Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'communication:sms_template_list' %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-list"></i> View All Templates
+                                </a>
+                                <a href="{% url 'communication:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-tachometer-alt"></i> Communication Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Character counter for content field
+    const contentField = document.getElementById('{{ form.content.id_for_label }}');
+    const charCount = document.getElementById('char-count');
+    const smsCount = document.getElementById('sms-count');
+    
+    if (contentField && charCount && smsCount) {
+        function updateCharCount() {
+            const length = contentField.value.length;
+            charCount.textContent = length;
+            
+            // Calculate SMS count
+            const sms = Math.ceil(length / 160);
+            smsCount.textContent = `(${sms} SMS)`;
+            
+            // Update color based on length
+            if (length <= 160) {
+                charCount.className = 'text-success';
+                smsCount.className = 'ms-2 text-success';
+            } else if (length <= 320) {
+                charCount.className = 'text-warning';
+                smsCount.className = 'ms-2 text-warning';
+            } else {
+                charCount.className = 'text-danger';
+                smsCount.className = 'ms-2 text-danger';
+            }
+        }
+        
+        contentField.addEventListener('input', updateCharCount);
+        updateCharCount(); // Initial count
+    }
+
+    // JSON validation for variables field
+    const variablesField = document.getElementById('{{ form.variables.id_for_label }}');
+    if (variablesField) {
+        variablesField.addEventListener('blur', function() {
+            const value = this.value.trim();
+            if (value) {
+                try {
+                    JSON.parse(value);
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                } catch (e) {
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                    // Add error message if not already present
+                    if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('invalid-feedback')) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'invalid-feedback';
+                        errorDiv.textContent = 'Invalid JSON format';
+                        this.parentNode.appendChild(errorDiv);
+                    }
+                }
+            } else {
+                this.classList.remove('is-valid', 'is-invalid');
+            }
+        });
+    }
+
+    // Auto-populate variables based on template type
+    const templateTypeField = document.getElementById('{{ form.template_type.id_for_label }}');
+    if (templateTypeField && variablesField) {
+        templateTypeField.addEventListener('change', function() {
+            const templateType = this.value;
+            let defaultVariables = {};
+            
+            switch(templateType) {
+                case 'welcome':
+                    defaultVariables = {
+                        "name": "User's full name",
+                        "phone": "Phone number",
+                        "school_name": "School name"
+                    };
+                    break;
+                case 'attendance_alert':
+                    defaultVariables = {
+                        "name": "Student's name",
+                        "date": "Attendance date",
+                        "status": "Attendance status",
+                        "class": "Class name"
+                    };
+                    break;
+                case 'fee_reminder':
+                    defaultVariables = {
+                        "name": "Student's name",
+                        "amount": "Fee amount",
+                        "due_date": "Due date",
+                        "fee_type": "Type of fee"
+                    };
+                    break;
+                case 'exam_schedule':
+                    defaultVariables = {
+                        "name": "Student's name",
+                        "exam_name": "Exam name",
+                        "exam_date": "Exam date",
+                        "subject": "Subject name"
+                    };
+                    break;
+                case 'announcement':
+                    defaultVariables = {
+                        "name": "Recipient's name",
+                        "announcement_title": "Announcement title",
+                        "school_name": "School name"
+                    };
+                    break;
+            }
+            
+            if (Object.keys(defaultVariables).length > 0) {
+                variablesField.value = JSON.stringify(defaultVariables, null, 2);
+                // Trigger validation
+                variablesField.dispatchEvent(new Event('blur'));
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

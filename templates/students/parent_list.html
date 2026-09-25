@@ -1,0 +1,280 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if role_ui.can_manage_people %}Parents List{% else %}Guardian Profile{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-user-friends text-primary"></i> {% if role_ui.can_manage_people %}Parents List{% else %}Guardian Profile{% endif %}
+                </h1>
+                <div>
+                    {% if role_ui.can_manage_people %}
+                    <a href="{% url 'students:parent_create' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Add Parent
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'students:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Search and Filter Form -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-search"></i> Search & Filter
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            {{ search_form.search.label_tag }}
+                            {{ search_form.search }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ search_form.relationship_filter.label_tag }}
+                            {{ search_form.relationship_filter }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ search_form.contact_filter.label_tag }}
+                            {{ search_form.contact_filter }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ search_form.student_filter.label_tag }}
+                            {{ search_form.student_filter }}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Parents Table -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-table"></i> Parents ({{ parents.count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if parents %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Parent Name</th>
+                                        <th>Student</th>
+                                        <th>Relationship</th>
+                                        <th>Contact Info</th>
+                                        <th>Occupation</th>
+                                        <th>Contact Type</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for parent in parents %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-sm me-3">
+                                                        <i class="fas fa-user-circle fa-2x text-success"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0">
+                                                            <a href="{% url 'students:parent_detail' parent.pk %}">
+                                                                {{ parent.user.get_full_name }}
+                                                            </a>
+                                                        </h6>
+                                                        <small class="text-muted">{{ parent.user.email }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'students:student_detail' parent.student.pk %}">
+                                                    {{ parent.student.user.get_full_name }}
+                                                </a>
+                                                <br>
+                                                <small class="text-muted">{{ parent.student.student_id }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{% if parent.relationship == 'father' %}primary{% elif parent.relationship == 'mother' %}danger{% else %}secondary{% endif %}">
+                                                    {{ parent.get_relationship_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <i class="fas fa-phone text-muted"></i> {{ parent.phone_number }}<br>
+                                                    <i class="fas fa-envelope text-muted"></i> {{ parent.email }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {{ parent.occupation|default:"Not specified" }}
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column gap-1">
+                                                    {% if parent.is_primary_contact %}
+                                                        <span class="badge bg-success">Primary Contact</span>
+                                                    {% endif %}
+                                                    {% if parent.is_emergency_contact %}
+                                                        <span class="badge bg-warning">Emergency Contact</span>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'students:parent_detail' parent.pk %}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    {% if role_ui.can_manage_people %}
+                                                    <a href="{% url 'students:parent_update' parent.pk %}" class="btn btn-sm btn-outline-warning">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a href="{% url 'students:parent_delete' parent.pk %}" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if is_paginated %}
+                            <nav aria-label="Parents pagination">
+                                <ul class="pagination justify-content-center">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.relationship_filter %}&relationship_filter={{ request.GET.relationship_filter }}{% endif %}{% if request.GET.contact_filter %}&contact_filter={{ request.GET.contact_filter }}{% endif %}{% if request.GET.student_filter %}&student_filter={{ request.GET.student_filter }}{% endif %}">
+                                                <i class="fas fa-angle-double-left"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.relationship_filter %}&relationship_filter={{ request.GET.relationship_filter }}{% endif %}{% if request.GET.contact_filter %}&contact_filter={{ request.GET.contact_filter }}{% endif %}{% if request.GET.student_filter %}&student_filter={{ request.GET.student_filter }}{% endif %}">
+                                                <i class="fas fa-angle-left"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.relationship_filter %}&relationship_filter={{ request.GET.relationship_filter }}{% endif %}{% if request.GET.contact_filter %}&contact_filter={{ request.GET.contact_filter }}{% endif %}{% if request.GET.student_filter %}&student_filter={{ request.GET.student_filter }}{% endif %}">
+                                                    {{ num }}
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.relationship_filter %}&relationship_filter={{ request.GET.relationship_filter }}{% endif %}{% if request.GET.contact_filter %}&contact_filter={{ request.GET.contact_filter }}{% endif %}{% if request.GET.student_filter %}&student_filter={{ request.GET.student_filter }}{% endif %}">
+                                                <i class="fas fa-angle-right"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.relationship_filter %}&relationship_filter={{ request.GET.relationship_filter }}{% endif %}{% if request.GET.contact_filter %}&contact_filter={{ request.GET.contact_filter }}{% endif %}{% if request.GET.student_filter %}&student_filter={{ request.GET.student_filter }}{% endif %}">
+                                                <i class="fas fa-angle-double-right"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                            <p class="text-center text-muted">
+                                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} parents
+                            </p>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-user-friends fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No parents found</h5>
+                            <p class="text-muted">{% if role_ui.can_manage_people %}Try adjusting your search criteria or add a new parent.{% else %}No guardian profile is linked to your account yet.{% endif %}</p>
+                            {% if role_ui.can_manage_people %}
+                            <a href="{% url 'students:parent_create' %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add First Parent
+                            </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-group .btn {
+    margin-right: 2px;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.pagination .page-link {
+    color: #007bff;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-submit form on filter change
+document.addEventListener('DOMContentLoaded', function() {
+    const filterSelects = document.querySelectorAll('select[name="relationship_filter"], select[name="contact_filter"], select[name="student_filter"]');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            this.closest('form').submit();
+        });
+    });
+});
+
+// Clear filters
+function clearFilters() {
+    window.location.href = '{% url "students:parent_list" %}';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,806 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulk Book Import - Library{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .import-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        padding: 40px;
+        margin-bottom: 30px;
+    }
+    .import-header {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .upload-area {
+        border: 3px dashed #007bff;
+        border-radius: 15px;
+        padding: 50px;
+        text-align: center;
+        background: #f8f9ff;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        margin-bottom: 30px;
+    }
+    .upload-area:hover {
+        border-color: #0056b3;
+        background: #e7f3ff;
+        transform: scale(1.02);
+    }
+    .upload-area.dragover {
+        border-color: #0056b3;
+        background: #e7f3ff;
+        transform: scale(1.05);
+    }
+    .upload-area.processing {
+        border-color: #28a745;
+        background: #f0fff4;
+    }
+    .template-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-left: 4px solid #007bff;
+    }
+    .progress-section {
+        background: #e3f2fd;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        display: none;
+    }
+    .progress-section.show {
+        display: block;
+    }
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+    }
+    .step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+    }
+    .step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        right: -50%;
+        width: 100%;
+        height: 2px;
+        background: #e9ecef;
+        z-index: 1;
+    }
+    .step.active::after {
+        background: #007bff;
+    }
+    .step.completed::after {
+        background: #28a745;
+    }
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e9ecef;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        font-weight: bold;
+        position: relative;
+        z-index: 2;
+    }
+    .step.active .step-circle {
+        background: #007bff;
+        color: white;
+    }
+    .step.completed .step-circle {
+        background: #28a745;
+        color: white;
+    }
+    .file-preview {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .validation-results {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .error-item {
+        background: #f8d7da;
+        border: 1px solid #f1aeb5;
+        border-radius: 8px;
+        padding: 10px 15px;
+        margin-bottom: 10px;
+        color: #721c24;
+    }
+    .warning-item {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 10px 15px;
+        margin-bottom: 10px;
+        color: #856404;
+    }
+    .success-item {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        border-radius: 8px;
+        padding: 10px 15px;
+        margin-bottom: 10px;
+        color: #155724;
+    }
+    .import-summary {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        text-align: center;
+    }
+    .sample-data {
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 5px;
+        padding: 15px;
+        overflow-x: auto;
+    }
+    .mapping-section {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .mapping-row {
+        display: flex;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    .mapping-row:last-child {
+        border-bottom: none;
+    }
+    .column-preview {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 5px;
+        padding: 10px;
+        background: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'library:dashboard' %}">Library</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'library:book_list' %}">Books</a></li>
+            <li class="breadcrumb-item active">Bulk Import</li>
+        </ol>
+    </nav>
+
+    <div class="import-container">
+        <!-- Import Header -->
+        <div class="import-header">
+            <h1 class="mb-3">
+                <i class="fas fa-upload fa-2x me-3"></i>
+                Bulk Book Import
+            </h1>
+            <p class="mb-0">
+                Import multiple books from CSV or Excel files. Upload your file and map the columns to book fields.
+            </p>
+        </div>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step active" id="step1">
+                <div class="step-circle">1</div>
+                <div>Upload File</div>
+            </div>
+            <div class="step" id="step2">
+                <div class="step-circle">2</div>
+                <div>Map Columns</div>
+            </div>
+            <div class="step" id="step3">
+                <div class="step-circle">3</div>
+                <div>Validate Data</div>
+            </div>
+            <div class="step" id="step4">
+                <div class="step-circle">4</div>
+                <div>Import Books</div>
+            </div>
+        </div>
+
+        <!-- Step 1: File Upload -->
+        <div id="uploadStep" class="step-content">
+            <div class="upload-area" id="uploadArea">
+                <i class="fas fa-cloud-upload-alt fa-4x text-primary mb-3"></i>
+                <h4>Drop your file here or click to browse</h4>
+                <p class="text-muted mb-3">Supported formats: CSV, Excel (.xlsx, .xls)</p>
+                <p class="text-muted">Maximum file size: 10MB</p>
+                <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;">
+            </div>
+
+            <!-- Template Section -->
+            <div class="template-section">
+                <h5><i class="fas fa-file-download me-2"></i>Download Template</h5>
+                <p class="mb-3">Don't have a file ready? Download our template with sample data and required columns.</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-file-csv fa-3x text-success mb-3"></i>
+                                <h6>CSV Template</h6>
+                                <p class="small text-muted">Comma-separated values format</p>
+                                <a href="/static/templates/book_import_template.csv" class="btn btn-success btn-sm" download>
+                                    <i class="fas fa-download me-1"></i>Download CSV
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-file-excel fa-3x text-primary mb-3"></i>
+                                <h6>Excel Template</h6>
+                                <p class="small text-muted">Microsoft Excel format</p>
+                                <a href="/static/templates/book_import_template.xlsx" class="btn btn-primary btn-sm" download>
+                                    <i class="fas fa-download me-1"></i>Download Excel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <h6>Required Columns:</h6>
+                    <div class="sample-data">
+Title, Author, ISBN, Category, Publisher, Publication_Year, Total_Copies, Language, Pages, Description
+"Introduction to Python", "John Smith", "978-0123456789", "Programming", "Tech Books", "2023", "5", "English", "350", "A comprehensive guide to Python programming"
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Title and Author are required. Other fields are optional but recommended.
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Column Mapping -->
+        <div id="mappingStep" class="step-content" style="display: none;">
+            <h4 class="mb-4">Map Your Columns</h4>
+            <p class="text-muted mb-4">Map the columns in your file to the corresponding book fields in our system.</p>
+            
+            <div class="mapping-section" id="mappingContainer">
+                <!-- Mapping content will be generated here -->
+            </div>
+            
+            <div class="text-center">
+                <button type="button" class="btn btn-secondary me-3" onclick="goToStep(1)">
+                    <i class="fas fa-arrow-left me-2"></i>Back
+                </button>
+                <button type="button" class="btn btn-primary" onclick="validateData()">
+                    <i class="fas fa-check me-2"></i>Validate Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Data Validation -->
+        <div id="validationStep" class="step-content" style="display: none;">
+            <h4 class="mb-4">Data Validation Results</h4>
+            
+            <div class="validation-results" id="validationResults">
+                <!-- Validation results will be shown here -->
+            </div>
+            
+            <div class="text-center">
+                <button type="button" class="btn btn-secondary me-3" onclick="goToStep(2)">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Mapping
+                </button>
+                <button type="button" class="btn btn-success" id="importBtn" onclick="importData()">
+                    <i class="fas fa-upload me-2"></i>Import Books
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 4: Import Progress -->
+        <div id="importStep" class="step-content" style="display: none;">
+            <h4 class="mb-4">Importing Books...</h4>
+            
+            <div class="progress-section show">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Import Progress</span>
+                        <span id="progressText">0%</span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             id="progressBar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <div id="importStatus" class="mt-3">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Importing...</span>
+                        </div>
+                        <p class="mt-2">Processing your data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import Complete -->
+        <div id="completeStep" class="step-content" style="display: none;">
+            <div class="import-summary">
+                <i class="fas fa-check-circle fa-4x mb-3"></i>
+                <h3>Import Complete!</h3>
+                <p class="mb-0" id="importSummaryText">Your books have been successfully imported.</p>
+            </div>
+            
+            <div class="text-center">
+                <a href="{% url 'library:book_list' %}" class="btn btn-primary me-3">
+                    <i class="fas fa-list me-2"></i>View Books
+                </a>
+                <button type="button" class="btn btn-outline-primary" onclick="startNewImport()">
+                    <i class="fas fa-plus me-2"></i>Import More Books
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    let uploadedFile = null;
+    let parsedData = null;
+    let columnMapping = {};
+    
+    // File upload functionality
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function() {
+        this.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileUpload(files[0]);
+        }
+    });
+    
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            handleFileUpload(this.files[0]);
+        }
+    });
+    
+    function handleFileUpload(file) {
+        // Validate file type
+        const validTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+        const validExtensions = ['.csv', '.xls', '.xlsx'];
+        
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
+            alert('Please upload a valid CSV or Excel file.');
+            return;
+        }
+        
+        // Validate file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File size must be less than 10MB.');
+            return;
+        }
+        
+        uploadedFile = file;
+        uploadArea.classList.add('processing');
+        uploadArea.innerHTML = `
+            <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+            <h4>Processing ${file.name}...</h4>
+            <p class="text-muted">Please wait while we process your file.</p>
+        `;
+        
+        // Parse the file
+        parseFile(file);
+    }
+    
+    function parseFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        fetch('/library/bulk-import/parse/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                parsedData = data;
+                showFilePreview(file, data);
+                goToStep(2);
+            } else {
+                showUploadError(data.error || 'Failed to parse file');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showUploadError('An error occurred while processing the file');
+        });
+    }
+    
+    function showFilePreview(file, data) {
+        uploadArea.classList.remove('processing');
+        uploadArea.innerHTML = `
+            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+            <h4>File Uploaded Successfully</h4>
+            <div class="file-info mt-3">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <strong>${file.name}</strong>
+                        <div class="small text-muted">Filename</div>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>${formatFileSize(file.size)}</strong>
+                        <div class="small text-muted">File Size</div>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>${data.rows}</strong>
+                        <div class="small text-muted">Data Rows</div>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>${data.columns.length}</strong>
+                        <div class="small text-muted">Columns</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    function showUploadError(message) {
+        uploadArea.classList.remove('processing');
+        uploadArea.innerHTML = `
+            <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+            <h4>Upload Error</h4>
+            <p class="text-danger">${message}</p>
+            <button type="button" class="btn btn-primary" onclick="resetUpload()">
+                <i class="fas fa-redo me-2"></i>Try Again
+            </button>
+        `;
+    }
+    
+    window.resetUpload = function() {
+        uploadArea.classList.remove('processing');
+        uploadArea.innerHTML = `
+            <i class="fas fa-cloud-upload-alt fa-4x text-primary mb-3"></i>
+            <h4>Drop your file here or click to browse</h4>
+            <p class="text-muted mb-3">Supported formats: CSV, Excel (.xlsx, .xls)</p>
+            <p class="text-muted">Maximum file size: 10MB</p>
+        `;
+        uploadedFile = null;
+        parsedData = null;
+        goToStep(1);
+    };
+    
+    function generateColumnMapping() {
+        if (!parsedData) return;
+        
+        const container = document.getElementById('mappingContainer');
+        const bookFields = [
+            { field: 'title', label: 'Title', required: true },
+            { field: 'author', label: 'Author', required: true },
+            { field: 'isbn', label: 'ISBN', required: false },
+            { field: 'category', label: 'Category', required: false },
+            { field: 'publisher', label: 'Publisher', required: false },
+            { field: 'publication_year', label: 'Publication Year', required: false },
+            { field: 'total_copies', label: 'Total Copies', required: false },
+            { field: 'language', label: 'Language', required: false },
+            { field: 'pages', label: 'Pages', required: false },
+            { field: 'description', label: 'Description', required: false }
+        ];
+        
+        container.innerHTML = bookFields.map(field => `
+            <div class="mapping-row">
+                <div class="col-md-3">
+                    <label class="form-label">
+                        ${field.label}
+                        ${field.required ? '<span class="text-danger">*</span>' : ''}
+                    </label>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" id="mapping_${field.field}" onchange="updateMapping('${field.field}', this.value)">
+                        <option value="">-- Select Column --</option>
+                        ${parsedData.columns.map((col, index) => `
+                            <option value="${index}" ${getAutoMapping(field.field, col) ? 'selected' : ''}>
+                                ${col} (Column ${index + 1})
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <div class="column-preview" id="preview_${field.field}">
+                        <small class="text-muted">Select a column to preview data</small>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        // Auto-map columns
+        bookFields.forEach(field => {
+            const select = document.getElementById(`mapping_${field.field}`);
+            if (select.value) {
+                updateMapping(field.field, select.value);
+            }
+        });
+    }
+    
+    function getAutoMapping(field, columnName) {
+        const column = columnName.toLowerCase();
+        const mappings = {
+            'title': ['title', 'book_title', 'name'],
+            'author': ['author', 'writer', 'authors'],
+            'isbn': ['isbn', 'isbn13', 'isbn10'],
+            'category': ['category', 'genre', 'subject'],
+            'publisher': ['publisher', 'publication'],
+            'publication_year': ['year', 'publication_year', 'published'],
+            'total_copies': ['copies', 'total_copies', 'quantity'],
+            'language': ['language', 'lang'],
+            'pages': ['pages', 'page_count'],
+            'description': ['description', 'summary', 'about']
+        };
+        
+        return mappings[field] && mappings[field].some(term => column.includes(term));
+    }
+    
+    window.updateMapping = function(field, columnIndex) {
+        columnMapping[field] = columnIndex;
+        
+        if (columnIndex && parsedData) {
+            const preview = document.getElementById(`preview_${field}`);
+            const sampleData = parsedData.sample_data.slice(0, 5).map(row => row[columnIndex]).filter(val => val);
+            
+            if (sampleData.length > 0) {
+                preview.innerHTML = sampleData.map(val => `<div class="small">${val}</div>`).join('');
+            } else {
+                preview.innerHTML = '<small class="text-muted">No data preview available</small>';
+            }
+        }
+    };
+    
+    window.validateData = function() {
+        // Check required fields
+        const requiredFields = ['title', 'author'];
+        const missingRequired = requiredFields.filter(field => !columnMapping[field]);
+        
+        if (missingRequired.length > 0) {
+            alert(`Please map the following required fields: ${missingRequired.join(', ')}`);
+            return;
+        }
+        
+        goToStep(3);
+        
+        // Send data for validation
+        fetch('/library/bulk-import/validate/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                file_id: parsedData.file_id,
+                mapping: columnMapping
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            showValidationResults(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred during validation');
+        });
+    };
+    
+    function showValidationResults(data) {
+        const container = document.getElementById('validationResults');
+        const importBtn = document.getElementById('importBtn');
+        
+        let html = `
+            <div class="row text-center mb-4">
+                <div class="col-md-3">
+                    <div class="h4 text-primary">${data.total_rows}</div>
+                    <div class="small text-muted">Total Rows</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="h4 text-success">${data.valid_rows}</div>
+                    <div class="small text-muted">Valid Rows</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="h4 text-warning">${data.warnings}</div>
+                    <div class="small text-muted">Warnings</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="h4 text-danger">${data.errors}</div>
+                    <div class="small text-muted">Errors</div>
+                </div>
+            </div>
+        `;
+        
+        if (data.error_details && data.error_details.length > 0) {
+            html += '<h6 class="text-danger">Errors:</h6>';
+            data.error_details.forEach(error => {
+                html += `<div class="error-item">Row ${error.row}: ${error.message}</div>`;
+            });
+        }
+        
+        if (data.warning_details && data.warning_details.length > 0) {
+            html += '<h6 class="text-warning mt-3">Warnings:</h6>';
+            data.warning_details.forEach(warning => {
+                html += `<div class="warning-item">Row ${warning.row}: ${warning.message}</div>`;
+            });
+        }
+        
+        container.innerHTML = html;
+        
+        // Enable/disable import button
+        importBtn.disabled = data.valid_rows === 0;
+        if (data.valid_rows === 0) {
+            importBtn.innerHTML = '<i class="fas fa-times me-2"></i>Cannot Import (No Valid Rows)';
+            importBtn.className = 'btn btn-danger';
+        } else {
+            importBtn.innerHTML = `<i class="fas fa-upload me-2"></i>Import ${data.valid_rows} Books`;
+            importBtn.className = 'btn btn-success';
+        }
+    }
+    
+    window.importData = function() {
+        goToStep(4);
+        
+        fetch('/library/bulk-import/execute/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                file_id: parsedData.file_id,
+                mapping: columnMapping
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                simulateProgress(data.total_rows);
+            } else {
+                showImportError(data.error || 'Import failed');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showImportError('An error occurred during import');
+        });
+    };
+    
+    function simulateProgress(totalRows) {
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 10;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+                setTimeout(() => {
+                    showImportComplete(totalRows);
+                }, 1000);
+            }
+            
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressText').textContent = Math.round(progress) + '%';
+        }, 500);
+    }
+    
+    function showImportComplete(totalRows) {
+        document.getElementById('importSummaryText').textContent = 
+            `Successfully imported ${totalRows} books to your library.`;
+        
+        // Update step indicator
+        document.getElementById('step4').classList.add('completed');
+        
+        // Show complete step
+        document.querySelectorAll('.step-content').forEach(step => step.style.display = 'none');
+        document.getElementById('completeStep').style.display = 'block';
+    }
+    
+    function showImportError(message) {
+        document.getElementById('importStatus').innerHTML = `
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                <h5 class="text-danger">Import Failed</h5>
+                <p class="text-danger">${message}</p>
+                <button type="button" class="btn btn-primary" onclick="goToStep(3)">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Validation
+                </button>
+            </div>
+        `;
+    }
+    
+    window.goToStep = function(stepNumber) {
+        // Update step indicator
+        for (let i = 1; i <= 4; i++) {
+            const step = document.getElementById(`step${i}`);
+            step.classList.remove('active', 'completed');
+            
+            if (i < stepNumber) {
+                step.classList.add('completed');
+            } else if (i === stepNumber) {
+                step.classList.add('active');
+            }
+        }
+        
+        // Hide all step content
+        document.querySelectorAll('.step-content').forEach(step => step.style.display = 'none');
+        
+        // Show current step
+        const stepContents = ['uploadStep', 'mappingStep', 'validationStep', 'importStep'];
+        if (stepContents[stepNumber - 1]) {
+            document.getElementById(stepContents[stepNumber - 1]).style.display = 'block';
+        }
+        
+        // Generate column mapping when going to step 2
+        if (stepNumber === 2 && parsedData) {
+            generateColumnMapping();
+        }
+    };
+    
+    window.startNewImport = function() {
+        location.reload();
+    };
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+});
+</script>
+{% endblock %}

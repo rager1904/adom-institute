@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Student Portal{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-user-graduate me-3 text-primary"></i>
+            {% if user.user_type == 'parent' %}My Children{% else %}Student Portal{% endif %}
+        </h2>
+        <p class="text-muted mb-0">Academic progress, attendance, fees, deadlines, messages, and AI study support.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'fees:my_fees' %}" class="btn btn-outline-primary">
+            <i class="fas fa-wallet me-2"></i>My Fees
+        </a>
+        <a href="{% url 'attendance:my_attendance' %}" class="btn btn-outline-primary">
+            <i class="fas fa-calendar-check me-2"></i>My Attendance
+        </a>
+        <a href="{% url 'academics:my_academics' %}" class="btn btn-outline-primary">
+            <i class="fas fa-book-open me-2"></i>My Academics
+        </a>
+        <a href="{% url 'adom_institute:dashboard' %}" class="btn btn-primary">
+            <i class="fas fa-wand-magic-sparkles me-2"></i>AI Study
+        </a>
+    </div>
+</div>
+
+{% if portal_students %}
+<div class="row g-3 mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Learners</div>
+                <div class="h3 mb-0">{{ portal_students|length }}</div>
+                <small class="text-muted">Scoped to your account</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Attendance</div>
+                <div class="h3 mb-0">{% if attendance_rate is not None %}{{ attendance_rate }}%{% else %}N/A{% endif %}</div>
+                <small class="text-muted">{{ attendance_total }} recorded day(s)</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Outstanding Fees</div>
+                <div class="h3 mb-0">{{ outstanding_fee_total|floatformat:0 }}</div>
+                <small class="text-muted">Balance across visible learners</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Deadlines</div>
+                <div class="h3 mb-0">{{ upcoming_assignments|length }}</div>
+                <small class="text-muted">Upcoming assignments</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="mb-4">
+    <h5 class="mb-3">{% if user.user_type == 'parent' %}Children{% else %}Profile{% endif %}</h5>
+    <div class="row g-3">
+        {% for student in portal_students %}
+        <div class="col-lg-4 col-md-6">
+            <a href="{% url 'students:student_detail' student.pk %}" class="text-decoration-none text-reset">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex gap-3 align-items-start">
+                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0">
+                                {{ student.user.first_name|default:student.student_id|first|upper }}
+                            </div>
+                            <div>
+                                <h6 class="mb-1">{{ student.user.get_full_name }}</h6>
+                                <div class="text-muted small">{{ student.student_id }}</div>
+                                <div class="text-muted small">{{ student.current_class.display_name|default:"No class assigned" }}</div>
+                            </div>
+                        </div>
+                        <div class="mt-3 d-flex flex-wrap gap-2">
+                            <span class="badge bg-light text-dark">{{ student.get_admission_status_display }}</span>
+                            <span class="badge bg-light text-dark">{{ student.age }} years</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<div class="row g-4">
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list-check me-2"></i>Assignment Deadlines</h5>
+                <a href="{% url 'academics:my_academics' %}" class="btn btn-sm btn-outline-primary">My Academics</a>
+            </div>
+            <div class="card-body p-0">
+                {% if upcoming_assignments %}
+                <div class="list-group list-group-flush">
+                    {% for assignment in upcoming_assignments %}
+                    <a href="{% url 'academics:assignment_detail' assignment.pk %}" class="list-group-item list-group-item-action border-0 py-3">
+                        <div class="d-flex justify-content-between gap-2">
+                            <div>
+                                <h6 class="mb-1">{{ assignment.title }}</h6>
+                                <div class="text-muted small">{{ assignment.subject.name }} - {{ assignment.class_obj.display_name }}</div>
+                            </div>
+                            <div class="text-end small">
+                                <div>{{ assignment.due_date|date:"M d" }}</div>
+                                {% if assignment.pk in submitted_assignment_ids %}
+                                <span class="badge bg-success">Submitted</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">No upcoming assignment deadlines.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Upcoming Exams</h5>
+                <a href="{% url 'academics:my_academics' %}" class="btn btn-sm btn-outline-primary">My Academics</a>
+            </div>
+            <div class="card-body p-0">
+                {% if upcoming_exams %}
+                <div class="list-group list-group-flush">
+                    {% for exam_subject in upcoming_exams %}
+                    <a href="{% url 'academics:exam_detail' exam_subject.exam.pk %}" class="list-group-item list-group-item-action border-0 py-3">
+                        <div class="d-flex justify-content-between gap-2">
+                            <div>
+                                <h6 class="mb-1">{{ exam_subject.exam.name }}</h6>
+                                <div class="text-muted small">{{ exam_subject.subject.name }} - {{ exam_subject.exam.class_obj.display_name }}</div>
+                            </div>
+                            <span class="badge bg-light text-dark align-self-start">{{ exam_subject.exam_date|date:"M d" }}</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">No upcoming exams found.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-simple me-2"></i>Progress Snapshot</h5>
+                <a href="{% url 'analytics:my_analytics' %}" class="btn btn-sm btn-outline-primary">Analytics</a>
+            </div>
+            <div class="card-body">
+                {% if performances %}
+                {% for performance in performances %}
+                <div class="mb-3 pb-3 border-bottom">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ performance.student.user.get_full_name }}</strong>
+                        <span class="badge bg-primary">{{ performance.grade|default:"N/A" }}</span>
+                    </div>
+                    <div class="text-muted small">{{ performance.academic_year.name }} - {{ performance.class_obj.display_name }}</div>
+                    <div class="mt-2 small">Academic {{ performance.percentage }}% | Attendance {{ performance.attendance_percentage }}%</div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-4 text-muted">No performance analytics yet.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-message me-2"></i>Messages & AI Study</h5>
+                <a href="{% url 'communication:inbox' %}" class="btn btn-sm btn-outline-primary">Inbox</a>
+            </div>
+            <div class="card-body">
+                {% if recent_messages %}
+                {% for message in recent_messages %}
+                <div class="mb-3 pb-3 border-bottom">
+                    <strong>{{ message.subject }}</strong>
+                    <div class="text-muted small">From {{ message.sender.get_full_name|default:message.sender.email }} - {{ message.sent_at|timesince }} ago</div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-muted mb-3">No recent messages.</div>
+                {% endif %}
+
+                <div class="border-top pt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>AI Study Recommendations</strong>
+                        <a href="{% url 'adom_institute:agent_catalog' %}" class="btn btn-sm btn-outline-primary">Agents</a>
+                    </div>
+                    {% if ai_recommendations %}
+                    {% for task in ai_recommendations %}
+                    <div class="small text-muted mb-2">{{ task.get_agent_key_display }} - {{ task.get_status_display }}</div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="small text-muted">No AI study tasks yet. Use ADOM Institute to create a learning coach or study recommendation task.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-user-graduate fa-2x text-muted mb-3"></i>
+        <h6>No learner profile found</h6>
+        <p class="text-muted mb-0">A student or linked child profile is required to use the portal.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

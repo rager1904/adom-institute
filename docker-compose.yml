@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: adom_institute
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:6-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - DB_ENGINE=postgresql
+      - DB_HOST=db
+      - DB_NAME=adom_institute
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+
+  celery:
+    build: .
+    command: celery -A adom worker -l info
+    volumes:
+      - .:/app
+    environment:
+      - DEBUG=True
+      - DB_ENGINE=postgresql
+      - DB_HOST=db
+      - DB_NAME=adom_institute
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+
+  celery-beat:
+    build: .
+    command: celery -A adom beat -l info
+    volumes:
+      - .:/app
+    environment:
+      - DEBUG=True
+      - DB_ENGINE=postgresql
+      - DB_HOST=db
+      - DB_NAME=adom_institute
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:

@@ -1,0 +1,377 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ role_ui.student_scope_label }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-graduation-cap text-primary"></i> {{ role_ui.student_scope_label }}
+                </h1>
+                {% if role_ui.can_manage_people %}
+                <div>
+                    <a href="{% url 'students:student_create' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Add Student
+                    </a>
+                    <a href="{% url 'students:class_create' %}" class="btn btn-info">
+                        <i class="fas fa-plus"></i> Add Class
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ total_students }}</h4>
+                                    <p class="mb-0">Total Students</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-users fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ active_students }}</h4>
+                                    <p class="mb-0">Active Students</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-user-check fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ pending_admissions }}</h4>
+                                    <p class="mb-0">Pending Admissions</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-clock fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ total_classes }}</h4>
+                                    <p class="mb-0">Total Classes</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-chalkboard fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row mb-4">
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-pie"></i> Students by Gender
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="genderChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-doughnut"></i> Students by Status
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="statusChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Class Utilization and Recent Admissions -->
+            <div class="row mb-4">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-bar"></i> Class Capacity Utilization
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Class</th>
+                                            <th>Students</th>
+                                            <th>Capacity</th>
+                                            <th>Utilization</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for class_obj in class_utilization %}
+                                            <tr>
+                                                <td>
+                                                    <a href="{% url 'students:class_detail' class_obj.pk %}">
+                                                        {{ class_obj.display_name }}
+                                                    </a>
+                                                </td>
+                                                <td>{{ class_obj.student_count }}</td>
+                                                <td>{{ class_obj.capacity }}</td>
+                                                <td>
+                                                    <div class="progress" style="height: 20px;">
+                                                        <div class="progress-bar bg-{% if class_obj.utilization < 80 %}success{% elif class_obj.utilization < 95 %}warning{% else %}danger{% endif %}" 
+                                                             role="progressbar" 
+                                                             style="width: {{ class_obj.utilization }}%" 
+                                                             aria-valuenow="{{ class_obj.utilization }}" 
+                                                             aria-valuemin="0" aria-valuemax="100">
+                                                            {{ class_obj.utilization|floatformat:1 }}%
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% empty %}
+                                            <tr>
+                                                <td colspan="4" class="text-center text-muted">No classes found</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-clock"></i> Recent Admissions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if recent_admissions %}
+                                <div class="list-group list-group-flush">
+                                    {% for student in recent_admissions %}
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 class="mb-0">
+                                                    <a href="{% url 'students:student_detail' student.pk %}">
+                                                        {{ student.user.get_full_name }}
+                                                    </a>
+                                                </h6>
+                                                <small class="text-muted">{{ student.student_id }}</small>
+                                            </div>
+                                            <span class="badge bg-{% if student.admission_status == 'approved' %}success{% elif student.admission_status == 'pending' %}warning{% else %}danger{% endif %}">
+                                                {{ student.get_admission_status_display }}
+                                            </span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted text-center">No recent admissions</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if role_ui.can_manage_people %}
+            <!-- Quick Actions -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-bolt"></i> Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center mb-3">
+                                        <a href="{% url 'students:student_create' %}" class="btn btn-outline-primary btn-lg">
+                                            <i class="fas fa-user-plus fa-2x mb-2"></i><br>
+                                            Add Student
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center mb-3">
+                                        <a href="{% url 'students:class_create' %}" class="btn btn-outline-info btn-lg">
+                                            <i class="fas fa-chalkboard fa-2x mb-2"></i><br>
+                                            Add Class
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center mb-3">
+                                        <a href="{% url 'students:parent_create' %}" class="btn btn-outline-success btn-lg">
+                                            <i class="fas fa-user-friends fa-2x mb-2"></i><br>
+                                            Add Parent
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center mb-3">
+                                        <a href="{% url 'students:student_list' %}" class="btn btn-outline-warning btn-lg">
+                                            <i class="fas fa-list fa-2x mb-2"></i><br>
+                                            View All Students
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Hidden data for charts -->
+<div id="chart-data" style="display: none;">
+    <div id="gender-data" data-gender-data="{{ students_by_gender|safe }}"></div>
+    <div id="status-data" data-status-data="{{ students_by_status|safe }}"></div>
+</div>
+
+<style>
+.progress {
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Parse chart data from hidden elements
+const genderData = JSON.parse(document.getElementById('gender-data').getAttribute('data-gender-data'));
+const statusData = JSON.parse(document.getElementById('status-data').getAttribute('data-status-data'));
+
+// Prepare data for charts
+const genderLabels = genderData.map(item => item.gender === 'male' ? 'Male' : item.gender === 'female' ? 'Female' : 'Other');
+const genderValues = genderData.map(item => item.count);
+const genderColors = ['#007bff', '#e83e8c', '#6c757d'];
+
+const statusLabels = statusData.map(item => {
+    const status = item.admission_status;
+    return status === 'approved' ? 'Approved' : status === 'pending' ? 'Pending' : 'Rejected';
+});
+const statusValues = statusData.map(item => item.count);
+const statusColors = ['#28a745', '#ffc107', '#dc3545'];
+
+// Gender Distribution Chart
+const genderCtx = document.getElementById('genderChart').getContext('2d');
+new Chart(genderCtx, {
+    type: 'pie',
+    data: {
+        labels: genderLabels,
+        datasets: [{
+            data: genderValues,
+            backgroundColor: genderColors,
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Status Distribution Chart
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: statusLabels,
+        datasets: [{
+            data: statusValues,
+            backgroundColor: statusColors,
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Auto-refresh statistics every 5 minutes
+setInterval(function() {
+    fetch('{% url "students:student_statistics" %}')
+        .then(response => response.json())
+        .then(data => {
+            // Update statistics if needed
+            console.log('Statistics refreshed');
+        })
+        .catch(error => {
+            console.error('Error refreshing statistics:', error);
+        });
+}, 300000); // 5 minutes
+</script>
+{% endblock %}

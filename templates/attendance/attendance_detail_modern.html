@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}Attendance Detail{% endblock %}
+
+{% block content %}
+<section class="container-fluid py-3">
+    <div class="adom-card p-4">
+        <h1 class="h4 mb-1">Attendance record</h1>
+        <p class="text-muted mb-4">{{ attendance.student.user.get_full_name }} on {{ attendance.date|date:"M d, Y" }}</p>
+        <dl class="row mb-0">
+            <dt class="col-md-3">Student</dt><dd class="col-md-9">{{ attendance.student.user.get_full_name }}</dd>
+            <dt class="col-md-3">Class</dt><dd class="col-md-9">{{ attendance.student.current_class.display_name|default:"Unassigned" }}</dd>
+            <dt class="col-md-3">Status</dt><dd class="col-md-9">{{ attendance.get_status_display }}</dd>
+            <dt class="col-md-3">Marked by</dt><dd class="col-md-9">{{ attendance.marked_by.user.get_full_name|default:"System" }}</dd>
+            <dt class="col-md-3">Remarks</dt><dd class="col-md-9">{{ attendance.remarks|default:"No remarks." }}</dd>
+        </dl>
+    </div>
+</section>
+{% endblock %}

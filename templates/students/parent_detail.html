@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ parent.user.get_full_name }} - Parent Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-user-friends text-primary"></i> {% if role_ui.can_manage_people %}Parent Details{% else %}Guardian Profile{% endif %}
+                </h1>
+                <div>
+                    {% if role_ui.can_manage_people %}
+                    <a href="{% url 'students:parent_update' parent.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit Parent
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'students:parent_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Parent Information -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Parent Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-user"></i> Full Name</h6>
+                                    <p class="mb-3">{{ parent.user.get_full_name }}</p>
+                                    
+                                    <h6><i class="fas fa-envelope"></i> Email</h6>
+                                    <p class="mb-3">{{ parent.user.email }}</p>
+                                    
+                                    <h6><i class="fas fa-phone"></i> Phone Number</h6>
+                                    <p class="mb-3">{{ parent.phone_number }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-heart"></i> Relationship</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{% if parent.relationship == 'father' %}primary{% elif parent.relationship == 'mother' %}danger{% else %}secondary{% endif %}">
+                                            {{ parent.get_relationship_display }}
+                                        </span>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-briefcase"></i> Occupation</h6>
+                                    <p class="mb-3">{{ parent.occupation|default:"Not specified" }}</p>
+                                    
+                                    <h6><i class="fas fa-toggle-on"></i> Contact Preferences</h6>
+                                    <div class="mb-3">
+                                        {% if parent.is_primary_contact %}
+                                            <span class="badge bg-success me-2">Primary Contact</span>
+                                        {% endif %}
+                                        {% if parent.is_emergency_contact %}
+                                            <span class="badge bg-warning">Emergency Contact</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Student Information -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-user-graduate"></i> Related Student
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-user"></i> Student Name</h6>
+                                    <p class="mb-3">
+                                        <a href="{% url 'students:student_detail' parent.student.pk %}">
+                                            {{ parent.student.user.get_full_name }}
+                                        </a>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-id-card"></i> Student ID</h6>
+                                    <p class="mb-3">{{ parent.student.student_id }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-chalkboard"></i> Current Class</h6>
+                                    <p class="mb-3">
+                                        {% if parent.student.current_class %}
+                                            <a href="{% url 'students:class_detail' parent.student.current_class.pk %}">
+                                                {{ parent.student.current_class.display_name }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Not assigned</span>
+                                        {% endif %}
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-clock"></i> Admission Status</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{% if parent.student.admission_status == 'approved' %}success{% elif parent.student.admission_status == 'pending' %}warning{% else %}danger{% endif %}">
+                                            {{ parent.student.get_admission_status_display }}
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    {% if role_ui.can_manage_people %}
+                    <!-- Quick Actions -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-bolt"></i> Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'students:parent_update' parent.pk %}" class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Edit Parent
+                                </a>
+                                <a href="{% url 'students:student_detail' parent.student.pk %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> View Student
+                                </a>
+                                <a href="{% url 'students:parent_delete' parent.pk %}" class="btn btn-outline-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Delete Parent
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if role_ui.can_manage_people %}
+                    <!-- System Information -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-cog"></i> System Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-calendar-plus"></i> Created</h6>
+                            <p class="mb-3">{{ parent.created_at|date:"F j, Y g:i A" }}</p>
+                            
+                            <h6><i class="fas fa-calendar-edit"></i> Last Updated</h6>
+                            <p class="mb-3">{{ parent.updated_at|date:"F j, Y g:i A" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+</style>
+{% endblock %}

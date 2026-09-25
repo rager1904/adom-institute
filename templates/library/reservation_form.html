@@ -1,0 +1,715 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create New Reservation - Library{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .form-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        padding: 40px;
+        margin-bottom: 30px;
+    }
+    .form-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-left: 4px solid #667eea;
+    }
+    .form-section h5 {
+        color: #495057;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 12px 15px;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102,126,234,0.25);
+    }
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+    .btn-primary {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    .btn-secondary {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+    }
+    .search-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 15px;
+        padding: 30px;
+        text-align: center;
+        background: #fafafa;
+        transition: all 0.3s ease;
+        margin-bottom: 25px;
+    }
+    .search-area.active {
+        border-color: #667eea;
+        background: #f0f4ff;
+    }
+    .selection-card {
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .selection-card:hover {
+        border-color: #667eea;
+        background: #f0f4ff;
+    }
+    .selection-card.selected {
+        border-color: #667eea;
+        background: #f0f4ff;
+        box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+    }
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-right: 15px;
+    }
+    .book-thumbnail {
+        width: 60px;
+        height: 80px;
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        margin-right: 15px;
+    }
+    .availability-alert {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+    .queue-info {
+        background: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+    .summary-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    .summary-item:last-child {
+        border-bottom: none;
+    }
+    .suggestions-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 200px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+    }
+    .suggestion-item {
+        padding: 10px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    .suggestion-item:hover {
+        background: #f8f9fa;
+    }
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+    .priority-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    .priority-option {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .priority-option:hover,
+    .priority-option.selected {
+        border-color: #667eea;
+        background: #f0f4ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'library:dashboard' %}">Library</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'library:reservation_list' %}">Reservations</a></li>
+            <li class="breadcrumb-item active">Create Reservation</li>
+        </ol>
+    </nav>
+
+    <div class="form-container">
+        <!-- Form Header -->
+        <div class="form-header">
+            <h1 class="mb-3">
+                <i class="fas fa-bookmark me-3"></i>
+                Create New Reservation
+            </h1>
+            <p class="mb-0">
+                Reserve a book for a user when it's currently not available. The user will be notified when the book becomes available.
+            </p>
+        </div>
+
+        <!-- Form -->
+        <form method="post" id="reservationForm">
+            {% csrf_token %}
+            
+            <!-- User Selection Section -->
+            <div class="form-section">
+                <h5><i class="fas fa-user me-2"></i>Select User</h5>
+                
+                <!-- Manual Search -->
+                <div class="search-area" id="userSearchArea">
+                    <i class="fas fa-search fa-2x text-muted mb-3"></i>
+                    <h5 class="text-muted">Search for User</h5>
+                    <div class="position-relative" style="max-width: 400px; margin: 0 auto;">
+                        <input type="text" class="form-control" id="userSearchInput" 
+                               placeholder="Search by name, username, or email...">
+                        <ul class="suggestions-list" id="userSuggestions" style="display: none;"></ul>
+                    </div>
+                </div>
+                
+                <!-- Selected User Display -->
+                <div id="selectedUserDisplay" style="display: none;">
+                    <div class="selection-card selected">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar" id="selectedUserAvatar"></div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1" id="selectedUserName"></h6>
+                                <p class="text-muted mb-1" id="selectedUserDetails"></p>
+                                <p class="text-muted small mb-0" id="selectedUserStats"></p>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearUserSelection()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                {{ form.user }}
+                {% if form.user.errors %}
+                    <div class="text-danger mt-2">{{ form.user.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Book Selection Section -->
+            <div class="form-section">
+                <h5><i class="fas fa-book me-2"></i>Select Book to Reserve</h5>
+                
+                <!-- Manual Search -->
+                <div class="search-area" id="bookSearchArea">
+                    <i class="fas fa-search fa-2x text-muted mb-3"></i>
+                    <h5 class="text-muted">Search for Book</h5>
+                    <div class="position-relative" style="max-width: 400px; margin: 0 auto;">
+                        <input type="text" class="form-control" id="bookSearchInput" 
+                               placeholder="Search by title, author, or ISBN...">
+                        <ul class="suggestions-list" id="bookSuggestions" style="display: none;"></ul>
+                    </div>
+                </div>
+                
+                <!-- Selected Book Display -->
+                <div id="selectedBookDisplay" style="display: none;">
+                    <div class="selection-card selected">
+                        <div class="d-flex align-items-center">
+                            <div class="book-thumbnail" id="selectedBookThumbnail">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1" id="selectedBookTitle"></h6>
+                                <p class="text-muted mb-1" id="selectedBookAuthor"></p>
+                                <p class="text-muted small mb-0" id="selectedBookDetails"></p>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearBookSelection()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Availability Alert -->
+                    <div class="availability-alert" id="availabilityAlert" style="display: none;">
+                        <h6 class="mb-2">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Availability Information
+                        </h6>
+                        <p class="mb-1" id="availabilityText"></p>
+                        <div id="queueInfo" class="queue-info mt-3" style="display: none;">
+                            <h6 class="mb-2">Current Reservation Queue:</h6>
+                            <p class="mb-1" id="queueText"></p>
+                            <small class="text-muted" id="estimatedWait"></small>
+                        </div>
+                    </div>
+                </div>
+                
+                {{ form.book }}
+                {% if form.book.errors %}
+                    <div class="text-danger mt-2">{{ form.book.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Reservation Details Section -->
+            <div class="form-section">
+                <h5><i class="fas fa-cog me-2"></i>Reservation Details</h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Priority Level</label>
+                            <div class="priority-selector">
+                                <div class="priority-option" data-priority="normal">
+                                    <i class="fas fa-clock text-success fa-2x mb-2"></i>
+                                    <h6>Normal</h6>
+                                    <small class="text-muted">Standard queue position</small>
+                                </div>
+                                <div class="priority-option" data-priority="high">
+                                    <i class="fas fa-exclamation text-warning fa-2x mb-2"></i>
+                                    <h6>High</h6>
+                                    <small class="text-muted">Priority position</small>
+                                </div>
+                                <div class="priority-option" data-priority="urgent">
+                                    <i class="fas fa-bolt text-danger fa-2x mb-2"></i>
+                                    <h6>Urgent</h6>
+                                    <small class="text-muted">Top of queue</small>
+                                </div>
+                            </div>
+                            <input type="hidden" id="priorityInput" name="priority" value="normal">
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">Notes (Optional)</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger mt-1">{{ form.notes.errors }}</div>
+                            {% endif %}
+                            <div class="field-help">Any special instructions or notes for this reservation</div>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="notifyWhenReady" checked>
+                            <label class="form-check-label" for="notifyWhenReady">
+                                Notify user when book becomes available
+                            </label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="autoExpire" checked>
+                            <label class="form-check-label" for="autoExpire">
+                                Auto-expire after 7 days if not picked up
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Section -->
+            <div class="summary-section" id="reservationSummary" style="display: none;">
+                <h5><i class="fas fa-clipboard-check me-2"></i>Reservation Summary</h5>
+                
+                <div class="summary-item">
+                    <span>User:</span>
+                    <span id="summaryUser">-</span>
+                </div>
+                <div class="summary-item">
+                    <span>Book:</span>
+                    <span id="summaryBook">-</span>
+                </div>
+                <div class="summary-item">
+                    <span>Priority:</span>
+                    <span id="summaryPriority">Normal</span>
+                </div>
+                <div class="summary-item">
+                    <span>Queue Position:</span>
+                    <span id="summaryQueuePosition">-</span>
+                </div>
+                <div class="summary-item">
+                    <span>Estimated Wait:</span>
+                    <span id="summaryEstimatedWait">-</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="text-center mt-4">
+                <a href="{% url 'library:reservation_list' %}" class="btn btn-secondary me-3">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                    <i class="fas fa-bookmark me-2"></i>Create Reservation
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('reservationForm');
+    const userInput = document.querySelector('#{{ form.user.id_for_label }}');
+    const bookInput = document.querySelector('#{{ form.book.id_for_label }}');
+    const priorityInput = document.getElementById('priorityInput');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    let selectedUser = null;
+    let selectedBook = null;
+    let selectedPriority = 'normal';
+    
+    // Hide original inputs
+    userInput.style.display = 'none';
+    bookInput.style.display = 'none';
+    
+    // User search functionality
+    const userSearchInput = document.getElementById('userSearchInput');
+    const userSuggestions = document.getElementById('userSuggestions');
+    let userSearchTimeout;
+    
+    userSearchInput.addEventListener('input', function() {
+        clearTimeout(userSearchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            userSuggestions.style.display = 'none';
+            return;
+        }
+        
+        userSearchTimeout = setTimeout(() => {
+            searchUsers(query);
+        }, 300);
+    });
+    
+    function searchUsers(query) {
+        fetch(`/library/search/users/?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                userSuggestions.innerHTML = '';
+                
+                if (data.users && data.users.length > 0) {
+                    data.users.forEach(user => {
+                        const li = document.createElement('li');
+                        li.className = 'suggestion-item';
+                        li.innerHTML = `
+                            <div class="d-flex align-items-center">
+                                <div style="width: 30px; height: 30px; background: #007bff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; margin-right: 10px;">
+                                    ${user.first_name.charAt(0)}${user.last_name.charAt(0)}
+                                </div>
+                                <div>
+                                    <div class="fw-bold">${user.full_name}</div>
+                                    <small class="text-muted">${user.username} • ${user.user_type}</small>
+                                </div>
+                            </div>
+                        `;
+                        li.addEventListener('click', () => selectUser(user));
+                        userSuggestions.appendChild(li);
+                    });
+                    userSuggestions.style.display = 'block';
+                } else {
+                    userSuggestions.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error searching users:', error);
+            });
+    }
+    
+    function selectUser(user) {
+        selectedUser = user;
+        userInput.value = user.id;
+        
+        // Update display
+        document.getElementById('selectedUserAvatar').textContent = user.first_name.charAt(0) + user.last_name.charAt(0);
+        document.getElementById('selectedUserName').textContent = user.full_name;
+        document.getElementById('selectedUserDetails').textContent = `${user.username} • ${user.user_type}`;
+        document.getElementById('selectedUserStats').textContent = `Active Reservations: ${user.active_reservations || 0}`;
+        
+        document.getElementById('userSearchArea').style.display = 'none';
+        document.getElementById('selectedUserDisplay').style.display = 'block';
+        userSuggestions.style.display = 'none';
+        
+        updateSummary();
+        checkFormCompletion();
+    }
+    
+    window.clearUserSelection = function() {
+        selectedUser = null;
+        userInput.value = '';
+        document.getElementById('userSearchArea').style.display = 'block';
+        document.getElementById('selectedUserDisplay').style.display = 'none';
+        userSearchInput.value = '';
+        updateSummary();
+        checkFormCompletion();
+    };
+    
+    // Book search functionality
+    const bookSearchInput = document.getElementById('bookSearchInput');
+    const bookSuggestions = document.getElementById('bookSuggestions');
+    let bookSearchTimeout;
+    
+    bookSearchInput.addEventListener('input', function() {
+        clearTimeout(bookSearchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            bookSuggestions.style.display = 'none';
+            return;
+        }
+        
+        bookSearchTimeout = setTimeout(() => {
+            searchBooks(query);
+        }, 300);
+    });
+    
+    function searchBooks(query) {
+        fetch(`/library/search/books/?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                bookSuggestions.innerHTML = '';
+                
+                if (data.books && data.books.length > 0) {
+                    data.books.forEach(book => {
+                        const li = document.createElement('li');
+                        li.className = 'suggestion-item';
+                        li.innerHTML = `
+                            <div class="d-flex align-items-center">
+                                <div style="width: 30px; height: 40px; background: #28a745; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; margin-right: 10px;">
+                                    <i class="fas fa-book"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold">${book.title}</div>
+                                    <small class="text-muted">${book.author} • Available: ${book.available_copies}/${book.total_copies}</small>
+                                </div>
+                            </div>
+                        `;
+                        li.addEventListener('click', () => selectBook(book));
+                        bookSuggestions.appendChild(li);
+                    });
+                    bookSuggestions.style.display = 'block';
+                } else {
+                    bookSuggestions.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error searching books:', error);
+            });
+    }
+    
+    function selectBook(book) {
+        selectedBook = book;
+        bookInput.value = book.id;
+        
+        // Update display
+        document.getElementById('selectedBookTitle').textContent = book.title;
+        document.getElementById('selectedBookAuthor').textContent = book.author;
+        document.getElementById('selectedBookDetails').textContent = `ISBN: ${book.isbn || 'N/A'} • Available: ${book.available_copies}/${book.total_copies}`;
+        
+        document.getElementById('bookSearchArea').style.display = 'none';
+        document.getElementById('selectedBookDisplay').style.display = 'block';
+        bookSuggestions.style.display = 'none';
+        
+        // Show availability information
+        updateAvailabilityInfo(book);
+        updateSummary();
+        checkFormCompletion();
+    }
+    
+    function updateAvailabilityInfo(book) {
+        const availabilityAlert = document.getElementById('availabilityAlert');
+        const availabilityText = document.getElementById('availabilityText');
+        const queueInfo = document.getElementById('queueInfo');
+        
+        availabilityAlert.style.display = 'block';
+        
+        if (book.available_copies > 0) {
+            availabilityText.innerHTML = `
+                <i class="fas fa-check-circle text-success me-2"></i>
+                This book is currently available (${book.available_copies} copies). 
+                You might want to create a borrowing instead of a reservation.
+            `;
+            queueInfo.style.display = 'none';
+        } else {
+            availabilityText.innerHTML = `
+                <i class="fas fa-exclamation-circle text-warning me-2"></i>
+                This book is currently not available (0 copies available). 
+                A reservation will be created and the user will be notified when it becomes available.
+            `;
+            
+            // Fetch queue information
+            fetch(`/library/books/${book.id}/queue-info/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.queue_length > 0) {
+                        queueInfo.style.display = 'block';
+                        document.getElementById('queueText').textContent = `${data.queue_length} people are currently waiting for this book.`;
+                        document.getElementById('estimatedWait').textContent = `Estimated wait time: ${data.estimated_wait || 'Unknown'}`;
+                    } else {
+                        queueInfo.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching queue info:', error);
+                    queueInfo.style.display = 'none';
+                });
+        }
+    }
+    
+    window.clearBookSelection = function() {
+        selectedBook = null;
+        bookInput.value = '';
+        document.getElementById('bookSearchArea').style.display = 'block';
+        document.getElementById('selectedBookDisplay').style.display = 'none';
+        document.getElementById('availabilityAlert').style.display = 'none';
+        bookSearchInput.value = '';
+        updateSummary();
+        checkFormCompletion();
+    };
+    
+    // Priority selection
+    const priorityOptions = document.querySelectorAll('.priority-option');
+    priorityOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            priorityOptions.forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+            selectedPriority = this.dataset.priority;
+            priorityInput.value = selectedPriority;
+            updateSummary();
+        });
+    });
+    
+    // Set default priority
+    document.querySelector('[data-priority="normal"]').classList.add('selected');
+    
+    // Update summary
+    function updateSummary() {
+        const summarySection = document.getElementById('reservationSummary');
+        
+        if (selectedUser && selectedBook) {
+            summarySection.style.display = 'block';
+            
+            document.getElementById('summaryUser').textContent = selectedUser.full_name;
+            document.getElementById('summaryBook').textContent = selectedBook.title;
+            document.getElementById('summaryPriority').textContent = selectedPriority.charAt(0).toUpperCase() + selectedPriority.slice(1);
+            
+            // Calculate queue position based on priority
+            let queuePosition = selectedBook.queue_length || 0;
+            if (selectedPriority === 'high') {
+                queuePosition = Math.ceil(queuePosition / 2);
+            } else if (selectedPriority === 'urgent') {
+                queuePosition = 1;
+            }
+            document.getElementById('summaryQueuePosition').textContent = queuePosition > 0 ? `#${queuePosition + 1}` : '#1';
+            
+            // Estimated wait time
+            const estimatedDays = queuePosition * 14; // Assume 14 days per person
+            if (estimatedDays > 0) {
+                document.getElementById('summaryEstimatedWait').textContent = `${estimatedDays} days`;
+            } else {
+                document.getElementById('summaryEstimatedWait').textContent = 'Next available';
+            }
+        } else {
+            summarySection.style.display = 'none';
+        }
+    }
+    
+    // Check form completion
+    function checkFormCompletion() {
+        const isComplete = selectedUser && selectedBook;
+        submitBtn.disabled = !isComplete;
+    }
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.position-relative')) {
+            userSuggestions.style.display = 'none';
+            bookSuggestions.style.display = 'none';
+        }
+    });
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        if (!selectedUser || !selectedBook) {
+            e.preventDefault();
+            alert('Please select both a user and a book.');
+            return;
+        }
+        
+        if (selectedBook && selectedBook.available_copies > 0) {
+            const proceed = confirm(
+                'This book is currently available. Are you sure you want to create a reservation instead of a borrowing?'
+            );
+            if (!proceed) {
+                e.preventDefault();
+                return;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

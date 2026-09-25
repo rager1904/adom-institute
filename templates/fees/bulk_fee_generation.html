@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulk Fee Generation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-users me-3 text-primary"></i>Bulk Fee Generation
+        </h2>
+        <p class="text-muted mb-0">Generate fees for multiple students at once</p>
+    </div>
+    <div>
+        <a href="{% url 'fees:student_fee_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>Bulk Fee Generation
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Fee Structure</label>
+                            {{ form.fee_structure }}
+                            {% if form.fee_structure.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.fee_structure.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Select the fee structure to apply</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Due Date</label>
+                            {{ form.due_date }}
+                            {% if form.due_date.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.due_date.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Set the due date for all generated fees</small>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Select Students</label>
+                            {{ form.students }}
+                            {% if form.students.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.students.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Hold Ctrl/Cmd to select multiple students</small>
+                        </div>
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger mt-3">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-magic me-2"></i>Generate Fees
+                        </button>
+                        <a href="{% url 'fees:student_fee_list' %}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>How it works:</h6>
+                    <ol class="small">
+                        <li>Select a fee structure that contains the fee categories and amounts</li>
+                        <li>Choose the students for whom you want to generate fees</li>
+                        <li>Set a due date for all the generated fees</li>
+                        <li>The system will create fee records for each student and fee category</li>
+                    </ol>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Benefits:</h6>
+                    <ul class="list-unstyled small">
+                        <li><i class="fas fa-check text-success me-2"></i>Save time with bulk operations</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Ensure consistency across students</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Reduce manual data entry errors</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Easy to manage and track</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Quick Actions:</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'fees:student_fee_list' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-2"></i>View All Fees
+                        </a>
+                        <a href="{% url 'fees:payment_create' %}" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-credit-card me-2"></i>Record Payment
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Fee Structure Preview -->
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-eye me-2"></i>Fee Structure Preview
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="feeStructurePreview">
+                    <p class="text-muted small">Select a fee structure to see its details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const feeStructureField = document.getElementById('id_fee_structure');
+    const previewDiv = document.getElementById('feeStructurePreview');
+    
+    if (feeStructureField) {
+        feeStructureField.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                // Fetch fee structure details via AJAX
+                fetch(`/fees/ajax/get-fee-structure-details/${selectedOption.value}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            let html = '<h6>Fee Categories:</h6><ul class="list-unstyled small">';
+                            data.details.forEach(detail => {
+                                html += `<li><i class="fas fa-tag me-2"></i>${detail.category_name}: ₹${detail.amount}</li>`;
+                            });
+                            html += '</ul>';
+                            previewDiv.innerHTML = html;
+                        } else {
+                            previewDiv.innerHTML = '<p class="text-danger small">Error loading fee structure details</p>';
+                        }
+                    })
+                    .catch(error => {
+                        previewDiv.innerHTML = '<p class="text-danger small">Error loading fee structure details</p>';
+                    });
+            } else {
+                previewDiv.innerHTML = '<p class="text-muted small">Select a fee structure to see its details</p>';
+            }
+        });
+    }
+    
+    // Set minimum date for due date field
+    const dueDateField = document.getElementById('id_due_date');
+    if (dueDateField) {
+        const today = new Date().toISOString().split('T')[0];
+        dueDateField.setAttribute('min', today);
+    }
+});
+</script>
+{% endblock %}

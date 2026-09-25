@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Grading Queue{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+        <h2 class="mb-1"><i class="fas fa-pen-to-square me-3 text-primary"></i>Grading Queue</h2>
+        <p class="text-muted mb-0">Review learner submissions and publish feedback.</p>
+    </div>
+    <div class="btn-group">
+        <a href="?status=ungraded" class="btn btn-outline-primary {% if status_filter == 'ungraded' %}active{% endif %}">Ungraded</a>
+        <a href="?status=graded" class="btn btn-outline-primary {% if status_filter == 'graded' %}active{% endif %}">Graded</a>
+        <a href="?status=all" class="btn btn-outline-primary {% if status_filter == 'all' %}active{% endif %}">All</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Ungraded</div><div class="h3 mb-0">{{ ungraded_count }}</div></div></div></div>
+    <div class="col-md-6"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Graded</div><div class="h3 mb-0">{{ graded_count }}</div></div></div></div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white"><h5 class="mb-0">Submissions</h5></div>
+    <div class="card-body">
+        {% for submission in submissions %}
+        <div class="border-bottom py-3">
+            <div class="row g-3 align-items-start">
+                <div class="col-lg-5">
+                    <h6 class="mb-1">{{ submission.assignment.title }}</h6>
+                    <div class="text-muted small">{{ submission.student.user.get_full_name }} - {{ submission.assignment.class_obj.display_name }} - {{ submission.assignment.subject.name }}</div>
+                    <div class="small mt-2">{{ submission.submission_text|default:"No text submission"|truncatechars:180 }}</div>
+                    {% if submission.submission_file %}
+                    <a href="{{ submission.submission_file.url }}" class="btn btn-sm btn-outline-secondary mt-2">Open File</a>
+                    {% endif %}
+                </div>
+                <div class="col-lg-2">
+                    {% if submission.is_graded %}
+                    <span class="badge bg-success">Graded</span>
+                    <div class="small mt-2">{{ submission.marks_obtained }} / {{ submission.assignment.max_marks }}</div>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Ungraded</span>
+                    {% endif %}
+                </div>
+                <div class="col-lg-5">
+                    <form method="post" action="{% url 'academics:grade_submission' submission.pk %}" class="row g-2">
+                        {% csrf_token %}
+                        <div class="col-sm-4">
+                            <label class="form-label small" for="marks-{{ submission.pk }}">Marks</label>
+                            <input id="marks-{{ submission.pk }}" type="number" min="0" max="{{ submission.assignment.max_marks }}" name="marks_obtained" class="form-control" value="{{ submission.marks_obtained|default_if_none:'' }}">
+                        </div>
+                        <div class="col-sm-8">
+                            <label class="form-label small" for="feedback-{{ submission.pk }}">Feedback</label>
+                            <input id="feedback-{{ submission.pk }}" type="text" name="feedback" class="form-control" value="{{ submission.feedback|default:'' }}">
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-sm btn-primary">Save Grade</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-check-circle fa-2x mb-3"></i>
+            <h6>No submissions in this queue</h6>
+            <p class="mb-0">Submitted work will appear here when learners upload assignments.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% if is_paginated %}
+<nav class="mt-4" aria-label="Grading pagination">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?status={{ status_filter }}&page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}
+        <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+        {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?status={{ status_filter }}&page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

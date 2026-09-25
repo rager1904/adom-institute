@@ -1,0 +1,705 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Analytics Dashboard - ADOM Institute{% endblock %}
+
+{% block extra_css %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- ApexCharts for advanced charts -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<!-- Date Range Picker -->
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
+<style>
+/* Modern Card Styling */
+.stat-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.stat-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.stat-card .card-body {
+    padding: 1.5rem;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+}
+
+.stat-change {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.stat-change.positive { color: #10b981; }
+.stat-change.negative { color: #ef4444; }
+.stat-change.neutral { color: #6b7280; }
+
+/* Chart Containers */
+.chart-container {
+    position: relative;
+    height: 350px;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.chart-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.chart-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.25rem 1.5rem;
+    border-radius: 16px 16px 0 0;
+}
+
+.chart-header h6 {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Timeline Styling */
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 0.75rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem;
+    padding-left: 1.5rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -0.5rem;
+    top: 0.25rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timeline-content {
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border-left: 4px solid #667eea;
+}
+
+.timeline-time {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.timeline-title {
+    font-weight: 600;
+    margin: 0.25rem 0;
+    color: #1f2937;
+}
+
+.timeline-description {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Quick Actions */
+.quick-action-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 12px;
+    padding: 1rem;
+    color: white;
+    text-decoration: none;
+    display: block;
+    transition: all 0.3s ease;
+    text-align: center;
+    font-weight: 600;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.quick-action-btn i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+/* Filter Panel */
+.filter-panel {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    margin-bottom: 2rem;
+}
+
+.filter-panel h6 {
+    color: #1f2937;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .chart-container {
+        height: 250px;
+    }
+    
+    .timeline {
+        padding-left: 1rem;
+    }
+}
+
+/* Loading Animation */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-chart-line me-3 text-primary"></i>Analytics Dashboard
+        </h2>
+        <p class="text-muted mb-0">Comprehensive insights into school performance and metrics</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" onclick="refreshDashboard()">
+            <i class="fas fa-sync-alt me-2"></i>Refresh
+        </button>
+        <a href="{% url 'analytics:report_list' %}" class="btn btn-primary">
+            <i class="fas fa-file-alt me-2"></i>Generate Report
+        </a>
+    </div>
+</div>
+
+<!-- Filter Panel -->
+<div class="filter-panel">
+    <div class="row align-items-end">
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">Date Range</label>
+            <input type="text" class="form-control" id="dateRange" placeholder="Select date range">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Academic Year</label>
+            <select class="form-select" id="academicYear">
+                <option value="">All Years</option>
+                {% for year in academic_years %}
+                <option value="{{ year.id }}">{{ year.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Class</label>
+            <select class="form-select" id="classFilter">
+                <option value="">All Classes</option>
+                {% for class in classes %}
+                <option value="{{ class.id }}">{{ class.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Metric</label>
+            <select class="form-select" id="metricFilter">
+                <option value="performance">Performance</option>
+                <option value="attendance">Attendance</option>
+                <option value="fees">Fees</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-primary w-100" onclick="applyFilters()">
+                <i class="fas fa-filter me-2"></i>Apply Filters
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Key Metrics -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label text-primary">Total Students</div>
+                        <div class="stat-value text-dark">{{ total_students }}</div>
+                        <div class="stat-change {% if student_growth >= 0 %}positive{% else %}negative{% endif %}">
+                            <i class="fas fa-arrow-{% if student_growth >= 0 %}up{% else %}down{% endif %} me-1"></i>
+                            {{ student_growth|floatformat:1 }}% from last month
+                        </div>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label text-success">Total Teachers</div>
+                        <div class="stat-value text-dark">{{ total_teachers }}</div>
+                        <div class="stat-change {% if teacher_growth >= 0 %}positive{% else %}negative{% endif %}">
+                            <i class="fas fa-arrow-{% if teacher_growth >= 0 %}up{% else %}down{% endif %} me-1"></i>
+                            {{ teacher_growth|floatformat:1 }}% from last month
+                        </div>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label text-info">Average Performance</div>
+                        <div class="stat-value text-dark">{{ avg_performance|floatformat:1 }}%</div>
+                        <div class="stat-change {% if performance_growth >= 0 %}positive{% else %}negative{% endif %}">
+                            <i class="fas fa-arrow-{% if performance_growth >= 0 %}up{% else %}down{% endif %} me-1"></i>
+                            {{ performance_growth|floatformat:1 }}% from last month
+                        </div>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label text-warning">Attendance Rate</div>
+                        <div class="stat-value text-dark">{{ attendance_rate|floatformat:1 }}%</div>
+                        <div class="stat-change {% if attendance_growth >= 0 %}positive{% else %}negative{% endif %}">
+                            <i class="fas fa-arrow-{% if attendance_growth >= 0 %}up{% else %}down{% endif %} me-1"></i>
+                            {{ attendance_growth|floatformat:1 }}% from last month
+                        </div>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <!-- Performance Trends -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card chart-card">
+            <div class="chart-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6>Performance Trends</h6>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-light btn-sm" onclick="updateChartPeriod('7d')">7D</button>
+                        <button class="btn btn-outline-light btn-sm active" onclick="updateChartPeriod('30d')">30D</button>
+                        <button class="btn btn-outline-light btn-sm" onclick="updateChartPeriod('90d')">90D</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="chart-container">
+                    <canvas id="performanceTrendsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grade Distribution -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card chart-card">
+            <div class="chart-header">
+                <h6>Grade Distribution</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="chart-container">
+                    <canvas id="gradeDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Charts -->
+<div class="row mb-4">
+    <!-- Class Performance Comparison -->
+    <div class="col-xl-6">
+        <div class="card chart-card">
+            <div class="chart-header">
+                <h6>Class Performance Comparison</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="chart-container">
+                    <canvas id="classComparisonChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance vs Performance -->
+    <div class="col-xl-6">
+        <div class="card chart-card">
+            <div class="chart-header">
+                <h6>Attendance vs Performance Correlation</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="chart-container">
+                    <canvas id="attendancePerformanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions and Recent Activity -->
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-lg-6">
+        <div class="card chart-card">
+            <div class="chart-header">
+                <h6>Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <a href="{% url 'analytics:student_performance_list' %}" class="quick-action-btn">
+                            <i class="fas fa-user-graduate"></i>
+                            <div>Student Performance</div>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{% url 'analytics:class_performance_list' %}" class="quick-action-btn">
+                            <i class="fas fa-school"></i>
+                            <div>Class Performance</div>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{% url 'analytics:teacher_performance_list' %}" class="quick-action-btn">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                            <div>Teacher Performance</div>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{% url 'analytics:report_list' %}" class="quick-action-btn">
+                            <i class="fas fa-file-alt"></i>
+                            <div>Generate Reports</div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-lg-6">
+        <div class="card chart-card">
+            <div class="chart-header">
+                <h6>Recent Activity</h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for event in recent_events %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker" data-color="{{ event.color }}" data-color-dark="{{ event.color_dark }}"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-time">{{ event.created_at|timesince }} ago</div>
+                            <div class="timeline-title">{{ event.title }}</div>
+                            <div class="timeline-description">{{ event.description }}</div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                        <p>No recent activity</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Data for Charts -->
+<script>
+// Pass Django data to JavaScript
+window.performanceData = {
+    labels: JSON.parse('{{ performance_labels|escapejs }}'),
+    performance: JSON.parse('{{ performance_data|escapejs }}'),
+    attendance: JSON.parse('{{ attendance_data|escapejs }}'),
+    gradeDistribution: JSON.parse('{{ grade_distribution|escapejs }}'),
+    gradeLabels: JSON.parse('{{ grade_labels|escapejs }}')
+};
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    applyTimelineColors();
+});
+
+function applyTimelineColors() {
+    const markers = document.querySelectorAll('.timeline-marker');
+    markers.forEach(marker => {
+        const color = marker.dataset.color;
+        const colorDark = marker.dataset.colorDark;
+        if (color && colorDark) {
+            marker.style.background = `linear-gradient(135deg, ${color} 0%, ${colorDark} 100%)`;
+        }
+    });
+}
+
+function initializeCharts() {
+    // Performance Trends Chart
+    const performanceCtx = document.getElementById('performanceTrendsChart').getContext('2d');
+    const performanceChart = new Chart(performanceCtx, {
+        type: 'line',
+        data: {
+            labels: window.performanceData.labels,
+            datasets: [{
+                label: 'Academic Performance',
+                data: window.performanceData.performance,
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#667eea',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 6
+            }, {
+                label: 'Attendance Rate',
+                data: window.performanceData.attendance,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#10b981',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Grade Distribution Chart
+    const gradeCtx = document.getElementById('gradeDistributionChart').getContext('2d');
+    const gradeChart = new Chart(gradeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: window.performanceData.gradeLabels,
+            datasets: [{
+                data: window.performanceData.gradeDistribution,
+                backgroundColor: [
+                    '#10b981',
+                    '#06b6d4',
+                    '#f59e0b',
+                    '#f97316',
+                    '#ef4444'
+                ],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15
+                    }
+                }
+            },
+            cutout: '60%'
+        }
+    });
+}
+
+function refreshDashboard() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Refreshing...';
+    btn.disabled = true;
+    
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+}
+
+function updateChartPeriod(period) {
+    console.log('Updating chart period:', period);
+    // AJAX call to fetch new data based on period
+    fetch(`/analytics/chart-data/?period=${period}`)
+        .then(response => response.json())
+        .then(data => {
+            // Update charts with new data
+            console.log('New chart data:', data);
+        });
+}
+
+function applyFilters() {
+    const filters = {
+        academic_year: document.getElementById('academicYear').value,
+        class_filter: document.getElementById('classFilter').value,
+        metric: document.getElementById('metricFilter').value,
+        date_range: document.getElementById('dateRange').value
+    };
+    
+    console.log('Applying filters:', filters);
+    // AJAX call to apply filters
+    fetch('/analytics/apply-filters/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(filters)
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update dashboard with filtered data
+        console.log('Filtered data:', data);
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Fees{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+        <h2 class="mb-1"><i class="fas fa-wallet me-3 text-primary"></i>My Fees</h2>
+        <p class="text-muted mb-0">Balances, due dates, payment history, and receipts scoped to your account.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'fees:receipt_list' %}" class="btn btn-outline-success">
+            <i class="fas fa-receipt me-2"></i>Receipts
+        </a>
+        <a href="{% url 'students:student_portal' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Student Portal
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body">
+            <div class="text-muted small">Total Fees</div>
+            <div class="h3 mb-0">{{ total_fees|floatformat:0 }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body">
+            <div class="text-muted small">Paid</div>
+            <div class="h3 mb-0 text-success">{{ total_paid|floatformat:0 }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body">
+            <div class="text-muted small">Balance</div>
+            <div class="h3 mb-0 {% if total_balance > 0 %}text-warning{% else %}text-success{% endif %}">{{ total_balance|floatformat:0 }}</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h5 class="mb-0">Fee Items</h5></div>
+            <div class="card-body p-0">
+                {% if student_fees %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Student</th><th>Category</th><th>Due</th><th>Balance</th><th>Status</th></tr></thead>
+                        <tbody>
+                        {% for fee in student_fees %}
+                        <tr>
+                            <td>{{ fee.student.user.get_full_name }}</td>
+                            <td>{{ fee.fee_structure_detail.fee_category.name }}</td>
+                            <td>{{ fee.due_date|date:"M d, Y" }}</td>
+                            <td>{{ fee.balance_amount|floatformat:0 }}</td>
+                            <td><span class="badge bg-light text-dark">{{ fee.get_payment_status_display }}</span></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">No fee records found.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-5">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white"><h5 class="mb-0">Recent Payments</h5></div>
+            <div class="card-body">
+                {% for payment in payments %}
+                <div class="d-flex justify-content-between border-bottom py-2">
+                    <span>{{ payment.student.user.get_full_name }}</span>
+                    <strong>{{ payment.amount|floatformat:0 }}</strong>
+                </div>
+                {% empty %}
+                <div class="text-muted">No payments yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white"><h5 class="mb-0">Receipts</h5></div>
+            <div class="card-body">
+                {% for receipt in receipts %}
+                <a class="d-flex justify-content-between border-bottom py-2 text-decoration-none" href="{% url 'fees:receipt_detail' receipt.pk %}">
+                    <span>{{ receipt.receipt_number }}</span>
+                    <strong>{{ receipt.amount_paid|floatformat:0 }}</strong>
+                </a>
+                {% empty %}
+                <div class="text-muted">No receipts yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

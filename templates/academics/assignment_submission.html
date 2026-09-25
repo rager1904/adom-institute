@@ -1,0 +1,575 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Submit Assignment - {{ assignment.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .assignment-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .submission-form {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .form-control, .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 12px 16px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .file-upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+    }
+    
+    .file-upload-area:hover {
+        border-color: #667eea;
+        background: #f0f2ff;
+    }
+    
+    .file-upload-area.dragover {
+        border-color: #667eea;
+        background: #e8f0ff;
+        transform: scale(1.02);
+    }
+    
+    .file-preview {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .file-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .file-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .file-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .file-icon {
+        width: 40px;
+        height: 40px;
+        background: #667eea;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        margin-right: 1rem;
+    }
+    
+    .btn-submit {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        color: white;
+    }
+    
+    .assignment-info {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .info-value {
+        color: #6c757d;
+    }
+    
+    .progress-bar {
+        height: 8px;
+        border-radius: 4px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Assignment Header -->
+    <div class="assignment-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-5 mb-3">Submit Assignment</h1>
+                <p class="lead mb-0">{{ assignment.title }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="d-flex flex-column align-items-md-end">
+                    <div class="mb-2">
+                        <span class="badge bg-primary fs-6">{{ assignment.subject.name }}</span>
+                        <span class="badge bg-secondary fs-6">{{ assignment.class_obj.name }}</span>
+                    </div>
+                    <div class="text-light">
+                        <small>Due: {{ assignment.due_date|date:"M d, Y H:i" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Assignment Information -->
+            <div class="assignment-info">
+                <h5 class="mb-3">
+                    <i class="fas fa-info-circle me-2"></i>Assignment Details
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <span class="info-label">Subject:</span>
+                            <span class="info-value">{{ assignment.subject.name }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Teacher:</span>
+                            <span class="info-value">{{ assignment.teacher.user.get_full_name }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Max Marks:</span>
+                            <span class="info-value">{{ assignment.max_marks }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <span class="info-label">Created:</span>
+                            <span class="info-value">{{ assignment.created_at|date:"M d, Y" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Due Date:</span>
+                            <span class="info-value {% if assignment.is_overdue %}text-danger{% endif %}">
+                                {{ assignment.due_date|date:"M d, Y H:i" }}
+                                {% if assignment.is_overdue %}
+                                    <span class="badge bg-danger ms-2">Overdue</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Status:</span>
+                            <span class="info-value">
+                                {% if assignment.is_overdue %}
+                                    <span class="badge bg-danger">Overdue</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Active</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if assignment.description %}
+                <div class="mt-3">
+                    <strong>Description:</strong>
+                    <div class="mt-2 p-3 bg-white rounded">
+                        {{ assignment.description|linebreaks }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if assignment.attachment %}
+                <div class="mt-3">
+                    <strong>Assignment File:</strong>
+                    <div class="mt-2">
+                        <a href="{{ assignment.attachment.url }}" class="btn btn-outline-primary" target="_blank">
+                            <i class="fas fa-download me-2"></i>Download Assignment
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Submission Form -->
+            <div class="submission-form">
+                <h4 class="mb-4">
+                    <i class="fas fa-upload me-2"></i>Submit Your Work
+                </h4>
+                
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                            <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% else %}check-circle{% endif %} me-2"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <form method="post" enctype="multipart/form-data" id="submissionForm">
+                    {% csrf_token %}
+                    
+                    <!-- Submission Text -->
+                    <div class="mb-4">
+                        <label for="submission_text" class="form-label">
+                            <i class="fas fa-edit me-2"></i>Submission Text
+                        </label>
+                        <textarea class="form-control" 
+                                  id="submission_text" 
+                                  name="submission_text" 
+                                  rows="6" 
+                                  placeholder="Type your assignment here or provide additional notes..."></textarea>
+                        <div class="form-text">You can type your assignment directly here or upload files below, or both.</div>
+                    </div>
+                    
+                    <!-- File Upload -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="fas fa-paperclip me-2"></i>Attach Files
+                        </label>
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <div class="mb-3">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-muted"></i>
+                            </div>
+                            <h5 class="mb-2">Drag & Drop Files Here</h5>
+                            <p class="text-muted mb-3">or click to browse files</p>
+                            <input type="file" 
+                                   class="form-control" 
+                                   id="submission_file" 
+                                   name="submission_file" 
+                                   multiple 
+                                   accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+                                   style="display: none;">
+                            <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('submission_file').click()">
+                                <i class="fas fa-folder-open me-2"></i>Choose Files
+                            </button>
+                        </div>
+                        
+                        <!-- File Preview -->
+                        <div id="filePreview" class="file-preview" style="display: none;">
+                            <h6 class="mb-3">
+                                <i class="fas fa-files-o me-2"></i>Selected Files
+                            </h6>
+                            <div id="fileList"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Additional Notes -->
+                    <div class="mb-4">
+                        <label for="additional_notes" class="form-label">
+                            <i class="fas fa-sticky-note me-2"></i>Additional Notes (Optional)
+                        </label>
+                        <textarea class="form-control" 
+                                  id="additional_notes" 
+                                  name="additional_notes" 
+                                  rows="3" 
+                                  placeholder="Any additional comments or notes for your teacher..."></textarea>
+                    </div>
+                    
+                    <!-- Submission Button -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-submit" id="submitBtn">
+                            <i class="fas fa-paper-plane me-2"></i>Submit Assignment
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Submission Guidelines -->
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h6 class="mb-2">
+                        <i class="fas fa-info-circle me-2"></i>Submission Guidelines
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li>Accepted file types: PDF, DOC, DOCX, TXT, JPG, JPEG, PNG, GIF</li>
+                        <li>Maximum file size: 10MB per file</li>
+                        <li>You can submit multiple files</li>
+                        <li>Make sure to submit before the due date</li>
+                        <li>You can edit your submission until the due date</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Submission Progress -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Submission Progress
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h4 class="text-primary mb-1" id="progressPercentage">0%</h4>
+                        <small class="text-muted">Form Completion</small>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'academics:assignment_detail' assignment.pk %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-eye me-2"></i>View Assignment
+                        </a>
+                        <a href="{% url 'academics:assignment_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Time Remaining -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>Time Remaining
+                    </h6>
+                </div>
+                <div class="card-body text-center">
+                    {% if assignment.is_overdue %}
+                        <div class="text-danger">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                            <h5 class="text-danger">Assignment Overdue</h5>
+                            <p class="mb-0">Due {{ assignment.due_date|timesince }} ago</p>
+                        </div>
+                    {% else %}
+                        <div class="text-warning">
+                            <i class="fas fa-hourglass-half fa-2x mb-2"></i>
+                            <h5 class="text-warning">Due Soon</h5>
+                            <p class="mb-0">Due in {{ assignment.due_date|timeuntil }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('submissionForm');
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    const fileInput = document.getElementById('submission_file');
+    const filePreview = document.getElementById('filePreview');
+    const fileList = document.getElementById('fileList');
+    const submitBtn = document.getElementById('submitBtn');
+    const progressPercentage = document.getElementById('progressPercentage');
+    const progressFill = document.getElementById('progressFill');
+    
+    let selectedFiles = [];
+    
+    // Drag and drop functionality
+    fileUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('dragover');
+    });
+    
+    fileUploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+    });
+    
+    fileUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        handleFiles(files);
+    });
+    
+    // File input change
+    fileInput.addEventListener('change', function(e) {
+        handleFiles(this.files);
+    });
+    
+    // Handle selected files
+    function handleFiles(files) {
+        selectedFiles = Array.from(files);
+        displayFiles();
+        updateProgress();
+    }
+    
+    // Display selected files
+    function displayFiles() {
+        if (selectedFiles.length === 0) {
+            filePreview.style.display = 'none';
+            return;
+        }
+        
+        filePreview.style.display = 'block';
+        fileList.innerHTML = '';
+        
+        selectedFiles.forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            
+            const fileIcon = getFileIcon(file.type);
+            const fileSize = formatFileSize(file.size);
+            
+            fileItem.innerHTML = `
+                <div class="file-info">
+                    <div class="file-icon">
+                        <i class="${fileIcon}"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold">${file.name}</div>
+                        <small class="text-muted">${fileSize}</small>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            fileList.appendChild(fileItem);
+        });
+    }
+    
+    // Remove file
+    window.removeFile = function(index) {
+        selectedFiles.splice(index, 1);
+        displayFiles();
+        updateProgress();
+    };
+    
+    // Get file icon based on type
+    function getFileIcon(type) {
+        if (type.includes('pdf')) return 'fas fa-file-pdf';
+        if (type.includes('word') || type.includes('document')) return 'fas fa-file-word';
+        if (type.includes('text')) return 'fas fa-file-alt';
+        if (type.includes('image')) return 'fas fa-file-image';
+        return 'fas fa-file';
+    }
+    
+    // Format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Update progress bar
+    function updateProgress() {
+        const textField = document.getElementById('submission_text');
+        const notesField = document.getElementById('additional_notes');
+        
+        let progress = 0;
+        let totalFields = 2; // text and notes
+        
+        if (textField.value.trim()) progress += 50;
+        if (notesField.value.trim()) progress += 25;
+        if (selectedFiles.length > 0) progress += 25;
+        
+        progressPercentage.textContent = progress + '%';
+        progressFill.style.width = progress + '%';
+        
+        // Update submit button state
+        submitBtn.disabled = progress === 0;
+        if (submitBtn.disabled) {
+            submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Complete Form to Submit';
+        } else {
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Assignment';
+        }
+    }
+    
+    // Real-time progress updates
+    document.getElementById('submission_text').addEventListener('input', updateProgress);
+    document.getElementById('additional_notes').addEventListener('input', updateProgress);
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        if (selectedFiles.length === 0 && !document.getElementById('submission_text').value.trim()) {
+            e.preventDefault();
+            alert('Please provide either submission text or upload files.');
+            return;
+        }
+        
+        // Check file sizes
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        for (let file of selectedFiles) {
+            if (file.size > maxSize) {
+                e.preventDefault();
+                alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
+                return;
+            }
+        }
+        
+        // Show loading state
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+        submitBtn.disabled = true;
+    });
+    
+    // Initialize progress
+    updateProgress();
+});
+</script>
+{% endblock %}

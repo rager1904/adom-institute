@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ department.name }} - Department Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-building text-primary"></i> {% if role_ui.can_manage_people %}Department Details{% else %}Department Profile{% endif %}
+                </h1>
+                <div>
+                    {% if role_ui.can_manage_people %}
+                    <a href="{% url 'teachers:department_update' department.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit Department
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'teachers:department_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Department Information -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Department Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-building"></i> Department Name</h6>
+                                    <p class="mb-3">{{ department.name }}</p>
+                                    
+                                    <h6><i class="fas fa-code"></i> Department Code</h6>
+                                    <p class="mb-3"><code>{{ department.code }}</code></p>
+                                    
+                                    <h6><i class="fas fa-toggle-on"></i> Status</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{% if department.is_active %}success{% else %}danger{% endif %}">
+                                            {% if department.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-align-left"></i> Description</h6>
+                                    <p class="mb-3">
+                                        {% if department.description %}
+                                            {{ department.description }}
+                                        {% else %}
+                                            <span class="text-muted">No description available</span>
+                                        {% endif %}
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-users"></i> Assigned Teachers</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-info">{{ department.teacher_departments.count }} teachers</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Head of Department -->
+                    {% if department.head_of_department %}
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-crown"></i> Head of Department
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-user"></i> Name</h6>
+                                        <p class="mb-3">
+                                            <a href="{% url 'teachers:teacher_detail' department.head_of_department.pk %}">
+                                                {{ department.head_of_department.user.get_full_name }}
+                                            </a>
+                                        </p>
+                                        
+                                        <h6><i class="fas fa-id-card"></i> Employee ID</h6>
+                                        <p class="mb-3">{{ department.head_of_department.employee_id }}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-envelope"></i> Email</h6>
+                                        <p class="mb-3">{{ department.head_of_department.user.email }}</p>
+                                        
+                                        <h6><i class="fas fa-phone"></i> Phone</h6>
+                                        <p class="mb-3">{{ department.head_of_department.phone_number }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Assigned Teachers -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chalkboard-teacher"></i> Department Teachers ({{ department.teacher_departments.count }})
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if department.teacher_departments.all %}
+                                <div class="row">
+                                    {% for teacher_dept in department.teacher_departments.all %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card border">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">
+                                                        <a href="{% url 'teachers:teacher_detail' teacher_dept.teacher.pk %}">
+                                                            {{ teacher_dept.teacher.user.get_full_name }}
+                                                        </a>
+                                                    </h6>
+                                                    <p class="text-muted mb-2">{{ teacher_dept.teacher.employee_id }}</p>
+                                                    <p class="text-muted mb-2">{{ teacher_dept.teacher.qualification }}</p>
+                                                    {% if teacher_dept.teacher == department.head_of_department %}
+                                                        <span class="badge bg-warning">Head of Department</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-chalkboard-teacher fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No teachers assigned</h5>
+                                    <p class="text-muted">This department has no teachers assigned yet.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    {% if role_ui.can_manage_people %}
+                    <!-- Quick Actions -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-bolt"></i> Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'teachers:department_update' department.pk %}" class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Edit Department
+                                </a>
+                                <a href="{% url 'teachers:department_delete' department.pk %}" class="btn btn-outline-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Delete Department
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if role_ui.can_manage_people %}
+                    <!-- System Information -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-cog"></i> System Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-calendar-plus"></i> Created</h6>
+                            <p class="mb-3">{{ department.created_at|date:"F j, Y g:i A" }}</p>
+                            
+                            <h6><i class="fas fa-calendar-edit"></i> Last Updated</h6>
+                            <p class="mb-3">{{ department.updated_at|date:"F j, Y g:i A" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+</style>
+{% endblock %}

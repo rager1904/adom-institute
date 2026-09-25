@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+{% if object %}Edit Payment{% else %}Record Payment{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-{% if object %}edit{% else %}credit-card{% endif %} me-3 text-primary"></i>
+            {% if object %}Edit Payment{% else %}Record Payment{% endif %}
+        </h2>
+        <p class="text-muted mb-0">
+            {% if object %}Update payment information{% else %}Record a new payment{% endif %}
+        </p>
+    </div>
+    <div>
+        <a href="{% url 'fees:payment_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>Payment Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Student</label>
+                            {{ form.student }}
+                            {% if form.student.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.student.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Student Fee</label>
+                            {{ form.student_fee }}
+                            {% if form.student_fee.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.student_fee.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Amount</label>
+                            {{ form.amount }}
+                            {% if form.amount.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.amount.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Payment Method</label>
+                            {{ form.payment_method }}
+                            {% if form.payment_method.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.payment_method.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Payment Status</label>
+                            {{ form.payment_status }}
+                            {% if form.payment_status.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.payment_status.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Transaction ID</label>
+                            {{ form.transaction_id }}
+                            {% if form.transaction_id.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.transaction_id.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Reference Number</label>
+                            {{ form.reference_number }}
+                            {% if form.reference_number.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.reference_number.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Remarks</label>
+                            {{ form.remarks }}
+                            {% if form.remarks.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.remarks.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger mt-3">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            {% if object %}Update Payment{% else %}Record Payment{% endif %}
+                        </button>
+                        <a href="{% url 'fees:payment_list' %}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Payment Methods:</h6>
+                    <ul class="list-unstyled small">
+                        <li><span class="badge bg-light text-dark me-2">Cash</span> Physical cash payment</li>
+                        <li><span class="badge bg-light text-dark me-2">Cheque</span> Bank cheque payment</li>
+                        <li><span class="badge bg-light text-dark me-2">Bank Transfer</span> Direct bank transfer</li>
+                        <li><span class="badge bg-light text-dark me-2">Online</span> Online payment gateway</li>
+                        <li><span class="badge bg-light text-dark me-2">Card</span> Credit/Debit card payment</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Payment Status:</h6>
+                    <ul class="list-unstyled small">
+                        <li><span class="badge bg-warning me-2">Pending</span> Payment is being processed</li>
+                        <li><span class="badge bg-success me-2">Completed</span> Payment successful</li>
+                        <li><span class="badge bg-danger me-2">Failed</span> Payment failed</li>
+                        <li><span class="badge bg-secondary me-2">Cancelled</span> Payment cancelled</li>
+                        <li><span class="badge bg-info me-2">Refunded</span> Payment refunded</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Quick Actions:</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'fees:bulk_payment' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-users me-2"></i>Bulk Payment
+                        </a>
+                        <a href="{% url 'fees:student_fee_list' %}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-list me-2"></i>View Fees
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-populate student when student fee is selected
+    const studentFeeField = document.getElementById('id_student_fee');
+    const studentField = document.getElementById('id_student');
+    const amountField = document.getElementById('id_amount');
+    
+    if (studentFeeField && studentField && amountField) {
+        studentFeeField.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption) {
+                // Update student field
+                const studentId = selectedOption.dataset.studentId;
+                if (studentId) {
+                    studentField.value = studentId;
+                }
+                
+                // Update amount field with balance amount
+                const balanceAmount = selectedOption.dataset.balanceAmount;
+                if (balanceAmount) {
+                    amountField.value = balanceAmount;
+                }
+            }
+        });
+    }
+    
+    // Validate amount against balance
+    if (amountField) {
+        amountField.addEventListener('input', function() {
+            const selectedStudentFee = studentFeeField.options[studentFeeField.selectedIndex];
+            if (selectedStudentFee && selectedStudentFee.dataset.balanceAmount) {
+                const balanceAmount = parseFloat(selectedStudentFee.dataset.balanceAmount);
+                const enteredAmount = parseFloat(this.value);
+                
+                if (enteredAmount > balanceAmount) {
+                    this.setCustomValidity(`Amount cannot exceed balance (₹${balanceAmount})`);
+                } else {
+                    this.setCustomValidity('');
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

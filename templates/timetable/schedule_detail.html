@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ schedule.class_obj.name }} - {{ schedule.subject.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-calendar-alt text-primary"></i> {% if role_ui.can_manage_timetable %}Schedule Details{% else %}Class Schedule{% endif %}
+                </h1>
+                <div>
+                    {% if role_ui.can_manage_timetable %}
+                    <a href="{% url 'timetable:schedule_update' schedule.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit Schedule
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'timetable:schedule_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Schedule Information -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Schedule Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-users"></i> Class</h6>
+                                    <p class="mb-3">
+                                        <a href="{% url 'students:class_detail' schedule.class_obj.pk %}">
+                                            {{ schedule.class_obj.name }}
+                                        </a>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-book"></i> Subject</h6>
+                                    <p class="mb-3">
+                                        <a href="{% url 'teachers:subject_detail' schedule.subject.pk %}">
+                                            {{ schedule.subject.name }}
+                                        </a>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-chalkboard-teacher"></i> Teacher</h6>
+                                    <p class="mb-3">
+                                        <a href="{% url 'teachers:teacher_detail' schedule.teacher.pk %}">
+                                            {{ schedule.teacher.user.get_full_name }}
+                                        </a>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-toggle-on"></i> Status</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{% if schedule.is_active %}success{% else %}danger{% endif %}">
+                                            {% if schedule.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-calendar-day"></i> Day & Time</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-info">{{ schedule.time_slot.get_day_display }}</span>
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ schedule.time_slot.start_time|time:"H:i" }} - {{ schedule.time_slot.end_time|time:"H:i" }}
+                                            ({{ schedule.time_slot.duration_minutes }} minutes)
+                                        </small>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-building"></i> Room</h6>
+                                    <p class="mb-3">
+                                        {% if role_ui.can_manage_timetable %}
+                                            <a href="{% url 'timetable:room_detail' schedule.room.pk %}">
+                                                {{ schedule.room.name }}
+                                            </a>
+                                        {% else %}
+                                            {{ schedule.room.name }}
+                                        {% endif %}
+                                        <br>
+                                        <small class="text-muted">
+                                            Capacity: {{ schedule.room.capacity }} students
+                                        </small>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-calendar-plus"></i> Academic Year</h6>
+                                    <p class="mb-3">
+                                        {{ schedule.academic_year.name }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conflict Information -->
+                    {% if schedule.has_conflicts %}
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-exclamation-triangle"></i> Schedule Conflicts
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-warning">
+                                    <h6><i class="fas fa-exclamation-triangle"></i> Warning</h6>
+                                    <p class="mb-0">This schedule has conflicts that need to be resolved.</p>
+                                </div>
+                                
+                                {% if schedule.teacher_conflicts %}
+                                    <h6><i class="fas fa-chalkboard-teacher"></i> Teacher Conflicts</h6>
+                                    <ul class="list-group list-group-flush mb-3">
+                                        {% for conflict in schedule.teacher_conflicts %}
+                                            <li class="list-group-item">
+                                                <i class="fas fa-calendar text-danger"></i>
+                                                {{ conflict.class_obj.name }} - {{ conflict.subject.name }}
+                                                ({{ conflict.time_slot.get_day_display }} {{ conflict.time_slot.start_time|time:"H:i" }})
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                
+                                {% if schedule.room_conflicts %}
+                                    <h6><i class="fas fa-building"></i> Room Conflicts</h6>
+                                    <ul class="list-group list-group-flush mb-3">
+                                        {% for conflict in schedule.room_conflicts %}
+                                            <li class="list-group-item">
+                                                <i class="fas fa-calendar text-danger"></i>
+                                                {{ conflict.class_obj.name }} - {{ conflict.subject.name }}
+                                                ({{ conflict.time_slot.get_day_display }} {{ conflict.time_slot.start_time|time:"H:i" }})
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                
+                                {% if schedule.class_conflicts %}
+                                    <h6><i class="fas fa-users"></i> Class Conflicts</h6>
+                                    <ul class="list-group list-group-flush">
+                                        {% for conflict in schedule.class_conflicts %}
+                                            <li class="list-group-item">
+                                                <i class="fas fa-calendar text-danger"></i>
+                                                {{ conflict.subject.name }} - {{ conflict.teacher.user.get_full_name }}
+                                                ({{ conflict.time_slot.get_day_display }} {{ conflict.time_slot.start_time|time:"H:i" }})
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Schedule Notes -->
+                    {% if schedule.notes %}
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-sticky-note"></i> Notes
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-0">{{ schedule.notes }}</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-lg-4">
+                    {% if role_ui.can_manage_timetable %}
+                    <!-- Quick Actions -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-bolt"></i> Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'timetable:schedule_update' schedule.pk %}" class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Edit Schedule
+                                </a>
+                                <a href="{% url 'timetable:schedule_delete' schedule.pk %}" class="btn btn-outline-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Delete Schedule
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Schedule Statistics -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-bar"></i> Schedule Statistics
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                        Duration
+                                    </div>
+                                    <div class="h6 mb-0 font-weight-bold text-gray-800">
+                                        {{ schedule.time_slot.duration_minutes }} min
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        Room Usage
+                                    </div>
+                                    <div class="h6 mb-0 font-weight-bold text-gray-800">
+                                        {{ schedule.room.schedules.count }} schedules
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Information -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-cog"></i> System Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-calendar-plus"></i> Created</h6>
+                            <p class="mb-3">{{ schedule.created_at|date:"F j, Y g:i A" }}</p>
+                            
+                            <h6><i class="fas fa-calendar-edit"></i> Last Updated</h6>
+                            <p class="mb-3">{{ schedule.updated_at|date:"F j, Y g:i A" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.text-xs {
+    font-size: 0.7rem;
+}
+
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+
+.btn-group .btn {
+    margin-right: 2px;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+
+.list-group-item {
+    border-left: 3px solid #ffc107;
+}
+</style>
+{% endblock %}

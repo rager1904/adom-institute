@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Hub - ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">ADOM Institute AI</div>
+            <h1 class="dashboard-title">Open-Source AI Hub</h1>
+            <p class="dashboard-subtitle">Model runtime, autonomous agents, and institutional RAG architecture for ADOM Institute.</p>
+        </div>
+        <div class="status-strip">
+            <span class="status-pill"><i class="fas fa-robot"></i>{{ runtime.provider }}</span>
+            <span class="status-pill"><i class="fas fa-database"></i>{{ runtime.vector_store }}</span>
+            <span class="status-pill"><i class="fas fa-toggle-on"></i>{{ runtime.enabled|yesno:"Enabled,Planned" }}</span>
+        </div>
+    </div>
+
+    <section class="metric-grid">
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-comments"></i></span>
+            <div class="metric-value">{{ runtime.default_chat_model }}</div>
+            <div class="metric-label">Chat Model</div>
+            <div class="metric-detail">Open-source instruction model</div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-fingerprint"></i></span>
+            <div class="metric-value">{{ runtime.default_embedding_model }}</div>
+            <div class="metric-label">Embedding Model</div>
+            <div class="metric-detail">Knowledge-base retrieval</div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-users-gear"></i></span>
+            <div class="metric-value">{{ agents|length }}</div>
+            <div class="metric-label">Agents</div>
+            <div class="metric-detail">Including ECZ and opportunities agents</div>
+        </article>
+        {% for stat in ai_stats %}
+            <article class="metric-card">
+                <span class="metric-icon"><i class="fas {{ stat.icon }}"></i></span>
+                <div class="metric-value">{{ stat.value }}</div>
+                <div class="metric-label">{{ stat.label }}</div>
+                <div class="metric-detail">{{ stat.detail }}</div>
+            </article>
+        {% endfor %}
+    </section>
+
+    <div class="dashboard-layout">
+        <main>
+            <section class="panel">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Autonomous Agents</h2>
+                </div>
+                <div class="focus-list">
+                    {% for agent in agents %}
+                        <div class="focus-item">
+                            <span class="focus-icon"><i class="fas fa-robot"></i></span>
+                            <div>
+                                <div class="focus-category">{{ agent.key }}</div>
+                                <div class="focus-title">{{ agent.name }}</div>
+                                <div class="metric-detail">{{ agent.purpose }}</div>
+                            </div>
+                            <div class="focus-date">{{ agent.model_profile }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </main>
+
+        <aside>
+            <section class="panel">
+                <div class="panel-heading">
+                    <h2 class="panel-title">RAG Blueprint</h2>
+                </div>
+                <div class="ai-grid">
+                    <div class="ai-row"><span>Vector Store</span><strong>{{ rag.vector_store }}</strong></div>
+                    <div class="ai-row"><span>Embeddings</span><strong>{{ rag.embedding_model }}</strong></div>
+                    <div class="ai-row"><span>Reranker</span><strong>{{ rag.reranker }}</strong></div>
+                    <div class="ai-row"><span>Chunking</span><strong>{{ rag.chunking }}</strong></div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Recent Agent Tasks</h2>
+                </div>
+                <div class="focus-list">
+                    {% for task in recent_agent_tasks %}
+                        <div class="focus-item">
+                            <span class="focus-icon"><i class="fas fa-diagram-project"></i></span>
+                            <div>
+                                <div class="focus-category">{{ task.status }}</div>
+                                <div class="focus-title">{{ task.get_agent_key_display }}</div>
+                                <div class="metric-detail">{{ task.model_profile }}</div>
+                            </div>
+                            <div class="focus-date">{{ task.created_at|date:"M d" }}</div>
+                        </div>
+                    {% empty %}
+                        <div class="empty-state">
+                            <i class="fas fa-diagram-project"></i>
+                            <p>No agent tasks have been created yet.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Model Profiles</h2>
+                </div>
+                <div class="agent-list">
+                    {% for profile in model_profiles %}
+                        <span class="agent-chip">{{ profile.default_model }}</span>
+                    {% endfor %}
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+{% endblock %}

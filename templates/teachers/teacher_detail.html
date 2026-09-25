@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ teacher.user.get_full_name }} - {{ role_ui.teacher_scope_label }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-chalkboard-teacher text-primary"></i>
+                    {% if role_ui.is_teacher %}My Teaching Profile{% elif role_ui.is_student or role_ui.is_parent %}Teacher Profile{% else %}Teacher Details{% endif %}
+                </h1>
+                <div>
+                    {% if role_ui.can_manage_people %}
+                    <a href="{% url 'teachers:teacher_update' teacher.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit Teacher
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'teachers:teacher_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Teacher Information -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Teacher Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-user"></i> Full Name</h6>
+                                    <p class="mb-3">{{ teacher.user.get_full_name }}</p>
+                                    
+                                    <h6><i class="fas fa-envelope"></i> Email</h6>
+                                    <p class="mb-3">{{ teacher.user.email }}</p>
+                                    
+                                    <h6><i class="fas fa-id-card"></i> Employee ID</h6>
+                                    <p class="mb-3">{{ teacher.employee_id }}</p>
+                                    
+                                    <h6><i class="fas fa-phone"></i> Phone Number</h6>
+                                    <p class="mb-3">{{ teacher.phone_number }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-clock"></i> Employment Type</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{% if teacher.employment_type == 'full_time' %}primary{% elif teacher.employment_type == 'part_time' %}warning{% else %}secondary{% endif %}">
+                                            {{ teacher.get_employment_type_display }}
+                                        </span>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-toggle-on"></i> Employment Status</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{% if teacher.employment_status == 'active' %}success{% elif teacher.employment_status == 'inactive' %}danger{% else %}warning{% endif %}">
+                                            {{ teacher.get_employment_status_display }}
+                                        </span>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-graduation-cap"></i> Qualification</h6>
+                                    <p class="mb-3">{{ teacher.qualification }}</p>
+                                    
+                                    <h6><i class="fas fa-briefcase"></i> Experience</h6>
+                                    <p class="mb-3">{{ teacher.experience_years }} years</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Employment Details -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-calendar"></i> Employment Details
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-calendar-plus"></i> Joining Date</h6>
+                                    <p class="mb-3">{{ teacher.joining_date|date:"F j, Y" }}</p>
+                                    
+                                    {% if teacher.contract_end_date %}
+                                        <h6><i class="fas fa-calendar-minus"></i> Contract End Date</h6>
+                                        <p class="mb-3">{{ teacher.contract_end_date|date:"F j, Y" }}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-map-marker-alt"></i> Address</h6>
+                                    <p class="mb-3">{{ teacher.address }}</p>
+                                    
+                                    {% if teacher.emergency_contact %}
+                                        <h6><i class="fas fa-phone-alt"></i> Emergency Contact</h6>
+                                        <p class="mb-3">{{ teacher.emergency_contact }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subjects -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-book"></i> Assigned Subjects ({{ teacher.teacher_subjects.count }})
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if teacher.teacher_subjects.all %}
+                                <div class="row">
+                                    {% for teacher_subject in teacher.teacher_subjects.all %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card border">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">{{ teacher_subject.subject.name }}</h6>
+                                                    <p class="text-muted mb-2">{{ teacher_subject.subject.code }}</p>
+                                                    {% if teacher_subject.is_primary %}
+                                                        <span class="badge bg-primary">Primary Subject</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No subjects assigned</h5>
+                                    <p class="text-muted">This teacher has no subjects assigned yet.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Departments -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-building"></i> Department Assignments ({{ teacher.teacher_departments.count }})
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if teacher.teacher_departments.all %}
+                                <div class="row">
+                                    {% for teacher_dept in teacher.teacher_departments.all %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card border">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">{{ teacher_dept.department.name }}</h6>
+                                                    <p class="text-muted mb-2">{{ teacher_dept.department.code }}</p>
+                                                    {% if teacher_dept.department.head_of_department == teacher %}
+                                                        <span class="badge bg-warning">Head of Department</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No departments assigned</h5>
+                                    <p class="text-muted">This teacher has no department assignments yet.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Teacher Statistics -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-bar"></i> Statistics
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="stat-item">
+                                        <h4 class="text-primary">{{ teacher.teacher_subjects.count }}</h4>
+                                        <small class="text-muted">Subjects</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-item">
+                                        <h4 class="text-info">{{ teacher.teacher_departments.count }}</h4>
+                                        <small class="text-muted">Departments</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if role_ui.can_manage_people %}
+                    <!-- Quick Actions -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-bolt"></i> Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'teachers:teacher_update' teacher.pk %}" class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Edit Teacher
+                                </a>
+                                <a href="{% url 'teachers:teacher_delete' teacher.pk %}" class="btn btn-outline-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Delete Teacher
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- System Information -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-cog"></i> System Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-calendar-plus"></i> Created</h6>
+                            <p class="mb-3">{{ teacher.created_at|date:"F j, Y g:i A" }}</p>
+                            
+                            <h6><i class="fas fa-calendar-edit"></i> Last Updated</h6>
+                            <p class="mb-3">{{ teacher.updated_at|date:"F j, Y g:i A" }}</p>
+                            
+                            <h6><i class="fas fa-id-badge"></i> Database ID</h6>
+                            <p class="mb-3"><code>{{ teacher.id }}</code></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.stat-item h4 {
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.stat-item small {
+    font-size: 0.75rem;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+</style>
+{% endblock %}

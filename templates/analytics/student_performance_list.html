@@ -1,0 +1,416 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Student Performance - Analytics Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.performance-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.performance-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.student-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.performance-score {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.performance-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+}
+
+.performance-change {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.performance-change.positive { color: #10b981; }
+.performance-change.negative { color: #ef4444; }
+.performance-change.neutral { color: #6b7280; }
+
+.progress-ring {
+    width: 80px;
+    height: 80px;
+    position: relative;
+}
+
+.progress-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.progress-ring circle {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+}
+
+.progress-ring .bg {
+    stroke: #e5e7eb;
+}
+
+.progress-ring .progress {
+    stroke: #667eea;
+    stroke-dasharray: 251.2;
+    stroke-dashoffset: calc(251.2 - (251.2 * var(--percentage)) / 100);
+    transition: stroke-dashoffset 0.5s ease;
+}
+
+.filter-panel {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    margin-bottom: 2rem;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-excellent { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.status-good { background: rgba(6, 182, 212, 0.2); color: #06b6d4; }
+.status-average { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.status-poor { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #6b7280;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.page-link {
+    border: none;
+    color: #667eea;
+    padding: 0.5rem 1rem;
+    margin: 0 0.25rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.page-link:hover {
+    background: #667eea;
+    color: white;
+}
+
+.page-item.active .page-link {
+    background: #667eea;
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-user-graduate me-3 text-primary"></i>Student Performance
+        </h2>
+        <p class="text-muted mb-0">Track and analyze student academic performance</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" onclick="exportData()">
+            <i class="fas fa-download me-2"></i>Export
+        </button>
+        <button class="btn btn-primary" onclick="generateReport()">
+            <i class="fas fa-chart-bar me-2"></i>Generate Report
+        </button>
+    </div>
+</div>
+
+<!-- Filter Panel -->
+<div class="filter-panel">
+    <form method="get" class="row align-items-end">
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Class</label>
+            <select name="class" class="form-select">
+                <option value="">All Classes</option>
+                {% for class in classes %}
+                <option value="{{ class.id }}" {% if selected_class == class.id %}selected{% endif %}>
+                    {{ class.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Academic Year</label>
+            <select name="academic_year" class="form-select">
+                <option value="">All Years</option>
+                {% for year in academic_years %}
+                <option value="{{ year.id }}" {% if selected_year == year.id %}selected{% endif %}>
+                    {{ year.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Performance Range</label>
+            <select name="performance_range" class="form-select">
+                <option value="">All Ranges</option>
+                <option value="excellent" {% if selected_range == 'excellent' %}selected{% endif %}>Excellent (90-100%)</option>
+                <option value="good" {% if selected_range == 'good' %}selected{% endif %}>Good (80-89%)</option>
+                <option value="average" {% if selected_range == 'average' %}selected{% endif %}>Average (70-79%)</option>
+                <option value="poor" {% if selected_range == 'poor' %}selected{% endif %}>Poor (Below 70%)</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">Search</label>
+            <input type="text" name="search" class="form-control" placeholder="Search by student name..." value="{{ search_query }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Sort By</label>
+            <select name="sort" class="form-select">
+                <option value="performance" {% if selected_sort == 'performance' %}selected{% endif %}>Performance</option>
+                <option value="name" {% if selected_sort == 'name' %}selected{% endif %}>Name</option>
+                <option value="class" {% if selected_sort == 'class' %}selected{% endif %}>Class</option>
+                <option value="attendance" {% if selected_sort == 'attendance' %}selected{% endif %}>Attendance</option>
+            </select>
+        </div>
+        <div class="col-md-1">
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Performance Summary -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card performance-card">
+            <div class="card-body text-center">
+                <div class="performance-score text-primary">{{ avg_performance|floatformat:1 }}%</div>
+                <div class="performance-label">Average Performance</div>
+                <div class="performance-change {% if performance_growth >= 0 %}positive{% else %}negative{% endif %}">
+                    <i class="fas fa-arrow-{% if performance_growth >= 0 %}up{% else %}down{% endif %} me-1"></i>
+                    {{ performance_growth|floatformat:1 }}% from last month
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card performance-card">
+            <div class="card-body text-center">
+                <div class="performance-score text-success">{{ total_students }}</div>
+                <div class="performance-label">Total Students</div>
+                <div class="performance-change positive">
+                    <i class="fas fa-users me-1"></i>
+                    {{ excellent_count }} excellent performers
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card performance-card">
+            <div class="card-body text-center">
+                <div class="performance-score text-info">{{ attendance_rate|floatformat:1 }}%</div>
+                <div class="performance-label">Average Attendance</div>
+                <div class="performance-change {% if attendance_growth >= 0 %}positive{% else %}negative{% endif %}">
+                    <i class="fas fa-arrow-{% if attendance_growth >= 0 %}up{% else %}down{% endif %} me-1"></i>
+                    {{ attendance_growth|floatformat:1 }}% from last month
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card performance-card">
+            <div class="card-body text-center">
+                <div class="performance-score text-warning">{{ improvement_count }}</div>
+                <div class="performance-label">Students Improved</div>
+                <div class="performance-change positive">
+                    <i class="fas fa-trending-up me-1"></i>
+                    {{ improvement_percentage|floatformat:1 }}% of total
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Student Performance List -->
+{% if students %}
+<div class="row">
+    {% for student in students %}
+    <div class="col-lg-6 col-xl-4 mb-4">
+        <div class="card performance-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <img src="{{ student.profile_picture.url|default:'/static/images/default-avatar.png' }}" 
+                         alt="{{ student.full_name }}" class="student-avatar me-3">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">{{ student.full_name }}</h6>
+                        <small class="text-muted">{{ student.current_class.name }}</small>
+                    </div>
+                    <div class="progress-ring">
+                        <svg>
+                            <circle class="bg" cx="40" cy="40" r="36"></circle>
+                            <circle class="progress" cx="40" cy="40" r="36" 
+                                    style="--percentage: {{ student.performance_score }}"></circle>
+                        </svg>
+                        <div class="position-absolute top-50 start-50 translate-middle text-center">
+                            <small class="fw-bold">{{ student.performance_score|floatformat:0 }}%</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row text-center mb-3">
+                    <div class="col-4">
+                        <div class="performance-score text-primary">{{ student.attendance_rate|floatformat:1 }}%</div>
+                        <div class="performance-label">Attendance</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="performance-score text-success">{{ student.assignments_completed }}</div>
+                        <div class="performance-label">Assignments</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="performance-score text-info">{{ student.exams_taken }}</div>
+                        <div class="performance-label">Exams</div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="status-badge status-{{ student.performance_status }}">
+                        {{ student.get_performance_status_display }}
+                    </span>
+                    <div class="performance-change {% if student.performance_change >= 0 %}positive{% else %}negative{% endif %}">
+                        <i class="fas fa-arrow-{% if student.performance_change >= 0 %}up{% else %}down{% endif %} me-1"></i>
+                        {{ student.performance_change|floatformat:1 }}%
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">Recent Activity</small>
+                        <small class="text-muted">{{ student.last_activity|timesince }} ago</small>
+                    </div>
+                    <div class="progress mt-1" style="height: 4px;">
+                        <div class="progress-bar bg-primary" style="width: {{ student.engagement_score }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<div class="pagination-wrapper">
+    <nav aria-label="Student performance pagination">
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.class %}&class={{ request.GET.class }}{% endif %}{% if request.GET.academic_year %}&academic_year={{ request.GET.academic_year }}{% endif %}{% if request.GET.performance_range %}&performance_range={{ request.GET.performance_range }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.class %}&class={{ request.GET.class }}{% endif %}{% if request.GET.academic_year %}&academic_year={{ request.GET.academic_year }}{% endif %}{% if request.GET.performance_range %}&performance_range={{ request.GET.performance_range }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.class %}&class={{ request.GET.class }}{% endif %}{% if request.GET.academic_year %}&academic_year={{ request.GET.academic_year }}{% endif %}{% if request.GET.performance_range %}&performance_range={{ request.GET.performance_range }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.class %}&class={{ request.GET.class }}{% endif %}{% if request.GET.academic_year %}&academic_year={{ request.GET.academic_year }}{% endif %}{% if request.GET.performance_range %}&performance_range={{ request.GET.performance_range }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.class %}&class={{ request.GET.class }}{% endif %}{% if request.GET.academic_year %}&academic_year={{ request.GET.academic_year }}{% endif %}{% if request.GET.performance_range %}&performance_range={{ request.GET.performance_range }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+{% else %}
+<!-- Empty State -->
+<div class="empty-state">
+    <i class="fas fa-user-graduate"></i>
+    <h4>No Students Found</h4>
+    <p class="mb-4">No students match your current filters. Try adjusting your search criteria.</p>
+    <a href="{% url 'students:student_list' %}" class="btn btn-primary">
+        <i class="fas fa-users me-2"></i>View All Students
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportData() {
+    const filters = new URLSearchParams(window.location.search);
+    window.open(`/analytics/export-student-performance/?${filters.toString()}`, '_blank');
+}
+
+function generateReport() {
+    const filters = new URLSearchParams(window.location.search);
+    window.open(`/analytics/generate-student-report/?${filters.toString()}`, '_blank');
+}
+
+// Initialize progress rings
+document.addEventListener('DOMContentLoaded', function() {
+    const progressRings = document.querySelectorAll('.progress-ring .progress');
+    progressRings.forEach(ring => {
+        const percentage = ring.style.getPropertyValue('--percentage');
+        ring.style.strokeDashoffset = `calc(251.2 - (251.2 * ${percentage}) / 100)`;
+    });
+});
+</script>
+{% endblock %}

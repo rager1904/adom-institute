@@ -1,0 +1,458 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if role_ui.can_manage_library %}Library Management Dashboard{% else %}Library Catalog{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-book-open text-primary"></i> {% if role_ui.can_manage_library %}Library Management Dashboard{% else %}Library Catalog{% endif %}
+                </h1>
+                {% if role_ui.can_manage_library %}
+                <div class="btn-group" role="group">
+                    <a href="{% url 'library:book_create' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Add Book
+                    </a>
+                    <a href="{% url 'library:digital_resource_create' %}" class="btn btn-info">
+                        <i class="fas fa-upload"></i> Upload Resource
+                    </a>
+                    <a href="{% url 'library:barcode_scan' %}" class="btn btn-warning">
+                        <i class="fas fa-barcode"></i> Scan Barcode
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Books
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_books }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-book fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Available Books
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ available_books }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Borrowed Books
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ borrowed_books }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-hand-holding-usd fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Overdue Books
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ overdue_books }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if role_ui.can_manage_library %}
+    <!-- Today's Activity -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Today's Borrowings
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ borrowings_today }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Today's Returns
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ returns_today }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-undo fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Digital Resources
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_digital_resources }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Digital Access Today
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ digital_access_today }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-download fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <div class="row">
+        {% if role_ui.can_manage_library %}
+        <!-- Recent Activity -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-history"></i> Recent Activity
+                    </h6>
+                    <div class="dropdown no-arrow">
+                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="dropdownMenuLink">
+                            <div class="dropdown-header">Activity Options:</div>
+                            <a class="dropdown-item" href="{% url 'library:borrowing_list' %}">View All Borrowings</a>
+                            <a class="dropdown-item" href="{% url 'library:digital_resource_list' %}">View All Resources</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Recent Borrowings -->
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-book"></i> Recent Borrowings
+                            </h6>
+                            {% if recent_borrowings %}
+                                <div class="list-group list-group-flush">
+                                    {% for borrowing in recent_borrowings %}
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 class="mb-1">{{ borrowing.book.title }}</h6>
+                                                <small class="text-muted">
+                                                    Borrowed by {{ borrowing.borrower.get_full_name }}
+                                                </small>
+                                            </div>
+                                            <small class="text-muted">
+                                                {{ borrowing.borrowed_date|date:"M j" }}
+                                            </small>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted">No recent borrowings</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Recent Returns -->
+                        <div class="col-md-6">
+                            <h6 class="text-success mb-3">
+                                <i class="fas fa-undo"></i> Recent Returns
+                            </h6>
+                            {% if recent_returns %}
+                                <div class="list-group list-group-flush">
+                                    {% for return in recent_returns %}
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 class="mb-1">{{ return.book.title }}</h6>
+                                                <small class="text-muted">
+                                                    Returned by {{ return.borrower.get_full_name }}
+                                                </small>
+                                            </div>
+                                            <small class="text-muted">
+                                                {{ return.return_date|date:"M j" }}
+                                            </small>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted">No recent returns</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Quick Actions & Overdue Books -->
+        <div class="{% if role_ui.can_manage_library %}col-lg-4{% else %}col-lg-12{% endif %}">
+            <!-- Quick Actions -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-bolt"></i> Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'library:book_list' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-search"></i> Search Books
+                        </a>
+                        <a href="{% url 'library:digital_resource_list' %}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-file-alt"></i> Digital Resources
+                        </a>
+                        {% if role_ui.can_manage_library %}
+                            <a href="{% url 'library:borrowing_create' %}" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-hand-holding-usd"></i> Borrow Book
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'library:reservation_list' %}" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-bookmark"></i> Reservations
+                        </a>
+                        {% if role_ui.can_manage_library %}
+                            <a href="{% url 'library:reports' %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-chart-bar"></i> Reports
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if role_ui.can_manage_library %}
+            <!-- Overdue Books -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Overdue Books
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if overdue_borrowings %}
+                        <div class="list-group list-group-flush">
+                            {% for borrowing in overdue_borrowings %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ borrowing.book.title }}</h6>
+                                            <small class="text-muted">
+                                                {{ borrowing.borrower.get_full_name }}
+                                            </small>
+                                        </div>
+                                        <span class="badge bg-danger">
+                                            {{ borrowing.days_overdue }} days
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">
+                                        Due: {{ borrowing.due_date|date:"M j, Y" }}
+                                    </small>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-3">
+                            <a href="{% url 'library:borrowing_list' %}" class="btn btn-outline-danger btn-sm">
+                                View All Overdue
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-success mb-0">
+                            <i class="fas fa-check-circle"></i> No overdue books!
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if role_ui.can_manage_library %}
+    <!-- Digital Resources Activity -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-download"></i> Recent Digital Resource Access
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_digital_access %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Resource</th>
+                                        <th>User</th>
+                                        <th>Action</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for access in recent_digital_access %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'library:digital_resource_detail' access.resource.pk %}">
+                                                    {{ access.resource.title }}
+                                                </a>
+                                            </td>
+                                            <td>{{ access.user.get_full_name }}</td>
+                                            <td>
+                                                <span class="badge bg-{% if access.action == 'download' %}success{% elif access.action == 'view' %}info{% else %}warning{% endif %}">
+                                                    {{ access.action|title }}
+                                                </span>
+                                            </td>
+                                            <td>{{ access.access_date|date:"M j, Y H:i" }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No recent digital resource access</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+
+.border-left-danger {
+    border-left: 0.25rem solid #e74a3b !important;
+}
+
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+
+.text-gray-300 {
+    color: #dddfeb !important;
+}
+
+.text-xs {
+    font-size: 0.7rem;
+}
+
+.font-weight-bold {
+    font-weight: 700 !important;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.list-group-item {
+    border: none;
+    padding: 0.75rem 0;
+}
+
+.list-group-item:not(:last-child) {
+    border-bottom: 1px solid #e3e6f0;
+}
+
+.btn-group .btn {
+    margin-right: 0.5rem;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+</style>
+{% endblock %}

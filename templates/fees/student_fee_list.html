@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ role_ui.fees_scope_label }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-list me-3 text-primary"></i>{{ role_ui.fees_scope_label }}
+        </h2>
+        <p class="text-muted mb-0">{% if role_ui.can_manage_finance %}View and manage student fee records{% elif role_ui.is_parent %}View fee balances and payment history for your children{% else %}View your fee balances and payment history{% endif %}</p>
+    </div>
+    {% if role_ui.can_manage_finance %}
+    <div class="d-flex gap-2">
+        <a href="{% url 'fees:student_fee_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add Fee
+        </a>
+        <a href="{% url 'fees:bulk_fee_generation' %}" class="btn btn-outline-primary">
+            <i class="fas fa-users me-2"></i>Bulk Generation
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Search and Filter Form -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">
+            <i class="fas fa-search me-2"></i>Search & Filter
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Student</label>
+                {{ search_form.student }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Fee Category</label>
+                {{ search_form.fee_category }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Status</label>
+                {{ search_form.payment_status }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Due Date From</label>
+                {{ search_form.due_date_from }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Due Date To</label>
+                {{ search_form.due_date_to }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Student Fees Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Student Fee Records</h5>
+            <div class="text-muted">
+                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} records
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if student_fees %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Student</th>
+                        <th>Fee Category</th>
+                        <th>Amount</th>
+                        <th>Paid</th>
+                        <th>Balance</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fee in student_fees %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                    {{ fee.student.user.first_name|first|upper }}
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">{{ fee.student.user.get_full_name }}</h6>
+                                    <small class="text-muted">{{ fee.student.current_class.name }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ fee.fee_structure_detail.fee_category.name }}</span>
+                        </td>
+                        <td>
+                            <span class="fw-semibold">₹{{ fee.amount }}</span>
+                        </td>
+                        <td>
+                            <span class="text-success">₹{{ fee.paid_amount }}</span>
+                        </td>
+                        <td>
+                            {% if fee.balance_amount == 0 %}
+                                <span class="text-success fw-semibold">₹{{ fee.balance_amount }}</span>
+                            {% elif fee.balance_amount < 0 %}
+                                <span class="text-danger fw-semibold">₹{{ fee.balance_amount }}</span>
+                            {% else %}
+                                <span class="text-warning fw-semibold">₹{{ fee.balance_amount }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-semibold">{{ fee.due_date|date:"M d, Y" }}</div>
+                            <small class="text-muted">{{ fee.due_date|date:"l" }}</small>
+                        </td>
+                        <td>
+                            {% if fee.payment_status == 'paid' %}
+                                <span class="badge bg-success">Paid</span>
+                            {% elif fee.payment_status == 'partial' %}
+                                <span class="badge bg-warning">Partial</span>
+                            {% elif fee.payment_status == 'pending' %}
+                                <span class="badge bg-info">Pending</span>
+                            {% elif fee.payment_status == 'overdue' %}
+                                <span class="badge bg-danger">Overdue</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Waived</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'fees:student_fee_detail' fee.pk %}" 
+                                   class="btn btn-sm btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if role_ui.can_manage_finance %}
+                                    <a href="{% url 'fees:student_fee_update' fee.pk %}" 
+                                       class="btn btn-sm btn-outline-warning" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                {% endif %}
+                                {% if fee.balance_amount > 0 %}
+                                    {% if role_ui.can_manage_finance %}
+                                        <a href="{% url 'fees:payment_create' %}?student_fee={{ fee.pk }}" 
+                                           class="btn btn-sm btn-outline-success" title="Record Payment">
+                                            <i class="fas fa-credit-card"></i>
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-file-invoice-dollar fa-3x text-muted mb-3"></i>
+            <h5>No Student Fees Found</h5>
+            <p class="text-muted mb-4">No fee records match your current search criteria.</p>
+            {% if role_ui.can_manage_finance %}
+            <a href="{% url 'fees:student_fee_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add First Fee Record
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Student fees pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{% if request.GET.student %}&student={{ request.GET.student }}{% endif %}{% if request.GET.fee_category %}&fee_category={{ request.GET.fee_category }}{% endif %}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}{% if request.GET.due_date_from %}&due_date_from={{ request.GET.due_date_from }}{% endif %}{% if request.GET.due_date_to %}&due_date_to={{ request.GET.due_date_to }}{% endif %}">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.student %}&student={{ request.GET.student }}{% endif %}{% if request.GET.fee_category %}&fee_category={{ request.GET.fee_category }}{% endif %}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}{% if request.GET.due_date_from %}&due_date_from={{ request.GET.due_date_from }}{% endif %}{% if request.GET.due_date_to %}&due_date_to={{ request.GET.due_date_to }}{% endif %}">
+                <i class="fas fa-angle-left"></i>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if request.GET.student %}&student={{ request.GET.student }}{% endif %}{% if request.GET.fee_category %}&fee_category={{ request.GET.fee_category }}{% endif %}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}{% if request.GET.due_date_from %}&due_date_from={{ request.GET.due_date_from }}{% endif %}{% if request.GET.due_date_to %}&due_date_to={{ request.GET.due_date_to }}{% endif %}">{{ num }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.student %}&student={{ request.GET.student }}{% endif %}{% if request.GET.fee_category %}&fee_category={{ request.GET.fee_category }}{% endif %}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}{% if request.GET.due_date_from %}&due_date_from={{ request.GET.due_date_from }}{% endif %}{% if request.GET.due_date_to %}&due_date_to={{ request.GET.due_date_to }}{% endif %}">
+                <i class="fas fa-angle-right"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.student %}&student={{ request.GET.student }}{% endif %}{% if request.GET.fee_category %}&fee_category={{ request.GET.fee_category }}{% endif %}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}{% if request.GET.due_date_from %}&due_date_from={{ request.GET.due_date_from }}{% endif %}{% if request.GET.due_date_to %}&due_date_to={{ request.GET.due_date_to }}{% endif %}">
+                <i class="fas fa-angle-double-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Receipts - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Fees</div>
+            <h1 class="dashboard-title">Receipts</h1>
+            <p class="dashboard-subtitle">Payment receipts available to your role.</p>
+        </div>
+        <a class="btn btn-outline-primary" href="{% url 'fees:payment_list' %}">Payments</a>
+    </div>
+    <section class="panel"><div class="focus-list">
+        {% for receipt in receipts %}
+            <div class="focus-item">
+                <span class="focus-icon"><i class="fas fa-receipt"></i></span>
+                <div>
+                    <div class="focus-category">{{ receipt.receipt_number }}</div>
+                    <div class="focus-title"><a href="{% url 'fees:receipt_detail' receipt.pk %}">{{ receipt.student_name }}</a></div>
+                    <div class="metric-detail">{{ receipt.fee_category }} - K {{ receipt.amount_paid }}</div>
+                </div>
+                <div class="focus-date">{{ receipt.receipt_date|date:"M d" }}</div>
+            </div>
+        {% empty %}
+            <div class="empty-state"><p>No receipts available.</p></div>
+        {% endfor %}
+    </div></section>
+</div>
+{% endblock %}

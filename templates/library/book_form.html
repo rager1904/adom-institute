@@ -1,0 +1,587 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit {{ form.instance.title }}{% else %}Add New Book{% endif %} - Library{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .form-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        padding: 40px;
+        margin-bottom: 30px;
+    }
+    .form-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-left: 4px solid #007bff;
+    }
+    .form-section h5 {
+        color: #495057;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 12px 15px;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    }
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+    .btn-primary {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        border: none;
+    }
+    .btn-secondary {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+    }
+    .image-upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 15px;
+        padding: 40px;
+        text-align: center;
+        background: #fafafa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .image-upload-area:hover {
+        border-color: #007bff;
+        background: #f0f8ff;
+    }
+    .image-upload-area.dragover {
+        border-color: #007bff;
+        background: #e7f3ff;
+    }
+    .image-preview {
+        max-width: 200px;
+        max-height: 300px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        margin-top: 15px;
+    }
+    .isbn-validator {
+        position: relative;
+    }
+    .isbn-status {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.2rem;
+    }
+    .isbn-status.valid {
+        color: #28a745;
+    }
+    .isbn-status.invalid {
+        color: #dc3545;
+    }
+    .isbn-status.checking {
+        color: #007bff;
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    .field-help {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    .required-asterisk {
+        color: #dc3545;
+    }
+    .category-color-preview {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-left: 10px;
+        border: 2px solid #dee2e6;
+    }
+    .barcode-section {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .barcode-display {
+        background: white;
+        color: black;
+        padding: 15px;
+        border-radius: 10px;
+        font-family: 'Courier New', monospace;
+        font-size: 1.2rem;
+        font-weight: bold;
+        letter-spacing: 2px;
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'library:dashboard' %}">Library</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'library:book_list' %}">Books</a></li>
+            <li class="breadcrumb-item active">{% if form.instance.pk %}Edit Book{% else %}Add Book{% endif %}</li>
+        </ol>
+    </nav>
+
+    <div class="form-container">
+        <!-- Form Header -->
+        <div class="form-header">
+            <h1 class="mb-3">
+                <i class="fas fa-book me-3"></i>
+                {% if form.instance.pk %}
+                    Edit Book: {{ form.instance.title }}
+                {% else %}
+                    Add New Book
+                {% endif %}
+            </h1>
+            <p class="mb-0">
+                {% if form.instance.pk %}
+                    Update the book information below. All fields marked with <span class="required-asterisk">*</span> are required.
+                {% else %}
+                    Fill in the details below to add a new book to your library. All fields marked with <span class="required-asterisk">*</span> are required.
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Form -->
+        <form method="post" enctype="multipart/form-data" id="bookForm">
+            {% csrf_token %}
+            
+            <!-- Basic Information Section -->
+            <div class="form-section">
+                <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+                
+                <div class="form-grid">
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">
+                            Title <span class="required-asterisk">*</span>
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger mt-1">{{ form.title.errors }}</div>
+                        {% endif %}
+                        <div class="field-help">The full title of the book</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.author.id_for_label }}" class="form-label">
+                            Author <span class="required-asterisk">*</span>
+                        </label>
+                        {{ form.author }}
+                        {% if form.author.errors %}
+                            <div class="text-danger mt-1">{{ form.author.errors }}</div>
+                        {% endif %}
+                        <div class="field-help">Primary author or authors</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.category.id_for_label }}" class="form-label">
+                            Category <span class="required-asterisk">*</span>
+                        </label>
+                        <div class="d-flex align-items-center">
+                            {{ form.category }}
+                            <div class="category-color-preview" id="categoryColorPreview"></div>
+                        </div>
+                        {% if form.category.errors %}
+                            <div class="text-danger mt-1">{{ form.category.errors }}</div>
+                        {% endif %}
+                        <div class="field-help">Book category for organization</div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <div class="text-danger mt-1">{{ form.description.errors }}</div>
+                    {% endif %}
+                    <div class="field-help">Brief description or summary of the book</div>
+                </div>
+            </div>
+
+            <!-- Publication Information Section -->
+            <div class="form-section">
+                <h5><i class="fas fa-building me-2"></i>Publication Information</h5>
+                
+                <div class="form-grid">
+                    <div class="mb-3">
+                        <label for="{{ form.isbn.id_for_label }}" class="form-label">ISBN</label>
+                        <div class="isbn-validator position-relative">
+                            {{ form.isbn }}
+                            <span class="isbn-status" id="isbnStatus"></span>
+                        </div>
+                        {% if form.isbn.errors %}
+                            <div class="text-danger mt-1">{{ form.isbn.errors }}</div>
+                        {% endif %}
+                        <div class="field-help">10 or 13 digit ISBN number</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.publisher.id_for_label }}" class="form-label">Publisher</label>
+                        {{ form.publisher }}
+                        {% if form.publisher.errors %}
+                            <div class="text-danger mt-1">{{ form.publisher.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.publication_year.id_for_label }}" class="form-label">Publication Year</label>
+                        {{ form.publication_year }}
+                        {% if form.publication_year.errors %}
+                            <div class="text-danger mt-1">{{ form.publication_year.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.edition.id_for_label }}" class="form-label">Edition</label>
+                        {{ form.edition }}
+                        {% if form.edition.errors %}
+                            <div class="text-danger mt-1">{{ form.edition.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.language.id_for_label }}" class="form-label">Language</label>
+                        {{ form.language }}
+                        {% if form.language.errors %}
+                            <div class="text-danger mt-1">{{ form.language.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.pages.id_for_label }}" class="form-label">Pages</label>
+                        {{ form.pages }}
+                        {% if form.pages.errors %}
+                            <div class="text-danger mt-1">{{ form.pages.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Library Management Section -->
+            <div class="form-section">
+                <h5><i class="fas fa-cogs me-2"></i>Library Management</h5>
+                
+                <div class="form-grid">
+                    <div class="mb-3">
+                        <label for="{{ form.total_copies.id_for_label }}" class="form-label">
+                            Total Copies <span class="required-asterisk">*</span>
+                        </label>
+                        {{ form.total_copies }}
+                        {% if form.total_copies.errors %}
+                            <div class="text-danger mt-1">{{ form.total_copies.errors }}</div>
+                        {% endif %}
+                        <div class="field-help">Number of copies in the library</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.location.id_for_label }}" class="form-label">Shelf Location</label>
+                        {{ form.location }}
+                        {% if form.location.errors %}
+                            <div class="text-danger mt-1">{{ form.location.errors }}</div>
+                        {% endif %}
+                        <div class="field-help">Physical location in the library</div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.tags.id_for_label }}" class="form-label">Tags</label>
+                    {{ form.tags }}
+                    {% if form.tags.errors %}
+                        <div class="text-danger mt-1">{{ form.tags.errors }}</div>
+                    {% endif %}
+                    <div class="field-help">Comma-separated tags for better searchability</div>
+                </div>
+            </div>
+
+            <!-- Cover Image Section -->
+            <div class="form-section">
+                <h5><i class="fas fa-image me-2"></i>Book Cover</h5>
+                
+                <div class="row">
+                    <div class="col-md-8">
+                        <label for="{{ form.cover_image.id_for_label }}" class="form-label">Cover Image</label>
+                        <div class="image-upload-area" id="imageUploadArea">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Drop image here or click to browse</h5>
+                            <p class="text-muted mb-0">Supports JPG, PNG, GIF up to 5MB</p>
+                            {{ form.cover_image }}
+                        </div>
+                        {% if form.cover_image.errors %}
+                            <div class="text-danger mt-1">{{ form.cover_image.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        {% if form.instance.cover_image %}
+                            <label class="form-label">Current Cover</label>
+                            <div class="text-center">
+                                <img src="{{ form.instance.cover_image.url }}" alt="Current cover" class="image-preview">
+                            </div>
+                        {% endif %}
+                        <div id="imagePreviewContainer" class="text-center" style="display: none;">
+                            <label class="form-label">Preview</label>
+                            <div>
+                                <img id="imagePreview" class="image-preview" alt="Preview">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barcode Generation Section -->
+            {% if not form.instance.pk %}
+            <div class="form-section">
+                <h5><i class="fas fa-barcode me-2"></i>Barcode Information</h5>
+                <p class="text-muted mb-3">A unique barcode will be automatically generated for this book upon creation.</p>
+                
+                <div class="barcode-section">
+                    <i class="fas fa-barcode fa-2x mb-2"></i>
+                    <h6>Barcode Preview</h6>
+                    <div class="barcode-display" id="barcodePreview">
+                        Will be generated automatically
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="form-section">
+                <h5><i class="fas fa-barcode me-2"></i>Barcode Information</h5>
+                
+                <div class="barcode-section">
+                    <i class="fas fa-barcode fa-2x mb-2"></i>
+                    <h6>Book Barcode</h6>
+                    <div class="barcode-display">
+                        {{ form.instance.barcode|default:"Not assigned" }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="text-center mt-4">
+                <a href="{% url 'library:book_list' %}" class="btn btn-secondary me-3">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>
+                    {% if form.instance.pk %}Update Book{% else %}Add Book{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Image upload handling
+    const imageUploadArea = document.getElementById('imageUploadArea');
+    const imageInput = document.querySelector('#{{ form.cover_image.id_for_label }}');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    
+    // Style the file input
+    imageInput.style.display = 'none';
+    
+    // Click to browse
+    imageUploadArea.addEventListener('click', function() {
+        imageInput.click();
+    });
+    
+    // Drag and drop functionality
+    imageUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        imageUploadArea.classList.add('dragover');
+    });
+    
+    imageUploadArea.addEventListener('dragleave', function() {
+        imageUploadArea.classList.remove('dragover');
+    });
+    
+    imageUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        imageUploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            imageInput.files = files;
+            handleImagePreview(files[0]);
+        }
+    });
+    
+    // File input change
+    imageInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            handleImagePreview(this.files[0]);
+        }
+    });
+    
+    function handleImagePreview(file) {
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreviewContainer.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    // Category color preview
+    const categorySelect = document.getElementById('{{ form.category.id_for_label }}');
+    const categoryColorPreview = document.getElementById('categoryColorPreview');
+    
+    function updateCategoryColor() {
+        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        if (selectedOption && selectedOption.dataset.color) {
+            categoryColorPreview.style.backgroundColor = selectedOption.dataset.color;
+            categoryColorPreview.style.display = 'inline-block';
+        } else {
+            categoryColorPreview.style.display = 'none';
+        }
+    }
+    
+    // Add data attributes to category options
+    {% for category in form.category.field.queryset %}
+    const option{{ category.id }} = categorySelect.querySelector('option[value="{{ category.id }}"]');
+    if (option{{ category.id }}) {
+        option{{ category.id }}.dataset.color = '{{ category.color }}';
+    }
+    {% endfor %}
+    
+    categorySelect.addEventListener('change', updateCategoryColor);
+    updateCategoryColor(); // Initial call
+    
+    // ISBN validation
+    const isbnInput = document.getElementById('{{ form.isbn.id_for_label }}');
+    const isbnStatus = document.getElementById('isbnStatus');
+    
+    function validateISBN(isbn) {
+        // Remove hyphens and spaces
+        isbn = isbn.replace(/[-\s]/g, '');
+        
+        // Check if it's 10 or 13 digits
+        if (isbn.length === 10) {
+            return validateISBN10(isbn);
+        } else if (isbn.length === 13) {
+            return validateISBN13(isbn);
+        }
+        return false;
+    }
+    
+    function validateISBN10(isbn) {
+        let sum = 0;
+        for (let i = 0; i < 9; i++) {
+            if (!/\d/.test(isbn[i])) return false;
+            sum += parseInt(isbn[i]) * (10 - i);
+        }
+        
+        const checksum = isbn[9].toUpperCase() === 'X' ? 10 : parseInt(isbn[9]);
+        return (sum + checksum) % 11 === 0;
+    }
+    
+    function validateISBN13(isbn) {
+        if (!/^\d{13}$/.test(isbn)) return false;
+        
+        let sum = 0;
+        for (let i = 0; i < 12; i++) {
+            sum += parseInt(isbn[i]) * (i % 2 === 0 ? 1 : 3);
+        }
+        
+        const checksum = (10 - (sum % 10)) % 10;
+        return checksum === parseInt(isbn[12]);
+    }
+    
+    isbnInput.addEventListener('input', function() {
+        const isbn = this.value.trim();
+        
+        if (!isbn) {
+            isbnStatus.innerHTML = '';
+            return;
+        }
+        
+        isbnStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        isbnStatus.className = 'isbn-status checking';
+        
+        setTimeout(() => {
+            if (validateISBN(isbn)) {
+                isbnStatus.innerHTML = '<i class="fas fa-check"></i>';
+                isbnStatus.className = 'isbn-status valid';
+            } else {
+                isbnStatus.innerHTML = '<i class="fas fa-times"></i>';
+                isbnStatus.className = 'isbn-status invalid';
+            }
+        }, 500);
+    });
+    
+    // Form validation
+    const form = document.getElementById('bookForm');
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fill in all required fields.');
+        }
+    });
+    
+    // Auto-generate barcode preview for new books
+    {% if not form.instance.pk %}
+    function generateBarcodePreview() {
+        const timestamp = Date.now();
+        const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        const barcode = `LIB${timestamp}${randomNum}`;
+        document.getElementById('barcodePreview').textContent = barcode;
+    }
+    
+    // Generate preview when title changes
+    const titleInput = document.getElementById('{{ form.title.id_for_label }}');
+    titleInput.addEventListener('input', generateBarcodePreview);
+    {% endif %}
+});
+</script>
+{% endblock %}

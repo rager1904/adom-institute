@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+{% if object %}Edit Student Fee{% else %}Add Student Fee{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-{% if object %}edit{% else %}plus{% endif %} me-3 text-primary"></i>
+            {% if object %}Edit Student Fee{% else %}Add Student Fee{% endif %}
+        </h2>
+        <p class="text-muted mb-0">
+            {% if object %}Update student fee information{% else %}Create a new student fee record{% endif %}
+        </p>
+    </div>
+    <div>
+        <a href="{% url 'fees:student_fee_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-invoice-dollar me-2"></i>Fee Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Student</label>
+                            {{ form.student }}
+                            {% if form.student.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.student.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Fee Structure Detail</label>
+                            {{ form.fee_structure_detail }}
+                            {% if form.fee_structure_detail.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.fee_structure_detail.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Amount</label>
+                            {{ form.amount }}
+                            {% if form.amount.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.amount.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Due Date</label>
+                            {{ form.due_date }}
+                            {% if form.due_date.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.due_date.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Payment Status</label>
+                            {{ form.payment_status }}
+                            {% if form.payment_status.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.payment_status.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger mt-3">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            {% if object %}Update Fee{% else %}Create Fee{% endif %}
+                        </button>
+                        <a href="{% url 'fees:student_fee_list' %}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Payment Status Options:</h6>
+                    <ul class="list-unstyled small">
+                        <li><span class="badge bg-info me-2">Pending</span> Fee is due but not paid</li>
+                        <li><span class="badge bg-warning me-2">Partial</span> Partial payment received</li>
+                        <li><span class="badge bg-success me-2">Paid</span> Full payment received</li>
+                        <li><span class="badge bg-danger me-2">Overdue</span> Payment is past due date</li>
+                        <li><span class="badge bg-secondary me-2">Waived</span> Fee has been waived</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Quick Actions:</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'fees:bulk_fee_generation' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-users me-2"></i>Bulk Fee Generation
+                        </a>
+                        <a href="{% url 'fees:payment_create' %}" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-credit-card me-2"></i>Record Payment
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set minimum date for due date field
+    const dueDateField = document.getElementById('id_due_date');
+    if (dueDateField) {
+        const today = new Date().toISOString().split('T')[0];
+        dueDateField.setAttribute('min', today);
+    }
+    
+    // Auto-populate amount when fee structure detail is selected
+    const feeStructureDetailField = document.getElementById('id_fee_structure_detail');
+    const amountField = document.getElementById('id_amount');
+    
+    if (feeStructureDetailField && amountField) {
+        feeStructureDetailField.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption && selectedOption.dataset.amount) {
+                amountField.value = selectedOption.dataset.amount;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

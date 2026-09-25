@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}Exams - ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-file-alt me-2"></i>{% if role_ui.can_manage_academics %}Exams{% elif role_ui.is_parent %}Children Exams{% else %}My Exams{% endif %}</h2>
+    {% if role_ui.can_manage_academics %}
+    <a href="{% url 'academics:exam_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Add New Exam
+    </a>
+    {% endif %}
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="q" class="form-label">Search</label>
+                <input type="text" class="form-control" id="q" name="q" value="{{ request.GET.q }}" placeholder="Search exams...">
+            </div>
+            <div class="col-md-3">
+                <label for="exam_type" class="form-label">Exam Type</label>
+                <select class="form-select" id="exam_type" name="exam_type">
+                    <option value="">All Exam Types</option>
+                    {% for exam_type in exam_types %}
+                        <option value="{{ exam_type.id }}" {% if request.GET.exam_type == exam_type.id|stringformat:"s" %}selected{% endif %}>
+                            {{ exam_type.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="academic_year" class="form-label">Academic Year</label>
+                <select class="form-select" id="academic_year" name="academic_year">
+                    <option value="">All Academic Years</option>
+                    {% for year in academic_years %}
+                        <option value="{{ year }}" {% if request.GET.academic_year == year %}selected{% endif %}>
+                            {{ year }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div>
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i>Search
+                    </button>
+                    <a href="{% url 'academics:exam_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Exams List -->
+<div class="row">
+    {% for exam in exams %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">{{ exam.name }}</h6>
+                <span class="badge {% if exam.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                    {% if exam.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <small class="text-muted">Type:</small>
+                    <span class="fw-bold">{{ exam.exam_type.name }}</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Class:</small>
+                    <span class="fw-bold">{{ exam.class_obj.name }}</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Academic Year:</small>
+                    <span class="fw-bold">{{ exam.academic_year }}</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Period:</small>
+                    <span class="fw-bold">{{ exam.start_date|date:"M d" }} - {{ exam.end_date|date:"M d, Y" }}</span>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">Marks:</small>
+                    <span class="fw-bold">{{ exam.total_marks }} (Pass: {{ exam.passing_marks }})</span>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'academics:exam_detail' exam.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye me-1"></i>View
+                    </a>
+                    {% if role_ui.can_manage_academics %}
+                        <div class="btn-group">
+                            <a href="{% url 'academics:exam_update' exam.pk %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-edit me-1"></i>Edit
+                            </a>
+                            <a href="{% url 'academics:exam_delete' exam.pk %}" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No exams found</h4>
+            <p class="text-muted">{% if role_ui.can_manage_academics %}Create your first exam to get started.{% else %}No exams are currently available for your class.{% endif %}</p>
+            {% if role_ui.can_manage_academics %}
+            <a href="{% url 'academics:exam_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Exam
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Exam pagination">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.exam_type %}&exam_type={{ request.GET.exam_type }}{% endif %}{% if request.GET.academic_year %}&academic_year={{ request.GET.academic_year }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.exam_type %}&exam_type={{ request.GET.exam_type }}{% endif %}{% if request.GET.academic_year %}&academic_year={{ request.GET.academic_year }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.exam_type %}&exam_type={{ request.GET.exam_type }}{% endif %}{% if request.GET.academic_year %}&academic_year={{ request.GET.academic_year }}{% endif %}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.exam_type %}&exam_type={{ request.GET.exam_type }}{% endif %}{% if request.GET.academic_year %}&academic_year={{ request.GET.academic_year }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.exam_type %}&exam_type={{ request.GET.exam_type }}{% endif %}{% if request.GET.academic_year %}&academic_year={{ request.GET.academic_year }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

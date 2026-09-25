@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}AI Usage - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div><div class="dashboard-kicker">ADOM Institute</div><h1 class="dashboard-title">Usage Ledger</h1></div>
+    </div>
+    <section class="panel"><div class="focus-list">
+        {% for usage in usage_entries %}
+            <div class="focus-item">
+                <span class="focus-icon"><i class="fas fa-gauge-high"></i></span>
+                <div>
+                    <div class="focus-category">{{ usage.provider }}</div>
+                    <div class="focus-title">{{ usage.model_name }}</div>
+                    <div class="metric-detail">{{ usage.total_tokens }} tokens - {{ usage.latency_ms }}ms</div>
+                </div>
+                <div class="focus-date">{{ usage.created_at|date:"M d" }}</div>
+            </div>
+        {% empty %}
+            <div class="empty-state"><p>No AI usage entries yet.</p></div>
+        {% endfor %}
+    </div></section>
+</div>
+{% endblock %}

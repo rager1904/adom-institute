@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if form.instance.pk %}Edit Assignment{% else %}Create New Assignment{% endif %} - ADOM Institute
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'academics:assignment_list' %}">Assignments</a></li>
+                <li class="breadcrumb-item active">
+                    {% if form.instance.pk %}Edit{% else %}Create{% endif %}
+                </li>
+            </ol>
+        </nav>
+        <h2>
+            <i class="fas fa-{% if form.instance.pk %}edit{% else %}plus{% endif %} me-2"></i>
+            {% if form.instance.pk %}Edit Assignment{% else %}Create New Assignment{% endif %}
+        </h2>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Assignment Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p class="mb-0">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <!-- Title -->
+                        <div class="col-12 mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">
+                                {{ form.title.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.title.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Subject -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.subject.id_for_label }}" class="form-label">
+                                {{ form.subject.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.subject }}
+                            {% if form.subject.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.subject.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Class -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.class_obj.id_for_label }}" class="form-label">
+                                {{ form.class_obj.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.class_obj }}
+                            {% if form.class_obj.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.class_obj.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Due Date -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.due_date.id_for_label }}" class="form-label">
+                                {{ form.due_date.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.due_date }}
+                            {% if form.due_date.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.due_date.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Max Marks -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.max_marks.id_for_label }}" class="form-label">
+                                {{ form.max_marks.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.max_marks }}
+                            {% if form.max_marks.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.max_marks.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Description -->
+                        <div class="col-12 mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                {{ form.description.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.description.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Attachment -->
+                        <div class="col-12 mb-3">
+                            <label for="{{ form.attachment.id_for_label }}" class="form-label">
+                                {{ form.attachment.label }}
+                            </label>
+                            {% if form.instance.attachment %}
+                                <div class="mb-2">
+                                    <small class="text-muted">Current file:</small>
+                                    <a href="{{ form.instance.attachment.url }}" target="_blank" class="ms-2">
+                                        <i class="fas fa-file me-1"></i>{{ form.instance.attachment.name|split:'/'|last }}
+                                    </a>
+                                </div>
+                            {% endif %}
+                            {{ form.attachment }}
+                            {% if form.attachment.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.attachment.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            {% if form.attachment.help_text %}
+                                <div class="form-text">{{ form.attachment.help_text }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Is Active -->
+                        <div class="col-12 mb-3">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    {{ form.is_active.label }}
+                                </label>
+                                {% if form.is_active.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.is_active.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'academics:assignment_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            {% if form.instance.pk %}Update Assignment{% else %}Create Assignment{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Custom styling for form fields */
+.form-control, .form-select {
+    border-radius: 0.375rem;
+    border: 1px solid #ced4da;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.form-check-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.invalid-feedback {
+    font-size: 0.75rem;
+    color: #dc3545;
+}
+
+.form-text {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+/* File input styling */
+input[type="file"] {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    background-color: #fff;
+}
+
+input[type="file"]:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+</style>
+{% endblock %}

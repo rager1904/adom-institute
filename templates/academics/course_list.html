@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Courses - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div><div class="dashboard-kicker">Learning</div><h1 class="dashboard-title">Courses</h1></div>
+    </div>
+    <section class="panel"><div class="focus-list">
+        {% for course in courses %}
+            <div class="focus-item">
+                <span class="focus-icon"><i class="fas fa-layer-group"></i></span>
+                <div>
+                    <div class="focus-category">{{ course.academic_year.name }}</div>
+                    <div class="focus-title"><a href="{% url 'academics:course_detail' course.pk %}">{{ course.display_name }}</a></div>
+                    <div class="metric-detail">{{ course.students.count }} learners</div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state"><p>No courses available.</p></div>
+        {% endfor %}
+    </div></section>
+</div>
+{% endblock %}

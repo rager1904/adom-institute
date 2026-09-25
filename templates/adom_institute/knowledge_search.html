@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Knowledge Search - ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">RAG search</div>
+            <h1 class="dashboard-title">Knowledge Search</h1>
+            <p class="dashboard-subtitle">Search indexed chunks with institution and role scoping.</p>
+        </div>
+    </div>
+    <section class="panel mb-3">
+        <form method="get" class="row g-2">
+            <div class="col-md-10">
+                <input class="form-control" type="search" name="q" value="{{ query }}" placeholder="Search curriculum, policies, notes, or past papers">
+            </div>
+            <div class="col-md-2 d-grid">
+                <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> Search</button>
+            </div>
+        </form>
+    </section>
+    <section class="panel">
+        <div class="focus-list">
+            {% if error %}<div class="alert alert-warning">{{ error }}</div>{% endif %}
+            {% for result in results %}
+                <div class="focus-item">
+                    <span class="focus-icon"><i class="fas fa-quote-left"></i></span>
+                    <div>
+                        <div class="focus-category">{{ result.source_type }} - chunk {{ result.chunk_index }}</div>
+                        <div class="focus-title">{{ result.document_title }}</div>
+                        <div class="metric-detail">{{ result.content|truncatechars:260 }}</div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state"><p>{% if query %}No matching knowledge chunks found.{% else %}Enter a search term to begin.{% endif %}</p></div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

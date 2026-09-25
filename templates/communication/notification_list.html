@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-bell me-3 text-primary"></i>Notifications
+        </h2>
+        <p class="text-muted mb-0">View your notifications</p>
+    </div>
+</div>
+
+<!-- Notifications List -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Notification Records</h5>
+            <div class="text-muted">
+                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} records
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if notifications %}
+        <div class="list-group list-group-flush">
+            {% for notification in notifications %}
+            <div class="list-group-item border-0 {% if notification.status != 'read' %}bg-light{% endif %}">
+                <div class="d-flex align-items-start">
+                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3 mt-1">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ notification.title }}</h6>
+                                <p class="mb-2 text-muted">{{ notification.message }}</p>
+                                <div class="d-flex align-items-center gap-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>{{ notification.created_at|timesince }} ago
+                                    </small>
+                                    <span class="badge bg-light text-dark">{{ notification.get_notification_type_display }}</span>
+                                    {% if notification.is_urgent %}
+                                        <span class="badge bg-danger">Urgent</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                {% if notification.status != 'read' %}
+                                <button class="btn btn-sm btn-outline-primary mark-read-btn" 
+                                        data-notification-id="{{ notification.id }}"
+                                        title="Mark as Read">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                {% else %}
+                                <span class="badge bg-success">Read</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-bell fa-3x text-muted mb-3"></i>
+            <h5>No Notifications</h5>
+            <p class="text-muted mb-0">You have no notifications at the moment.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Notifications pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                <i class="fas fa-angle-left"></i>
+            </a>
+        </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                <i class="fas fa-angle-right"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
+                <i class="fas fa-angle-double-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mark notification as read
+    document.querySelectorAll('.mark-read-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const notificationId = this.dataset.notificationId;
+            const button = this;
+            
+            fetch(`/communication/ajax/notifications/${notificationId}/mark-read/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update UI
+                    button.innerHTML = '<span class="badge bg-success">Read</span>';
+                    button.classList.remove('btn-outline-primary', 'mark-read-btn');
+                    button.classList.add('btn-success');
+                    button.disabled = true;
+                    
+                    // Update notification count
+                    updateNotificationCount();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    });
+    
+    function updateNotificationCount() {
+        fetch('/communication/ajax/notifications/count/')
+            .then(response => response.json())
+            .then(data => {
+                // Update notification count in navbar if it exists
+                const countElement = document.querySelector('.notification-count');
+                if (countElement) {
+                    countElement.textContent = data.count;
+                    if (data.count === 0) {
+                        countElement.style.display = 'none';
+                    }
+                }
+            });
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulk Attendance Marking{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-users me-3 text-primary"></i>Bulk Attendance Marking
+        </h2>
+        <p class="text-muted mb-0">Mark attendance for an entire class at once</p>
+    </div>
+    <div>
+        <a href="{% url 'attendance:attendance_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-check me-2"></i>Mark Class Attendance
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="bulkAttendanceForm">
+                    {% csrf_token %}
+                    
+                    <!-- Class and Date Selection -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Class</label>
+                            {{ form.class_obj }}
+                            {% if form.class_obj.errors %}
+                                <div class="text-danger small">{{ form.class_obj.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Date</label>
+                            {{ form.date }}
+                            {% if form.date.errors %}
+                                <div class="text-danger small">{{ form.date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Students List -->
+                    <div id="studentsList" class="d-none">
+                        <h6 class="mb-3">
+                            <i class="fas fa-user-graduate me-2"></i>Student Attendance
+                        </h6>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Student ID</th>
+                                        <th>Status</th>
+                                        <th>Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="studentsTableBody">
+                                    <!-- Students will be loaded here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-success" onclick="markAllPresent()">
+                                        <i class="fas fa-check me-2"></i>Mark All Present
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" onclick="markAllAbsent()">
+                                        <i class="fas fa-times me-2"></i>Mark All Absent
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning" onclick="markAllLate()">
+                                        <i class="fas fa-clock me-2"></i>Mark All Late
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-save me-2"></i>Save Attendance
+                                </button>
+                                <a href="{% url 'attendance:attendance_list' %}" class="btn btn-outline-secondary btn-lg ms-2">
+                                    Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="loadingState" class="text-center py-5 d-none">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <h5>Loading Students...</h5>
+                        <p class="text-muted">Please wait while we fetch the student list.</p>
+                    </div>
+
+                    <!-- No Students State -->
+                    <div id="noStudentsState" class="text-center py-5 d-none">
+                        <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                        <h5>No Students Found</h5>
+                        <p class="text-muted">The selected class has no enrolled students.</p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Instructions -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Instructions
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Select a class and date first
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Mark individual student attendance
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Use quick actions for bulk marking
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Add remarks for special cases
+                    </li>
+                    <li>
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Save to record attendance
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Attendance Summary -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Summary
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="h4 text-success mb-1" id="presentCount">0</div>
+                        <small class="text-muted">Present</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="h4 text-danger mb-1" id="absentCount">0</div>
+                        <small class="text-muted">Absent</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="h4 text-warning mb-1" id="lateCount">0</div>
+                        <small class="text-muted">Late</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="text-center">
+                    <div class="h5 text-primary mb-1" id="totalCount">0</div>
+                    <small class="text-muted">Total Students</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const classSelect = document.getElementById('id_class_obj');
+    const dateInput = document.getElementById('id_date');
+    
+    // Load students when class is selected
+    classSelect.addEventListener('change', function() {
+        if (this.value && dateInput.value) {
+            loadStudents(this.value, dateInput.value);
+        }
+    });
+    
+    // Load students when date is selected
+    dateInput.addEventListener('change', function() {
+        if (classSelect.value && this.value) {
+            loadStudents(classSelect.value, this.value);
+        }
+    });
+});
+
+function loadStudents(classId, date) {
+    showLoading();
+    
+    fetch(`/attendance/ajax/students/?class_id=${classId}`)
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.students && data.students.length > 0) {
+                displayStudents(data.students);
+            } else {
+                showNoStudents();
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error loading students:', error);
+            alert('Error loading students. Please try again.');
+        });
+}
+
+function displayStudents(students) {
+    const tableBody = document.getElementById('studentsTableBody');
+    const studentsList = document.getElementById('studentsList');
+    
+    tableBody.innerHTML = '';
+    
+    students.forEach(student => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                        ${student.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <h6 class="mb-0">${student.name}</h6>
+                        <small class="text-muted">${student.student_id}</small>
+                    </div>
+                </div>
+            </td>
+            <td><span class="badge bg-light text-dark">${student.student_id}</span></td>
+            <td>
+                <select name="status_${student.id}" class="form-select form-select-sm" onchange="updateSummary()">
+                    <option value="present">Present</option>
+                    <option value="absent">Absent</option>
+                    <option value="late">Late</option>
+                    <option value="half_day">Half Day</option>
+                    <option value="excused">Excused</option>
+                </select>
+            </td>
+            <td>
+                <input type="text" name="remarks_${student.id}" class="form-control form-control-sm" placeholder="Remarks">
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+    
+    studentsList.classList.remove('d-none');
+    document.getElementById('noStudentsState').classList.add('d-none');
+    updateSummary();
+}
+
+function showLoading() {
+    document.getElementById('loadingState').classList.remove('d-none');
+    document.getElementById('studentsList').classList.add('d-none');
+    document.getElementById('noStudentsState').classList.add('d-none');
+}
+
+function hideLoading() {
+    document.getElementById('loadingState').classList.add('d-none');
+}
+
+function showNoStudents() {
+    document.getElementById('noStudentsState').classList.remove('d-none');
+    document.getElementById('studentsList').classList.add('d-none');
+}
+
+function markAllPresent() {
+    const statusSelects = document.querySelectorAll('select[name^="status_"]');
+    statusSelects.forEach(select => {
+        select.value = 'present';
+    });
+    updateSummary();
+}
+
+function markAllAbsent() {
+    const statusSelects = document.querySelectorAll('select[name^="status_"]');
+    statusSelects.forEach(select => {
+        select.value = 'absent';
+    });
+    updateSummary();
+}
+
+function markAllLate() {
+    const statusSelects = document.querySelectorAll('select[name^="status_"]');
+    statusSelects.forEach(select => {
+        select.value = 'late';
+    });
+    updateSummary();
+}
+
+function updateSummary() {
+    const statusSelects = document.querySelectorAll('select[name^="status_"]');
+    let present = 0, absent = 0, late = 0;
+    
+    statusSelects.forEach(select => {
+        switch(select.value) {
+            case 'present':
+                present++;
+                break;
+            case 'absent':
+                absent++;
+                break;
+            case 'late':
+                late++;
+                break;
+        }
+    });
+    
+    document.getElementById('presentCount').textContent = present;
+    document.getElementById('absentCount').textContent = absent;
+    document.getElementById('lateCount').textContent = late;
+    document.getElementById('totalCount').textContent = statusSelects.length;
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

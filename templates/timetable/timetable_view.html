@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Schedule{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-calendar-week me-3 text-primary"></i>{{ role_ui.timetable_scope_label|default:"My Schedule" }}
+        </h2>
+        <p class="text-muted mb-0">Your active timetable grouped by day.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'timetable:schedule_list' %}" class="btn btn-outline-primary">
+            <i class="fas fa-list me-2"></i>Schedule List
+        </a>
+        {% if role_ui.can_manage_timetable %}
+        <a href="{% url 'timetable:schedule_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add Schedule
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Scheduled periods</div>
+                <div class="h3 mb-0">{{ schedule_count }}</div>
+                <small class="text-muted">Days with active lessons</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Week coverage</div>
+                <div class="h3 mb-0">{{ days|length }}/{{ all_days|length }}</div>
+                <small class="text-muted">Scheduled days</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Access scope</div>
+                <div class="h5 mb-0">{{ user.get_user_type_display }}</div>
+                <small class="text-muted">Role-based timetable</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for section in day_sections %}
+<section class="mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <h5 class="mb-0">{{ section.label }}</h5>
+        {% if section.schedules %}
+        <span class="badge bg-primary">{{ section.schedules|length }} period(s)</span>
+        {% else %}
+        <span class="badge bg-light text-dark">No lessons</span>
+        {% endif %}
+    </div>
+
+    {% if section.schedules %}
+    <div class="row g-3">
+        {% for schedule in section.schedules %}
+        <div class="col-lg-4 col-md-6">
+            <a href="{% url 'timetable:schedule_detail' schedule.pk %}" class="text-decoration-none text-reset">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between gap-2 mb-2">
+                            <span class="badge bg-light text-dark">
+                                {{ schedule.time_slot.start_time|time:"H:i" }} - {{ schedule.time_slot.end_time|time:"H:i" }}
+                            </span>
+                            {% if schedule.time_slot.is_break %}
+                            <span class="badge bg-warning text-dark">{{ schedule.time_slot.break_type|default:"Break" }}</span>
+                            {% endif %}
+                        </div>
+                        <h6 class="mb-1">{{ schedule.subject.name }}</h6>
+                        <div class="text-muted small mb-2">{{ schedule.class_obj.display_name }}</div>
+                        <div class="d-flex flex-column gap-1 small">
+                            <span><i class="fas fa-user-tie me-2 text-primary"></i>{{ schedule.teacher.user.get_full_name }}</span>
+                            <span><i class="fas fa-door-open me-2 text-primary"></i>{{ schedule.room.name }}</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card border-0 bg-light">
+        <div class="card-body py-3 text-muted small">No active schedule has been assigned for {{ section.label }}.</div>
+    </div>
+    {% endif %}
+</section>
+{% empty %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-calendar-times fa-2x text-muted mb-3"></i>
+        <h6>No timetable data</h6>
+        <p class="text-muted mb-0">Schedules will appear here once they are assigned.</p>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

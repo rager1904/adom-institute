@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ event.title }} - Calendar Event{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-calendar text-primary"></i> Calendar Event Details
+                </h1>
+                <div>
+                    <a href="{% url 'timetable:calendar_update' event.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit Event
+                    </a>
+                    <a href="{% url 'timetable:calendar_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Event Information -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Event Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-heading"></i> Event Title</h6>
+                                    <p class="mb-3">{{ event.title }}</p>
+                                    
+                                    <h6><i class="fas fa-tag"></i> Event Type</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{{ event.get_event_type_color }}">{{ event.get_event_type_display }}</span>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-calendar-plus"></i> Academic Year</h6>
+                                    <p class="mb-3">{{ event.academic_year.name }}</p>
+                                    
+                                    <h6><i class="fas fa-toggle-on"></i> Status</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{% if event.is_active %}success{% else %}danger{% endif %}">
+                                            {% if event.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-calendar-day"></i> Date Range</h6>
+                                    <p class="mb-3">
+                                        <div class="date-range-display">
+                                            <div class="start-date">{{ event.start_date|date:"F j, Y" }}</div>
+                                            <div class="date-separator">to</div>
+                                            <div class="end-date">{{ event.end_date|date:"F j, Y" }}</div>
+                                        </div>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-clock"></i> Duration</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-secondary">{{ event.duration_days }} days</span>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-align-left"></i> Description</h6>
+                                    <p class="mb-3">
+                                        {% if event.description %}
+                                            {{ event.description }}
+                                        {% else %}
+                                            <span class="text-muted">No description available</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Event Details -->
+                    {% if event.notes %}
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-sticky-note"></i> Additional Notes
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-0">{{ event.notes }}</p>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Event Timeline -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-timeline"></i> Event Timeline
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <div class="timeline-marker bg-primary"></div>
+                                    <div class="timeline-content">
+                                        <h6>Event Start</h6>
+                                        <p class="text-muted">{{ event.start_date|date:"F j, Y" }}</p>
+                                    </div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-marker bg-success"></div>
+                                    <div class="timeline-content">
+                                        <h6>Event End</h6>
+                                        <p class="text-muted">{{ event.end_date|date:"F j, Y" }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Quick Actions -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-bolt"></i> Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'timetable:calendar_update' event.pk %}" class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Edit Event
+                                </a>
+                                <a href="{% url 'timetable:calendar_delete' event.pk %}" class="btn btn-outline-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Delete Event
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Event Statistics -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-bar"></i> Event Statistics
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                        Duration
+                                    </div>
+                                    <div class="h6 mb-0 font-weight-bold text-gray-800">
+                                        {{ event.duration_days }} days
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        Days Remaining
+                                    </div>
+                                    <div class="h6 mb-0 font-weight-bold text-gray-800">
+                                        {% if event.days_remaining > 0 %}
+                                            {{ event.days_remaining }} days
+                                        {% else %}
+                                            Completed
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Information -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-cog"></i> System Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-calendar-plus"></i> Created</h6>
+                            <p class="mb-3">{{ event.created_at|date:"F j, Y g:i A" }}</p>
+                            
+                            <h6><i class="fas fa-calendar-edit"></i> Last Updated</h6>
+                            <p class="mb-3">{{ event.updated_at|date:"F j, Y g:i A" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.date-range-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.start-date, .end-date {
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 2px solid #dee2e6;
+}
+
+.date-separator {
+    color: #6c757d;
+    font-weight: normal;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -35px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    padding-left: 20px;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.text-xs {
+    font-size: 0.7rem;
+}
+
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+
+.btn-group .btn {
+    margin-right: 2px;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+</style>
+{% endblock %}

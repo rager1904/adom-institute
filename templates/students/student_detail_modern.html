@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if role_ui.is_student %}My Student Profile{% elif role_ui.is_parent %}Child Profile{% else %}Student Detail{% endif %}{% endblock %}
+
+{% block content %}
+<section class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <div class="text-uppercase text-muted small fw-semibold">
+                {% if role_ui.is_student %}My profile{% elif role_ui.is_parent %}Child profile{% else %}Student profile{% endif %}
+            </div>
+            <h1 class="h4 mb-1">{{ student.user.get_full_name }}</h1>
+            <p class="text-muted mb-0">{{ student.student_id }} - {{ student.current_class.display_name|default:"No class assigned" }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if role_ui.can_manage_people %}
+                <a href="{% url 'students:student_update' student.pk %}" class="btn btn-primary">Edit</a>
+            {% endif %}
+            <a href="{% url 'students:student_list' %}" class="btn btn-outline-secondary">Back</a>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="adom-card p-4">
+                <h2 class="h6 text-uppercase text-muted mb-3">Student profile</h2>
+                <dl class="row mb-0">
+                    <dt class="col-md-4">Admission number</dt><dd class="col-md-8">{{ student.admission_number }}</dd>
+                    <dt class="col-md-4">Gender</dt><dd class="col-md-8">{{ student.get_gender_display }}</dd>
+                    <dt class="col-md-4">Date of birth</dt><dd class="col-md-8">{{ student.date_of_birth|date:"M d, Y" }}</dd>
+                    <dt class="col-md-4">Phone</dt><dd class="col-md-8">{{ student.phone_number|default:"Not provided" }}</dd>
+                    <dt class="col-md-4">Address</dt><dd class="col-md-8">{{ student.address }}</dd>
+                    <dt class="col-md-4">Admission status</dt><dd class="col-md-8">{{ student.get_admission_status_display }}</dd>
+                </dl>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="adom-card p-4">
+                <h2 class="h6 text-uppercase text-muted mb-3">Guardians</h2>
+                {% for parent in student.parents.all %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <div class="fw-semibold">{{ parent.user.get_full_name }}</div>
+                        <div class="text-muted small">{{ parent.get_relationship_display }} - {{ parent.phone_number }}</div>
+                    </div>
+                {% empty %}
+                    <p class="text-muted mb-0">No guardians added.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

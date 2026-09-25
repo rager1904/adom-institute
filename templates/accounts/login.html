@@ -1,0 +1,455 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login - ADOM Institute{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: var(--edu-bg);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+    }
+    
+    .login-container {
+        background: white;
+        border: 1px solid var(--edu-border);
+        border-radius: var(--edu-radius);
+        box-shadow: var(--edu-shadow);
+        overflow: hidden;
+        max-width: 900px;
+        width: 100%;
+    }
+    
+    .login-left {
+        background: var(--edu-navy);
+        color: white;
+        padding: 3rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .login-right {
+        padding: 3rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .form-control {
+        border: 1px solid var(--edu-border);
+        border-radius: var(--edu-radius);
+        padding: 12px 16px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: var(--edu-azure);
+        box-shadow: 0 0 0 0.2rem rgba(15, 108, 189, 0.14);
+    }
+    
+    .btn-login {
+        background: var(--edu-azure);
+        border: none;
+        border-radius: var(--edu-radius);
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    
+    .btn-login:hover {
+        transform: translateY(-2px);
+        background: #0b5ea8;
+        box-shadow: 0 8px 20px rgba(15, 108, 189, 0.22);
+        color: white;
+    }
+    
+    .social-login {
+        border-top: 1px solid #e9ecef;
+        padding-top: 2rem;
+        margin-top: 2rem;
+    }
+    
+    .social-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--edu-border);
+        border-radius: var(--edu-radius);
+        background: white;
+        color: #495057;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+    }
+    
+    .social-btn:hover {
+        border-color: var(--edu-azure);
+        color: var(--edu-azure);
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+    
+    .feature-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .feature-icon {
+        width: 50px;
+        height: 50px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: var(--edu-radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 20px;
+    }
+    
+    .alert {
+        border-radius: 10px;
+        border: none;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-danger {
+        background: #f8d7da;
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border-left: 4px solid #28a745;
+    }
+    
+    .form-floating {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-floating > .form-control {
+        height: 60px;
+    }
+    
+    .form-floating > label {
+        padding: 16px 16px;
+    }
+    
+    .password-toggle {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #6c757d;
+        cursor: pointer;
+        z-index: 10;
+    }
+    
+    .password-toggle:hover {
+        color: #495057;
+    }
+    
+    @media (max-width: 768px) {
+        .login-left {
+            padding: 2rem 1rem;
+        }
+        
+        .login-right {
+            padding: 2rem 1rem;
+        }
+        
+        .login-container {
+            margin: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="login-container mx-auto">
+                <div class="row g-0">
+                    <!-- Left Side - Features -->
+                    <div class="col-lg-6 login-left">
+                        <div class="mb-4">
+                            <h1 class="display-5 fw-bold mb-3">ADOM Institute</h1>
+                            <p class="lead">Access your AI-powered education dashboard</p>
+                        </div>
+                        
+                        <div class="features">
+                            <div class="feature-item">
+                                <div class="feature-icon">
+                                    <i class="fas fa-graduation-cap"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Student Success</h6>
+                                    <small class="opacity-75">Track progress and performance</small>
+                                </div>
+                            </div>
+                            
+                            <div class="feature-item">
+                                <div class="feature-icon">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Connected Learning</h6>
+                                    <small class="opacity-75">Connect with teachers and peers</small>
+                                </div>
+                            </div>
+                            
+                            <div class="feature-item">
+                                <div class="feature-icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Institution Analytics</h6>
+                                    <small class="opacity-75">Monitor your academic journey</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <p class="mb-0 opacity-75">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                Secure and encrypted login system
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Side - Login Form -->
+                    <div class="col-lg-6 login-right">
+                        <div class="text-center mb-4">
+                            <h2 class="h3 mb-2">Sign In</h2>
+                            <p class="text-muted">Enter your credentials to continue</p>
+                        </div>
+                        
+                        <!-- Messages -->
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }}">
+                                    <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% else %}check-circle{% endif %} me-2"></i>
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        <!-- Login Form -->
+                        <form method="post" id="loginForm">
+                            {% csrf_token %}
+                            
+                            <div class="form-floating">
+                                <input type="email" 
+                                       class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
+                                       id="email" 
+                                       name="email" 
+                                       placeholder="Email address"
+                                       value="{{ form.email.value|default:'' }}"
+                                       required>
+                                <label for="email">Email address</label>
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.email.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="form-floating position-relative">
+                                <input type="password" 
+                                       class="form-control {% if form.password.errors %}is-invalid{% endif %}" 
+                                       id="password" 
+                                       name="password" 
+                                       placeholder="Password"
+                                       required>
+                                <label for="password">Password</label>
+                                <button type="button" class="password-toggle" onclick="togglePassword()">
+                                    <i class="fas fa-eye" id="passwordIcon"></i>
+                                </button>
+                                {% if form.password.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.password.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="rememberMe">
+                                    <label class="form-check-label" for="rememberMe">
+                                        Remember me
+                                    </label>
+                                </div>
+                                <a href="#" class="text-decoration-none text-primary">Forgot password?</a>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-login mb-3">
+                                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                            </button>
+                        </form>
+                        
+                        <!-- Social Login -->
+                        <div class="social-login">
+                            <p class="text-center text-muted mb-3">Or continue with</p>
+                            
+                            <a href="#" class="social-btn">
+                                <i class="fab fa-google me-2"></i>
+                                Continue with Google
+                            </a>
+                            
+                            <a href="#" class="social-btn">
+                                <i class="fab fa-microsoft me-2"></i>
+                                Continue with Microsoft
+                            </a>
+                        </div>
+                        
+                        <!-- Register Link -->
+                        <div class="text-center">
+                            <p class="mb-0">
+                                Don't have an account? 
+                                <a href="{% url 'accounts:register' %}" class="text-decoration-none text-primary fw-bold">Sign up</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('loginForm');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Reset previous error states
+        emailInput.classList.remove('is-invalid');
+        passwordInput.classList.remove('is-invalid');
+        
+        // Email validation
+        if (!emailInput.value.trim()) {
+            emailInput.classList.add('is-invalid');
+            isValid = false;
+        } else if (!isValidEmail(emailInput.value)) {
+            emailInput.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        // Password validation
+        if (!passwordInput.value.trim()) {
+            passwordInput.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            showAlert('Please fill in all required fields correctly.', 'danger');
+        }
+    });
+    
+    // Real-time validation
+    emailInput.addEventListener('blur', function() {
+        if (this.value.trim() && !isValidEmail(this.value)) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    passwordInput.addEventListener('blur', function() {
+        if (!this.value.trim()) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    // Email format validation
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
+    // Show alert function
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            <i class="fas fa-${type === 'danger' ? 'exclamation-circle' : 'check-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const form = document.getElementById('loginForm');
+        form.parentNode.insertBefore(alertDiv, form);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+    
+    // Remember me functionality
+    const rememberMe = document.getElementById('rememberMe');
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    
+    if (savedEmail) {
+        emailInput.value = savedEmail;
+        rememberMe.checked = true;
+    }
+    
+    rememberMe.addEventListener('change', function() {
+        if (this.checked) {
+            localStorage.setItem('rememberedEmail', emailInput.value);
+        } else {
+            localStorage.removeItem('rememberedEmail');
+        }
+    });
+});
+
+// Password toggle functionality
+function togglePassword() {
+    const passwordInput = document.getElementById('password');
+    const passwordIcon = document.getElementById('passwordIcon');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        passwordIcon.classList.remove('fa-eye');
+        passwordIcon.classList.add('fa-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        passwordIcon.classList.remove('fa-eye-slash');
+        passwordIcon.classList.add('fa-eye');
+    }
+}
+</script>
+{% endblock %}
+

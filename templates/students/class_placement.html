@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Class Placement - ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Class Placement</h1>
+            <p class="text-muted mb-0">Assign active students to classes within your institution.</p>
+        </div>
+        <a href="{% url 'students:class_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-school me-2"></i>Classes
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Assign Student</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">{{ form.non_field_errors.0 }}</div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.student.id_for_label }}" class="form-label">Student</label>
+                            {{ form.student }}
+                            {% if form.student.errors %}
+                                <div class="text-danger">{{ form.student.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.current_class.id_for_label }}" class="form-label">Class</label>
+                            {{ form.current_class }}
+                            {% if form.current_class.errors %}
+                                <div class="text-danger">{{ form.current_class.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-user-check me-2"></i>Assign to Class
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Class Capacity</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Class</th>
+                                <th>Institution</th>
+                                <th>Students</th>
+                                <th>Capacity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for class_obj in classes %}
+                                <tr>
+                                    <td>{{ class_obj.display_name }}</td>
+                                    <td>{{ class_obj.academic_year.institution.name }}</td>
+                                    <td>{{ class_obj.students.count }}</td>
+                                    <td>{{ class_obj.capacity }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">No active classes available.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Recently Updated Students</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Student ID</th>
+                                <th>Current Class</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in recent_students %}
+                                <tr>
+                                    <td>{{ student.user.get_full_name }}</td>
+                                    <td>{{ student.student_id }}</td>
+                                    <td>{{ student.current_class.display_name|default:"Not assigned" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">No students available.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

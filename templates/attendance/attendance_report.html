@@ -1,0 +1,362 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Attendance Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-chart-bar me-3 text-primary"></i>Attendance Report
+        </h2>
+        <p class="text-muted mb-0">Generate detailed attendance reports and analytics</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" onclick="exportReport()">
+            <i class="fas fa-download me-2"></i>Export
+        </button>
+        <button class="btn btn-primary" onclick="printReport()">
+            <i class="fas fa-print me-2"></i>Print
+        </button>
+    </div>
+</div>
+
+<!-- Report Filters -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">
+            <i class="fas fa-filter me-2"></i>Report Filters
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Date From</label>
+                {{ form.date_from }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Date To</label>
+                {{ form.date_to }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Class</label>
+                {{ form.class_obj }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Student</label>
+                {{ form.student }}
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-2"></i>Generate Report
+                </button>
+                <a href="{% url 'attendance:attendance_report' %}" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-times me-2"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if report_data %}
+<!-- Report Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body bg-primary text-white">
+                <div class="h3 mb-1">{{ report_data|length }}</div>
+                <div class="small">Total Students</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body bg-success text-white">
+                <div class="h3 mb-1" id="totalPresent">0</div>
+                <div class="small">Total Present</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body bg-danger text-white">
+                <div class="h3 mb-1" id="totalAbsent">0</div>
+                <div class="small">Total Absent</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body bg-info text-white">
+                <div class="h3 mb-1" id="avgAttendance">0%</div>
+                <div class="small">Average Attendance</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Report -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Detailed Attendance Report</h5>
+            <div class="text-muted">
+                {% if date_from and date_to %}
+                    Period: {{ date_from|date:"M d, Y" }} - {{ date_to|date:"M d, Y" }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Student</th>
+                        <th>Class</th>
+                        <th>Total Days</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Late</th>
+                        <th>Attendance %</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in report_data %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                    {{ record.student.user.first_name|first|upper }}
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">{{ record.student.user.get_full_name }}</h6>
+                                    <small class="text-muted">{{ record.student.student_id }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ record.student.current_class.name }}</span>
+                        </td>
+                        <td>
+                            <span class="fw-semibold">{{ record.total_days }}</span>
+                        </td>
+                        <td>
+                            <span class="text-success fw-semibold">{{ record.present_days }}</span>
+                        </td>
+                        <td>
+                            <span class="text-danger fw-semibold">{{ record.absent_days }}</span>
+                        </td>
+                        <td>
+                            <span class="text-warning fw-semibold">{{ record.late_days }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="progress me-2" style="width: 60px; height: 6px;">
+                                    <div class="progress-bar bg-{% if record.attendance_percentage >= 90 %}success{% elif record.attendance_percentage >= 75 %}warning{% else %}danger{% endif %}" 
+                                         data-width="{{ record.attendance_percentage }}"></div>
+                                </div>
+                                <span class="fw-semibold">{{ record.attendance_percentage|floatformat:1 }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if record.attendance_percentage >= 90 %}
+                                <span class="badge bg-success">Excellent</span>
+                            {% elif record.attendance_percentage >= 75 %}
+                                <span class="badge bg-warning">Good</span>
+                            {% else %}
+                                <span class="badge bg-danger">Poor</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Chart -->
+<div class="row mt-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Attendance Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="attendanceChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Summary Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Attendance Ranges</h6>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>90-100% (Excellent)</span>
+                        <span class="badge bg-success" id="excellentCount">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>75-89% (Good)</span>
+                        <span class="badge bg-warning" id="goodCount">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Below 75% (Poor)</span>
+                        <span class="badge bg-danger" id="poorCount">0</span>
+                    </div>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <h6>Top Performers</h6>
+                    <div id="topPerformers">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<!-- Empty State -->
+<div class="text-center py-5">
+    <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+    <h5>No Report Data</h5>
+    <p class="text-muted mb-4">Select filters and generate a report to view attendance statistics.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if report_data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Apply progress bar widths
+    document.querySelectorAll('.progress-bar[data-width]').forEach(bar => {
+        bar.style.width = bar.dataset.width + '%';
+    });
+    
+    // Get data from data attribute
+    const reportDataElement = document.getElementById('reportData');
+    const reportData = reportDataElement ? JSON.parse(reportDataElement.dataset.reportData) : [];
+    
+    // Calculate summary statistics
+    let totalPresent = 0, totalAbsent = 0, totalLate = 0;
+    let excellentCount = 0, goodCount = 0, poorCount = 0;
+    const topPerformers = [];
+    
+    reportData.forEach(record => {
+        totalPresent += record.present_days;
+        totalAbsent += record.absent_days;
+        totalLate += record.late_days;
+        
+        const percentage = record.attendance_percentage;
+        if (percentage >= 90) excellentCount++;
+        else if (percentage >= 75) goodCount++;
+        else poorCount++;
+        
+        topPerformers.push({
+            name: record.student_name,
+            percentage: percentage
+        });
+    });
+    
+    // Update summary cards
+    document.getElementById('totalPresent').textContent = totalPresent;
+    document.getElementById('totalAbsent').textContent = totalAbsent;
+    document.getElementById('avgAttendance').textContent = 
+        ((totalPresent / (totalPresent + totalAbsent + totalLate)) * 100).toFixed(1) + '%';
+    
+    // Update attendance ranges
+    document.getElementById('excellentCount').textContent = excellentCount;
+    document.getElementById('goodCount').textContent = goodCount;
+    document.getElementById('poorCount').textContent = poorCount;
+    
+    // Show top performers
+    topPerformers.sort((a, b) => b.percentage - a.percentage);
+    const topPerformersDiv = document.getElementById('topPerformers');
+    topPerformers.slice(0, 5).forEach((performer, index) => {
+        const div = document.createElement('div');
+        div.className = 'd-flex justify-content-between mb-1';
+        div.innerHTML = `
+            <span>${index + 1}. ${performer.name}</span>
+            <span class="text-success fw-semibold">${performer.percentage.toFixed(1)}%</span>
+        `;
+        topPerformersDiv.appendChild(div);
+    });
+    
+    // Create attendance chart
+    const ctx = document.getElementById('attendanceChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Present', 'Absent', 'Late'],
+            datasets: [{
+                data: [totalPresent, totalAbsent, totalLate],
+                backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+});
+
+function exportReport() {
+    // Implementation for exporting report
+    alert('Export functionality will be implemented here');
+}
+
+function printReport() {
+    window.print();
+}
+</script>
+
+<!-- Hidden element to pass data from Django to JavaScript -->
+<div id="reportData" data-report-data='[
+    {% for record in report_data %}
+    {
+        "present_days": {{ record.present_days }},
+        "absent_days": {{ record.absent_days }},
+        "late_days": {{ record.late_days }},
+        "attendance_percentage": {{ record.attendance_percentage }},
+        "student_name": "{{ record.student.user.get_full_name|escapejs }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+]' style="display: none;"></div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+@media print {
+    .btn, .card-header {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}

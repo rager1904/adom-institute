@@ -1,0 +1,842 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit {{ form.instance.title }}{% else %}Add New Digital Resource{% endif %} - Library{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .form-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        padding: 40px;
+        margin-bottom: 30px;
+    }
+    .form-header {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-left: 4px solid #11998e;
+    }
+    .form-section h5 {
+        color: #495057;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 12px 15px;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #11998e;
+        box-shadow: 0 0 0 0.2rem rgba(17,153,142,0.25);
+    }
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+    .btn-primary {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        border: none;
+    }
+    .btn-secondary {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+    }
+    .file-upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 15px;
+        padding: 40px;
+        text-align: center;
+        background: #fafafa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    .file-upload-area:hover {
+        border-color: #11998e;
+        background: #f0fffe;
+    }
+    .file-upload-area.dragover {
+        border-color: #11998e;
+        background: #e8f9f8;
+        transform: scale(1.02);
+    }
+    .file-upload-area.has-file {
+        border-color: #28a745;
+        background: #d4edda;
+    }
+    .file-preview {
+        max-width: 200px;
+        max-height: 200px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        margin-top: 15px;
+    }
+    .file-info {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+        border: 1px solid #e9ecef;
+    }
+    .file-type-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+        margin-top: 15px;
+    }
+    .file-type-option {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .file-type-option:hover,
+    .file-type-option.selected {
+        border-color: #11998e;
+        background: #f0fffe;
+    }
+    .file-type-option i {
+        font-size: 2rem;
+        margin-bottom: 8px;
+        display: block;
+    }
+    .access-level-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    .access-option {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .access-option:hover,
+    .access-option.selected {
+        border-color: #11998e;
+        background: #f0fffe;
+    }
+    .access-option.selected {
+        box-shadow: 0 0 0 2px rgba(17,153,142,0.2);
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    .field-help {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    .required-asterisk {
+        color: #dc3545;
+    }
+    .thumbnail-upload {
+        position: relative;
+        display: inline-block;
+    }
+    .thumbnail-preview {
+        width: 150px;
+        height: 200px;
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #fafafa;
+    }
+    .thumbnail-preview:hover {
+        border-color: #11998e;
+        background: #f0fffe;
+    }
+    .thumbnail-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+    .progress-container {
+        display: none;
+        margin-top: 15px;
+    }
+    .upload-stats {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+        text-align: center;
+    }
+    .tag-input-container {
+        position: relative;
+    }
+    .tag-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 0 0 10px 10px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+    .tag-suggestion {
+        padding: 10px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    .tag-suggestion:hover {
+        background: #f8f9fa;
+    }
+    .tag-display {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .tag-item {
+        background: #e9ecef;
+        color: #495057;
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .tag-item .remove-tag {
+        cursor: pointer;
+        color: #6c757d;
+    }
+    .tag-item .remove-tag:hover {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'library:dashboard' %}">Library</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'library:digital_resource_list' %}">Digital Resources</a></li>
+            <li class="breadcrumb-item active">{% if form.instance.pk %}Edit Resource{% else %}Add Resource{% endif %}</li>
+        </ol>
+    </nav>
+
+    <div class="form-container">
+        <!-- Form Header -->
+        <div class="form-header">
+            <h1 class="mb-3">
+                <i class="fas fa-cloud me-3"></i>
+                {% if form.instance.pk %}
+                    Edit Digital Resource: {{ form.instance.title }}
+                {% else %}
+                    Add New Digital Resource
+                {% endif %}
+            </h1>
+            <p class="mb-0">
+                {% if form.instance.pk %}
+                    Update the digital resource information below. All fields marked with <span class="required-asterisk">*</span> are required.
+                {% else %}
+                    Upload and configure a new digital resource for your library. All fields marked with <span class="required-asterisk">*</span> are required.
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Form -->
+        <form method="post" enctype="multipart/form-data" id="resourceForm">
+            {% csrf_token %}
+            
+            <!-- File Upload Section -->
+            {% if not form.instance.pk %}
+            <div class="form-section">
+                <h5><i class="fas fa-upload me-2"></i>File Upload</h5>
+                
+                <div class="file-upload-area" id="fileUploadArea">
+                    <i class="fas fa-cloud-upload-alt fa-4x text-muted mb-3"></i>
+                    <h5 class="text-muted">Drop your file here or click to browse</h5>
+                    <p class="text-muted mb-0">Supports PDF, DOC, PPT, MP4, MP3, and image files up to 100MB</p>
+                    {{ form.file }}
+                </div>
+                
+                {% if form.file.errors %}
+                    <div class="text-danger mt-2">{{ form.file.errors }}</div>
+                {% endif %}
+                
+                <div id="fileInfo" class="file-info" style="display: none;">
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            <div id="fileIcon" class="text-center">
+                                <i class="fas fa-file fa-3x text-muted"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-10">
+                            <h6 id="fileName" class="mb-1"></h6>
+                            <p class="text-muted mb-1">
+                                <span id="fileSize"></span> • <span id="fileType"></span>
+                            </p>
+                            <div class="progress-container">
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted mt-1">Processing file...</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Basic Information Section -->
+            <div class="form-section">
+                <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+                
+                <div class="form-grid">
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">
+                            Title <span class="required-asterisk">*</span>
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger mt-1">{{ form.title.errors }}</div>
+                        {% endif %}
+                        <div class="field-help">The title of the digital resource</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.author.id_for_label }}" class="form-label">Author</label>
+                        {{ form.author }}
+                        {% if form.author.errors %}
+                            <div class="text-danger mt-1">{{ form.author.errors }}</div>
+                        {% endif %}
+                        <div class="field-help">Author or creator of the resource</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.subject.id_for_label }}" class="form-label">Subject</label>
+                        {{ form.subject }}
+                        {% if form.subject.errors %}
+                            <div class="text-danger mt-1">{{ form.subject.errors }}</div>
+                        {% endif %}
+                        <div class="field-help">Subject area this resource belongs to</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.grade.id_for_label }}" class="form-label">Grade Level</label>
+                        {{ form.grade }}
+                        {% if form.grade.errors %}
+                            <div class="text-danger mt-1">{{ form.grade.errors }}</div>
+                        {% endif %}
+                        <div class="field-help">Target grade level for this resource</div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <div class="text-danger mt-1">{{ form.description.errors }}</div>
+                    {% endif %}
+                    <div class="field-help">Brief description of the resource content</div>
+                </div>
+            </div>
+
+            <!-- File Type & Access Configuration -->
+            <div class="form-section">
+                <h5><i class="fas fa-cogs me-2"></i>Configuration</h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">File Type <span class="required-asterisk">*</span></label>
+                        <div class="file-type-selector">
+                            <div class="file-type-option" data-type="pdf">
+                                <i class="fas fa-file-pdf text-danger"></i>
+                                <div>PDF</div>
+                            </div>
+                            <div class="file-type-option" data-type="doc">
+                                <i class="fas fa-file-word text-primary"></i>
+                                <div>Document</div>
+                            </div>
+                            <div class="file-type-option" data-type="video">
+                                <i class="fas fa-play-circle text-info"></i>
+                                <div>Video</div>
+                            </div>
+                            <div class="file-type-option" data-type="audio">
+                                <i class="fas fa-music text-warning"></i>
+                                <div>Audio</div>
+                            </div>
+                            <div class="file-type-option" data-type="image">
+                                <i class="fas fa-image text-success"></i>
+                                <div>Image</div>
+                            </div>
+                            <div class="file-type-option" data-type="other">
+                                <i class="fas fa-file text-secondary"></i>
+                                <div>Other</div>
+                            </div>
+                        </div>
+                        {{ form.file_type }}
+                        {% if form.file_type.errors %}
+                            <div class="text-danger mt-2">{{ form.file_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Access Level <span class="required-asterisk">*</span></label>
+                        <div class="access-level-grid">
+                            <div class="access-option" data-access="public">
+                                <i class="fas fa-globe text-success fa-2x mb-2"></i>
+                                <h6>Public</h6>
+                                <small class="text-muted">Everyone can access</small>
+                            </div>
+                            <div class="access-option" data-access="student">
+                                <i class="fas fa-user-graduate text-primary fa-2x mb-2"></i>
+                                <h6>Students</h6>
+                                <small class="text-muted">Students and above</small>
+                            </div>
+                            <div class="access-option" data-access="teacher">
+                                <i class="fas fa-chalkboard-teacher text-warning fa-2x mb-2"></i>
+                                <h6>Teachers</h6>
+                                <small class="text-muted">Teachers and admins</small>
+                            </div>
+                            <div class="access-option" data-access="admin">
+                                <i class="fas fa-lock text-danger fa-2x mb-2"></i>
+                                <h6>Admin Only</h6>
+                                <small class="text-muted">Admins only</small>
+                            </div>
+                        </div>
+                        {{ form.access_level }}
+                        {% if form.access_level.errors %}
+                            <div class="text-danger mt-2">{{ form.access_level.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tags and Categorization -->
+            <div class="form-section">
+                <h5><i class="fas fa-tags me-2"></i>Tags and Categorization</h5>
+                
+                <div class="mb-3">
+                    <label for="{{ form.tags.id_for_label }}" class="form-label">Tags</label>
+                    <div class="tag-input-container">
+                        {{ form.tags }}
+                        <div class="tag-suggestions" id="tagSuggestions"></div>
+                    </div>
+                    {% if form.tags.errors %}
+                        <div class="text-danger mt-1">{{ form.tags.errors }}</div>
+                    {% endif %}
+                    <div class="field-help">Add comma-separated tags for better discoverability</div>
+                    <div class="tag-display" id="tagDisplay"></div>
+                </div>
+            </div>
+
+            <!-- Thumbnail Section -->
+            <div class="form-section">
+                <h5><i class="fas fa-image me-2"></i>Thumbnail</h5>
+                
+                <div class="row">
+                    <div class="col-md-8">
+                        <label for="{{ form.thumbnail.id_for_label }}" class="form-label">Thumbnail Image</label>
+                        <div class="file-upload-area" id="thumbnailUploadArea" style="min-height: 150px;">
+                            <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                            <h6 class="text-muted">Upload thumbnail (optional)</h6>
+                            <p class="text-muted mb-0">JPG, PNG up to 5MB • Recommended: 300x400px</p>
+                            {{ form.thumbnail }}
+                        </div>
+                        {% if form.thumbnail.errors %}
+                            <div class="text-danger mt-1">{{ form.thumbnail.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        {% if form.instance.thumbnail %}
+                            <label class="form-label">Current Thumbnail</label>
+                            <div class="text-center">
+                                <img src="{{ form.instance.thumbnail.url }}" alt="Current thumbnail" class="file-preview">
+                            </div>
+                        {% endif %}
+                        <div id="thumbnailPreviewContainer" class="text-center" style="display: none;">
+                            <label class="form-label">Preview</label>
+                            <div>
+                                <img id="thumbnailPreview" class="file-preview" alt="Preview">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Statistics (for existing resources) -->
+            {% if form.instance.pk %}
+            <div class="form-section">
+                <h5><i class="fas fa-chart-bar me-2"></i>Resource Statistics</h5>
+                
+                <div class="upload-stats">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <h4>{{ form.instance.download_count }}</h4>
+                            <small>Total Downloads</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h4>{{ form.instance.view_count|default:0 }}</h4>
+                            <small>Views</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h4>{{ form.instance.file_size_display }}</h4>
+                            <small>File Size</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h4>{{ form.instance.created_at|date:"M Y" }}</h4>
+                            <small>Uploaded</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="text-center mt-4">
+                <a href="{% url 'library:digital_resource_list' %}" class="btn btn-secondary me-3">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    <i class="fas fa-save me-2"></i>
+                    {% if form.instance.pk %}Update Resource{% else %}Upload Resource{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('resourceForm');
+    const fileInput = document.querySelector('#{{ form.file.id_for_label }}');
+    const fileTypeInput = document.querySelector('#{{ form.file_type.id_for_label }}');
+    const accessLevelInput = document.querySelector('#{{ form.access_level.id_for_label }}');
+    const thumbnailInput = document.querySelector('#{{ form.thumbnail.id_for_label }}');
+    
+    // Hide original inputs
+    if (fileInput) fileInput.style.display = 'none';
+    fileTypeInput.style.display = 'none';
+    accessLevelInput.style.display = 'none';
+    if (thumbnailInput) thumbnailInput.style.display = 'none';
+    
+    // File upload handling
+    {% if not form.instance.pk %}
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    const fileInfo = document.getElementById('fileInfo');
+    
+    fileUploadArea.addEventListener('click', () => fileInput.click());
+    
+    fileUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('dragover');
+    });
+    
+    fileUploadArea.addEventListener('dragleave', function() {
+        this.classList.remove('dragover');
+    });
+    
+    fileUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelection(files[0]);
+        }
+    });
+    
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            handleFileSelection(this.files[0]);
+        }
+    });
+    
+    function handleFileSelection(file) {
+        fileUploadArea.classList.add('has-file');
+        fileInfo.style.display = 'block';
+        
+        // Update file info
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = formatFileSize(file.size);
+        document.getElementById('fileType').textContent = file.type || 'Unknown';
+        
+        // Update file icon
+        const icon = document.getElementById('fileIcon').querySelector('i');
+        const ext = file.name.split('.').pop().toLowerCase();
+        
+        if (['pdf'].includes(ext)) {
+            icon.className = 'fas fa-file-pdf fa-3x text-danger';
+            selectFileType('pdf');
+        } else if (['doc', 'docx', 'txt'].includes(ext)) {
+            icon.className = 'fas fa-file-word fa-3x text-primary';
+            selectFileType('doc');
+        } else if (['mp4', 'avi', 'mov'].includes(ext)) {
+            icon.className = 'fas fa-play-circle fa-3x text-info';
+            selectFileType('video');
+        } else if (['mp3', 'wav', 'ogg'].includes(ext)) {
+            icon.className = 'fas fa-music fa-3x text-warning';
+            selectFileType('audio');
+        } else if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
+            icon.className = 'fas fa-image fa-3x text-success';
+            selectFileType('image');
+        } else {
+            icon.className = 'fas fa-file fa-3x text-secondary';
+            selectFileType('other');
+        }
+        
+        // Auto-fill title if empty
+        const titleInput = document.querySelector('#{{ form.title.id_for_label }}');
+        if (!titleInput.value) {
+            titleInput.value = file.name.replace(/\.[^/.]+$/, '');
+        }
+        
+        // Show progress animation
+        const progressContainer = document.querySelector('.progress-container');
+        progressContainer.style.display = 'block';
+        
+        // Simulate processing
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 10;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+                progressContainer.style.display = 'none';
+            }
+            document.querySelector('.progress-bar').style.width = progress + '%';
+        }, 200);
+    }
+    {% endif %}
+    
+    // File type selection
+    const fileTypeOptions = document.querySelectorAll('.file-type-option');
+    fileTypeOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            selectFileType(this.dataset.type);
+        });
+    });
+    
+    function selectFileType(type) {
+        fileTypeOptions.forEach(opt => opt.classList.remove('selected'));
+        document.querySelector(`[data-type="${type}"]`).classList.add('selected');
+        fileTypeInput.value = type;
+    }
+    
+    // Access level selection
+    const accessOptions = document.querySelectorAll('.access-option');
+    accessOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            selectAccessLevel(this.dataset.access);
+        });
+    });
+    
+    function selectAccessLevel(level) {
+        accessOptions.forEach(opt => opt.classList.remove('selected'));
+        document.querySelector(`[data-access="${level}"]`).classList.add('selected');
+        accessLevelInput.value = level;
+    }
+    
+    // Set initial selections
+    {% if form.instance.pk %}
+    if ('{{ form.instance.file_type }}') {
+        selectFileType('{{ form.instance.file_type }}');
+    }
+    if ('{{ form.instance.access_level }}') {
+        selectAccessLevel('{{ form.instance.access_level }}');
+    }
+    {% endif %}
+    
+    // Thumbnail upload
+    if (thumbnailInput) {
+        const thumbnailUploadArea = document.getElementById('thumbnailUploadArea');
+        const thumbnailPreviewContainer = document.getElementById('thumbnailPreviewContainer');
+        const thumbnailPreview = document.getElementById('thumbnailPreview');
+        
+        thumbnailUploadArea.addEventListener('click', () => thumbnailInput.click());
+        
+        thumbnailInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    thumbnailPreview.src = e.target.result;
+                    thumbnailPreviewContainer.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Tags functionality
+    const tagsInput = document.querySelector('#{{ form.tags.id_for_label }}');
+    const tagDisplay = document.getElementById('tagDisplay');
+    const tagSuggestions = document.getElementById('tagSuggestions');
+    
+    let currentTags = [];
+    const suggestedTags = ['educational', 'reference', 'textbook', 'multimedia', 'interactive', 'tutorial', 'exercise', 'assessment'];
+    
+    function updateTagDisplay() {
+        tagDisplay.innerHTML = '';
+        currentTags.forEach((tag, index) => {
+            const tagElement = document.createElement('div');
+            tagElement.className = 'tag-item';
+            tagElement.innerHTML = `
+                <span>${tag}</span>
+                <i class="fas fa-times remove-tag" data-index="${index}"></i>
+            `;
+            tagDisplay.appendChild(tagElement);
+        });
+        
+        // Update hidden input
+        tagsInput.value = currentTags.join(', ');
+        
+        // Add event listeners to remove buttons
+        document.querySelectorAll('.remove-tag').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                currentTags.splice(index, 1);
+                updateTagDisplay();
+            });
+        });
+    }
+    
+    // Initialize with existing tags
+    if (tagsInput.value) {
+        currentTags = tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+        updateTagDisplay();
+    }
+    
+    tagsInput.addEventListener('input', function() {
+        const value = this.value.toLowerCase();
+        if (value.endsWith(',') || value.endsWith(' ')) {
+            const newTag = value.replace(/[, ]+$/, '').trim();
+            if (newTag && !currentTags.includes(newTag)) {
+                currentTags.push(newTag);
+                updateTagDisplay();
+                this.value = '';
+            }
+        }
+        
+        // Show suggestions
+        if (value.length > 0) {
+            const matches = suggestedTags.filter(tag => 
+                tag.toLowerCase().includes(value.toLowerCase()) && 
+                !currentTags.includes(tag)
+            );
+            
+            if (matches.length > 0) {
+                tagSuggestions.innerHTML = matches.map(tag => 
+                    `<div class="tag-suggestion" data-tag="${tag}">${tag}</div>`
+                ).join('');
+                tagSuggestions.style.display = 'block';
+                
+                // Add click handlers to suggestions
+                document.querySelectorAll('.tag-suggestion').forEach(suggestion => {
+                    suggestion.addEventListener('click', function() {
+                        const tag = this.dataset.tag;
+                        if (!currentTags.includes(tag)) {
+                            currentTags.push(tag);
+                            updateTagDisplay();
+                        }
+                        tagsInput.value = '';
+                        tagSuggestions.style.display = 'none';
+                    });
+                });
+            } else {
+                tagSuggestions.style.display = 'none';
+            }
+        } else {
+            tagSuggestions.style.display = 'none';
+        }
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.tag-input-container')) {
+            tagSuggestions.style.display = 'none';
+        }
+    });
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+        
+        // Check file type and access level selection
+        if (!fileTypeInput.value) {
+            alert('Please select a file type.');
+            isValid = false;
+        }
+        
+        if (!accessLevelInput.value) {
+            alert('Please select an access level.');
+            isValid = false;
+        }
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+    
+    // Helper function
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+});
+</script>
+{% endblock %}

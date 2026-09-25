@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ notification.title }} - Notification Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-bell text-primary"></i> Notification Details
+                </h1>
+                <div>
+                    <a href="{% url 'communication:notification_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Notifications
+                    </a>
+                    {% if user.is_staff or user == notification.recipient %}
+                        <a href="{% url 'communication:notification_update' notification.pk %}" class="btn btn-primary">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Notification Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-heading"></i> Title</h6>
+                                    <p class="mb-3">{{ notification.title }}</p>
+                                    
+                                    <h6><i class="fas fa-user"></i> Recipient</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-info">{{ notification.recipient.get_full_name }}</span>
+                                        <small class="text-muted d-block">{{ notification.recipient.email }}</small>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-tag"></i> Type</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{% if notification.notification_type == 'message' %}primary{% elif notification.notification_type == 'announcement' %}success{% elif notification.notification_type == 'attendance' %}warning{% elif notification.notification_type == 'exam' %}info{% elif notification.notification_type == 'fee' %}danger{% elif notification.notification_type == 'assignment' %}secondary{% else %}dark{% endif %}">
+                                            {{ notification.get_notification_type_display }}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-info-circle"></i> Status</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{% if notification.status == 'pending' %}warning{% elif notification.status == 'sent' %}info{% elif notification.status == 'delivered' %}success{% elif notification.status == 'read' %}primary{% else %}danger{% endif %}">
+                                            {{ notification.get_status_display }}
+                                        </span>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-clock"></i> Created</h6>
+                                    <p class="mb-3">{{ notification.created_at|date:"F j, Y g:i A" }}</p>
+                                    
+                                    {% if notification.is_urgent %}
+                                        <h6><i class="fas fa-exclamation-triangle text-warning"></i> Priority</h6>
+                                        <p class="mb-3">
+                                            <span class="badge bg-warning">Urgent</span>
+                                        </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <h6><i class="fas fa-comment"></i> Message</h6>
+                            <div class="alert alert-info">
+                                {{ notification.message|linebreaks }}
+                            </div>
+
+                            {% if notification.related_message %}
+                                <hr>
+                                <h6><i class="fas fa-envelope"></i> Related Message</h6>
+                                <div class="card border-info">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ notification.related_message.subject }}</h6>
+                                        <p class="card-text">{{ notification.related_message.content|truncatewords:30 }}</p>
+                                        <small class="text-muted">
+                                            From: {{ notification.related_message.sender.get_full_name }} | 
+                                            {{ notification.related_message.sent_at|date:"M j, Y" }}
+                                        </small>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {% if notification.related_announcement %}
+                                <hr>
+                                <h6><i class="fas fa-bullhorn"></i> Related Announcement</h6>
+                                <div class="card border-success">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ notification.related_announcement.title }}</h6>
+                                        <p class="card-text">{{ notification.related_announcement.content|truncatewords:30 }}</p>
+                                        <small class="text-muted">
+                                            Type: {{ notification.related_announcement.get_announcement_type_display }} | 
+                                            {{ notification.related_announcement.created_at|date:"M j, Y" }}
+                                        </small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Delivery Status -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-paper-plane"></i> Delivery Status
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <i class="fas fa-envelope fa-2x {% if notification.email_sent %}text-success{% else %}text-muted{% endif %}"></i>
+                                        <p class="mt-2">
+                                            <strong>Email</strong><br>
+                                            <span class="badge bg-{% if notification.email_sent %}success{% else %}secondary{% endif %}">
+                                                {% if notification.email_sent %}Sent{% else %}Not Sent{% endif %}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <i class="fas fa-sms fa-2x {% if notification.sms_sent %}text-success{% else %}text-muted{% endif %}"></i>
+                                        <p class="mt-2">
+                                            <strong>SMS</strong><br>
+                                            <span class="badge bg-{% if notification.sms_sent %}success{% else %}secondary{% endif %}">
+                                                {% if notification.sms_sent %}Sent{% else %}Not Sent{% endif %}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <i class="fas fa-mobile-alt fa-2x {% if notification.push_sent %}text-success{% else %}text-muted{% endif %}"></i>
+                                        <p class="mt-2">
+                                            <strong>Push</strong><br>
+                                            <span class="badge bg-{% if notification.push_sent %}success{% else %}secondary{% endif %}">
+                                                {% if notification.push_sent %}Sent{% else %}Not Sent{% endif %}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if notification.sent_at %}
+                                <hr>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-paper-plane"></i> Sent At</h6>
+                                        <p>{{ notification.sent_at|date:"F j, Y g:i A" }}</p>
+                                    </div>
+                                    {% if notification.read_at %}
+                                        <div class="col-md-6">
+                                            <h6><i class="fas fa-eye"></i> Read At</h6>
+                                            <p>{{ notification.read_at|date:"F j, Y g:i A" }}</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-clock"></i> Timeline
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <div class="timeline-marker bg-primary"></div>
+                                    <div class="timeline-content">
+                                        <h6>Created</h6>
+                                        <p class="text-muted">{{ notification.created_at|date:"M j, Y g:i A" }}</p>
+                                    </div>
+                                </div>
+                                
+                                {% if notification.sent_at %}
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker bg-success"></div>
+                                        <div class="timeline-content">
+                                            <h6>Sent</h6>
+                                            <p class="text-muted">{{ notification.sent_at|date:"M j, Y g:i A" }}</p>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                
+                                {% if notification.read_at %}
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker bg-info"></div>
+                                        <div class="timeline-content">
+                                            <h6>Read</h6>
+                                            <p class="text-muted">{{ notification.read_at|date:"M j, Y g:i A" }}</p>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-lightbulb"></i> Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                {% if user == notification.recipient and not notification.read_at %}
+                                    <button class="btn btn-success btn-sm" onclick="markAsRead()">
+                                        <i class="fas fa-check"></i> Mark as Read
+                                    </button>
+                                {% endif %}
+                                
+                                <a href="{% url 'communication:notification_list' %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-list"></i> View All Notifications
+                                </a>
+                                
+                                {% if user.is_staff or user == notification.recipient %}
+                                    <a href="{% url 'communication:notification_update' notification.pk %}" class="btn btn-outline-warning btn-sm">
+                                        <i class="fas fa-edit"></i> Edit Notification
+                                    </a>
+                                {% endif %}
+                                
+                                <a href="{% url 'communication:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-tachometer-alt"></i> Communication Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -22px;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+}
+
+.timeline-content h6 {
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.timeline-content p {
+    margin-bottom: 0;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markAsRead() {
+    fetch('{% url "communication:mark_notification_read" notification.pk %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error marking notification as read');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error marking notification as read');
+    });
+}
+</script>
+{% endblock %}

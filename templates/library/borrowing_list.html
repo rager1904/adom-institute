@@ -1,0 +1,878 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Book Borrowings - Library{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .borrowing-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+    }
+    .borrowing-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    .borrowing-card.overdue {
+        border-left: 5px solid #dc3545;
+        background: #fff5f5;
+    }
+    .borrowing-card.due-soon {
+        border-left: 5px solid #ffc107;
+        background: #fffbf0;
+    }
+    .borrowing-card.on-time {
+        border-left: 5px solid #28a745;
+        background: #f8fff8;
+    }
+    .search-filters {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-right: 15px;
+    }
+    .book-thumbnail {
+        width: 60px;
+        height: 80px;
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        margin-right: 15px;
+    }
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    .status-badge.overdue {
+        background: #dc3545;
+        color: white;
+    }
+    .status-badge.due-soon {
+        background: #ffc107;
+        color: #212529;
+    }
+    .status-badge.on-time {
+        background: #28a745;
+        color: white;
+    }
+    .status-badge.returned {
+        background: #6c757d;
+        color: white;
+    }
+    .quick-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .quick-action-btn {
+        padding: 6px 12px;
+        border-radius: 15px;
+        border: none;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .filter-chip {
+        display: inline-block;
+        margin: 5px;
+        padding: 8px 15px;
+        background: #fff;
+        border: 2px solid #e9ecef;
+        border-radius: 25px;
+        text-decoration: none;
+        color: #495057;
+        transition: all 0.3s ease;
+        font-size: 0.875rem;
+    }
+    .filter-chip.active,
+    .filter-chip:hover {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+        text-decoration: none;
+    }
+    .overdue-indicator {
+        background: #dc3545;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    .bulk-actions {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        display: none;
+    }
+    .bulk-actions.show {
+        display: block;
+    }
+    .borrowing-timeline {
+        position: relative;
+        padding-left: 20px;
+    }
+    .borrowing-timeline::before {
+        content: '';
+        position: absolute;
+        left: 8px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+    .timeline-dot {
+        position: absolute;
+        left: 0;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #007bff;
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px #e9ecef;
+    }
+    .view-toggle {
+        background: #fff;
+        border: 2px solid #dee2e6;
+        border-radius: 25px;
+        padding: 5px;
+    }
+    .view-toggle .btn {
+        border-radius: 20px;
+        border: none;
+        padding: 8px 15px;
+    }
+    .view-toggle .btn.active {
+        background: #007bff;
+        color: white;
+    }
+    .list-view .borrowing-card {
+        margin-bottom: 10px;
+    }
+    .grid-view .borrowing-card {
+        height: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-hand-holding me-2"></i>Book Borrowings
+            </h1>
+            <p class="text-muted">Track and manage book borrowings</p>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <!-- View Toggle -->
+            <div class="view-toggle">
+                <button type="button" class="btn btn-sm" id="listViewBtn" onclick="switchView('list')">
+                    <i class="fas fa-list"></i>
+                </button>
+                <button type="button" class="btn btn-sm active" id="gridViewBtn" onclick="switchView('grid')">
+                    <i class="fas fa-th"></i>
+                </button>
+            </div>
+            
+            <div class="btn-group">
+                <a href="{% url 'library:borrowing_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>New Borrowing
+                </a>
+                <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#scanModal">
+                    <i class="fas fa-barcode me-2"></i>Scan Barcode
+                </button>
+                <button type="button" class="btn btn-secondary" id="toggleBulkSelect">
+                    <i class="fas fa-check-square me-2"></i>Bulk Actions
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <i class="fas fa-hand-holding fa-2x mb-2"></i>
+                <h4>{{ total_borrowings|default:0 }}</h4>
+                <p class="mb-0">Total Active</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                <h4>{{ overdue_count|default:0 }}</h4>
+                <p class="mb-0">Overdue</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%);">
+                <i class="fas fa-clock fa-2x mb-2"></i>
+                <h4>{{ due_soon_count|default:0 }}</h4>
+                <p class="mb-0">Due Soon</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <i class="fas fa-undo fa-2x mb-2"></i>
+                <h4>{{ returned_today|default:0 }}</h4>
+                <p class="mb-0">Returned Today</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="search-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="search" class="form-label">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ request.GET.search }}" placeholder="Search by user, book, ISBN...">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Status</option>
+                    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="overdue" {% if request.GET.status == 'overdue' %}selected{% endif %}>Overdue</option>
+                    <option value="due_soon" {% if request.GET.status == 'due_soon' %}selected{% endif %}>Due Soon</option>
+                    <option value="returned" {% if request.GET.status == 'returned' %}selected{% endif %}>Returned</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="user_type" class="form-label">User Type</label>
+                <select class="form-select" id="user_type" name="user_type">
+                    <option value="">All Users</option>
+                    <option value="student" {% if request.GET.user_type == 'student' %}selected{% endif %}>Students</option>
+                    <option value="teacher" {% if request.GET.user_type == 'teacher' %}selected{% endif %}>Teachers</option>
+                    <option value="staff" {% if request.GET.user_type == 'staff' %}selected{% endif %}>Staff</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="date_range" class="form-label">Date Range</label>
+                <select class="form-select" id="date_range" name="date_range">
+                    <option value="">All Time</option>
+                    <option value="today" {% if request.GET.date_range == 'today' %}selected{% endif %}>Today</option>
+                    <option value="week" {% if request.GET.date_range == 'week' %}selected{% endif %}>This Week</option>
+                    <option value="month" {% if request.GET.date_range == 'month' %}selected{% endif %}>This Month</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid gap-2 d-md-flex">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-1"></i>Filter
+                    </button>
+                    <a href="{% url 'library:borrowing_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <!-- Quick Filters -->
+        <div class="mt-3">
+            <small class="text-muted d-block mb-2">Quick Filters:</small>
+            <a href="?status=overdue" class="filter-chip {% if request.GET.status == 'overdue' %}active{% endif %}">
+                <i class="fas fa-exclamation-triangle me-1"></i>Overdue
+            </a>
+            <a href="?status=due_soon" class="filter-chip {% if request.GET.status == 'due_soon' %}active{% endif %}">
+                <i class="fas fa-clock me-1"></i>Due Soon
+            </a>
+            <a href="?user_type=student" class="filter-chip {% if request.GET.user_type == 'student' %}active{% endif %}">
+                <i class="fas fa-user-graduate me-1"></i>Students
+            </a>
+            <a href="?date_range=today" class="filter-chip {% if request.GET.date_range == 'today' %}active{% endif %}">
+                <i class="fas fa-calendar-day me-1"></i>Today
+            </a>
+            <a href="{% url 'library:borrowing_list' %}" class="filter-chip">
+                <i class="fas fa-times me-1"></i>Clear All
+            </a>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="bulk-actions" id="bulkActions">
+        <div class="d-flex justify-content-between align-items-center">
+            <span id="selectedCount">0 borrowings selected</span>
+            <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-success" id="bulkReturn">
+                    <i class="fas fa-undo me-1"></i>Return Selected
+                </button>
+                <button type="button" class="btn btn-sm btn-warning" id="bulkExtend">
+                    <i class="fas fa-calendar-plus me-1"></i>Extend Due Date
+                </button>
+                <button type="button" class="btn btn-sm btn-info" id="bulkReminder">
+                    <i class="fas fa-bell me-1"></i>Send Reminders
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Borrowings List/Grid -->
+    <div id="borrowingContainer" class="grid-view">
+        <div class="row" id="borrowingGrid">
+            {% for borrowing in borrowings %}
+            <div class="col-lg-6 col-xl-4 mb-3 borrowing-item">
+                <div class="card borrowing-card 
+                    {% if borrowing.is_overdue %}overdue{% elif borrowing.days_until_due <= 3 %}due-soon{% else %}on-time{% endif %}" 
+                    data-borrowing-id="{{ borrowing.id }}">
+                    
+                    <div class="card-body">
+                        <div class="d-flex align-items-start mb-3">
+                            <input type="checkbox" class="form-check-input borrowing-checkbox me-3" 
+                                   value="{{ borrowing.id }}" style="display: none; margin-top: 20px;">
+                            
+                            <div class="user-avatar">
+                                {{ borrowing.user.first_name|first }}{{ borrowing.user.last_name|first }}
+                            </div>
+                            
+                            <div class="flex-grow-1">
+                                <h6 class="card-title mb-1">{{ borrowing.user.get_full_name }}</h6>
+                                <p class="text-muted small mb-2">{{ borrowing.user.username }}</p>
+                                
+                                <span class="status-badge 
+                                    {% if borrowing.is_overdue %}overdue{% elif borrowing.days_until_due <= 3 %}due-soon{% else %}on-time{% endif %}">
+                                    {% if borrowing.is_overdue %}
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        Overdue by {{ borrowing.days_overdue }} day{{ borrowing.days_overdue|pluralize }}
+                                    {% elif borrowing.days_until_due <= 3 %}
+                                        <i class="fas fa-clock me-1"></i>
+                                        Due in {{ borrowing.days_until_due }} day{{ borrowing.days_until_due|pluralize }}
+                                    {% else %}
+                                        <i class="fas fa-check me-1"></i>
+                                        On Time
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="book-thumbnail">
+                                {% if borrowing.book.cover_image %}
+                                    <img src="{{ borrowing.book.cover_image.url }}" alt="{{ borrowing.book.title }}" 
+                                         class="img-fluid h-100 w-100" style="object-fit: cover; border-radius: 8px;">
+                                {% else %}
+                                    <i class="fas fa-book"></i>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ borrowing.book.title|truncatechars:40 }}</h6>
+                                <p class="text-muted small mb-1">{{ borrowing.book.author }}</p>
+                                <p class="text-muted small mb-0">ISBN: {{ borrowing.book.isbn|default:"N/A" }}</p>
+                            </div>
+                        </div>
+
+                        <div class="borrowing-timeline mb-3">
+                            <div class="timeline-dot"></div>
+                            <div class="ps-3">
+                                <p class="mb-1"><strong>Borrowed:</strong> {{ borrowing.borrowed_date|date:"M d, Y" }}</p>
+                                <p class="mb-1">
+                                    <strong>Due:</strong> {{ borrowing.due_date|date:"M d, Y" }}
+                                    {% if borrowing.is_overdue %}
+                                        <span class="overdue-indicator ms-2">{{ borrowing.days_overdue }} days late</span>
+                                    {% endif %}
+                                </p>
+                                {% if borrowing.notes %}
+                                <p class="text-muted small mb-0">{{ borrowing.notes|truncatechars:50 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="quick-actions">
+                            <button type="button" class="quick-action-btn btn-success" 
+                                    onclick="returnBook({{ borrowing.id }})"
+                                    title="Return Book">
+                                <i class="fas fa-undo me-1"></i>Return
+                            </button>
+                            <button type="button" class="quick-action-btn btn-warning" 
+                                    onclick="extendDueDate({{ borrowing.id }})"
+                                    title="Extend Due Date">
+                                <i class="fas fa-calendar-plus me-1"></i>Extend
+                            </button>
+                            <button type="button" class="quick-action-btn btn-info" 
+                                    onclick="sendReminder({{ borrowing.id }})"
+                                    title="Send Reminder">
+                                <i class="fas fa-bell me-1"></i>Remind
+                            </button>
+                            <button type="button" class="quick-action-btn btn-outline-secondary" 
+                                    onclick="viewDetails({{ borrowing.id }})"
+                                    title="View Details">
+                                <i class="fas fa-eye me-1"></i>Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-hand-holding fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No borrowings found</h4>
+                    <p class="text-muted">
+                        {% if request.GET.search or request.GET.status %}
+                            Try adjusting your search criteria or <a href="{% url 'library:borrowing_list' %}">clear filters</a>.
+                        {% else %}
+                            No active borrowings at the moment. <a href="{% url 'library:borrowing_create' %}">Create a new borrowing</a>.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Borrowings pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page=1">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.next_page_number }}">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- Barcode Scan Modal -->
+<div class="modal fade" id="scanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-barcode me-2"></i>Scan Barcode</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="barcodeInput" class="form-label">Barcode</label>
+                    <input type="text" class="form-control" id="barcodeInput" placeholder="Scan or enter barcode..." autofocus>
+                </div>
+                <div id="scanResult" class="alert" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="processBarcode()">
+                    <i class="fas fa-search me-2"></i>Search
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Return Book Modal -->
+<div class="modal fade" id="returnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-undo me-2"></i>Return Book</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="returnForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" id="returnBorrowingId">
+                    <div id="returnBookDetails"></div>
+                    <div class="mb-3">
+                        <label for="returnNotes" class="form-label">Return Notes (Optional)</label>
+                        <textarea class="form-control" id="returnNotes" rows="3" placeholder="Any notes about the book condition..."></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="bookDamaged">
+                        <label class="form-check-label" for="bookDamaged">
+                            Book has damage or issues
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Confirm Return
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Extend Due Date Modal -->
+<div class="modal fade" id="extendModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-calendar-plus me-2"></i>Extend Due Date</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="extendForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" id="extendBorrowingId">
+                    <div id="extendBookDetails"></div>
+                    <div class="mb-3">
+                        <label for="newDueDate" class="form-label">New Due Date</label>
+                        <input type="date" class="form-control" id="newDueDate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="extendReason" class="form-label">Reason for Extension</label>
+                        <textarea class="form-control" id="extendReason" rows="2" placeholder="Reason for extending the due date..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-check me-2"></i>Extend Due Date
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // View switching
+    window.switchView = function(view) {
+        const container = document.getElementById('borrowingContainer');
+        const gridBtn = document.getElementById('gridViewBtn');
+        const listBtn = document.getElementById('listViewBtn');
+        
+        if (view === 'grid') {
+            container.className = 'grid-view';
+            gridBtn.classList.add('active');
+            listBtn.classList.remove('active');
+        } else {
+            container.className = 'list-view';
+            listBtn.classList.add('active');
+            gridBtn.classList.remove('active');
+        }
+        
+        localStorage.setItem('borrowingView', view);
+    };
+    
+    // Load saved view preference
+    const savedView = localStorage.getItem('borrowingView') || 'grid';
+    switchView(savedView);
+    
+    // Bulk selection functionality
+    const toggleBulkBtn = document.getElementById('toggleBulkSelect');
+    const bulkActions = document.getElementById('bulkActions');
+    const borrowingCheckboxes = document.querySelectorAll('.borrowing-checkbox');
+    const selectedCount = document.getElementById('selectedCount');
+    let bulkMode = false;
+
+    toggleBulkBtn.addEventListener('click', function() {
+        bulkMode = !bulkMode;
+        if (bulkMode) {
+            borrowingCheckboxes.forEach(cb => cb.style.display = 'block');
+            toggleBulkBtn.innerHTML = '<i class="fas fa-times me-2"></i>Cancel Selection';
+            toggleBulkBtn.className = 'btn btn-warning';
+        } else {
+            borrowingCheckboxes.forEach(cb => {
+                cb.style.display = 'none';
+                cb.checked = false;
+            });
+            bulkActions.classList.remove('show');
+            toggleBulkBtn.innerHTML = '<i class="fas fa-check-square me-2"></i>Bulk Actions';
+            toggleBulkBtn.className = 'btn btn-secondary';
+        }
+        updateSelectedCount();
+    });
+
+    function updateSelectedCount() {
+        const selected = document.querySelectorAll('.borrowing-checkbox:checked').length;
+        selectedCount.textContent = `${selected} borrowings selected`;
+        if (selected > 0 && bulkMode) {
+            bulkActions.classList.add('show');
+        } else {
+            bulkActions.classList.remove('show');
+        }
+    }
+
+    borrowingCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelectedCount);
+    });
+
+    // Return book functionality
+    window.returnBook = function(borrowingId) {
+        const modal = new bootstrap.Modal(document.getElementById('returnModal'));
+        document.getElementById('returnBorrowingId').value = borrowingId;
+        
+        // Fetch borrowing details and populate modal
+        fetch(`/library/borrowings/${borrowingId}/details/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('returnBookDetails').innerHTML = `
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-book me-2"></i>${data.book_title}</h6>
+                        <p class="mb-1"><strong>Borrower:</strong> ${data.borrower_name}</p>
+                        <p class="mb-1"><strong>Borrowed:</strong> ${data.borrowed_date}</p>
+                        <p class="mb-0"><strong>Due Date:</strong> ${data.due_date}</p>
+                        ${data.is_overdue ? '<p class="text-danger mb-0"><strong>Status:</strong> Overdue</p>' : ''}
+                    </div>
+                `;
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error loading borrowing details');
+            });
+    };
+
+    // Extend due date functionality
+    window.extendDueDate = function(borrowingId) {
+        const modal = new bootstrap.Modal(document.getElementById('extendModal'));
+        document.getElementById('extendBorrowingId').value = borrowingId;
+        
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('newDueDate').min = today;
+        
+        // Fetch borrowing details and populate modal
+        fetch(`/library/borrowings/${borrowingId}/details/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('extendBookDetails').innerHTML = `
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-book me-2"></i>${data.book_title}</h6>
+                        <p class="mb-1"><strong>Borrower:</strong> ${data.borrower_name}</p>
+                        <p class="mb-0"><strong>Current Due Date:</strong> ${data.due_date}</p>
+                    </div>
+                `;
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error loading borrowing details');
+            });
+    };
+
+    // Send reminder functionality
+    window.sendReminder = function(borrowingId) {
+        if (confirm('Send reminder email to the borrower?')) {
+            fetch(`/library/borrowings/${borrowingId}/reminder/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Reminder sent successfully!');
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to send reminder'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while sending the reminder');
+            });
+        }
+    };
+
+    // View details functionality
+    window.viewDetails = function(borrowingId) {
+        window.location.href = `/library/borrowings/${borrowingId}/`;
+    };
+
+    // Barcode processing
+    window.processBarcode = function() {
+        const barcode = document.getElementById('barcodeInput').value.trim();
+        const resultDiv = document.getElementById('scanResult');
+        
+        if (!barcode) {
+            resultDiv.className = 'alert alert-warning';
+            resultDiv.textContent = 'Please enter a barcode';
+            resultDiv.style.display = 'block';
+            return;
+        }
+        
+        fetch(`/library/barcode-scan/?barcode=${encodeURIComponent(barcode)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.className = 'alert alert-success';
+                    resultDiv.innerHTML = `
+                        <h6><i class="fas fa-check me-2"></i>Book Found</h6>
+                        <p class="mb-1"><strong>Title:</strong> ${data.book.title}</p>
+                        <p class="mb-1"><strong>Author:</strong> ${data.book.author}</p>
+                        <p class="mb-0"><strong>Status:</strong> ${data.book.is_available ? 'Available' : 'Not Available'}</p>
+                    `;
+                    
+                    if (data.book.is_available) {
+                        resultDiv.innerHTML += `
+                            <a href="/library/borrowings/create/?book=${data.book.id}" class="btn btn-sm btn-primary mt-2">
+                                <i class="fas fa-plus me-1"></i>Create Borrowing
+                            </a>
+                        `;
+                    }
+                } else {
+                    resultDiv.className = 'alert alert-danger';
+                    resultDiv.textContent = data.error || 'Book not found';
+                }
+                resultDiv.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultDiv.className = 'alert alert-danger';
+                resultDiv.textContent = 'Error processing barcode';
+                resultDiv.style.display = 'block';
+            });
+    };
+
+    // Form submissions
+    document.getElementById('returnForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const borrowingId = document.getElementById('returnBorrowingId').value;
+        const notes = document.getElementById('returnNotes').value;
+        const damaged = document.getElementById('bookDamaged').checked;
+        
+        fetch(`/library/borrowings/${borrowingId}/return/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                notes: notes,
+                damaged: damaged
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('returnModal')).hide();
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to return book'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while returning the book');
+        });
+    });
+
+    document.getElementById('extendForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const borrowingId = document.getElementById('extendBorrowingId').value;
+        const newDueDate = document.getElementById('newDueDate').value;
+        const reason = document.getElementById('extendReason').value;
+        
+        fetch(`/library/borrowings/${borrowingId}/extend/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                new_due_date: newDueDate,
+                reason: reason
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('extendModal')).hide();
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to extend due date'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while extending the due date');
+        });
+    });
+
+    // Auto-focus barcode input when modal opens
+    document.getElementById('scanModal').addEventListener('shown.bs.modal', function() {
+        document.getElementById('barcodeInput').focus();
+    });
+
+    // Enter key in barcode input
+    document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            processBarcode();
+        }
+    });
+});
+</script>
+{% endblock %}

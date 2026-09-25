@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Edit Leave Request{% else %}New Leave Request{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-calendar-alt me-3 text-primary"></i>
+            {% if object %}Edit Leave Request{% else %}New Leave Request{% endif %}
+        </h2>
+        <p class="text-muted mb-0">
+            {% if object %}Update leave request details{% else %}Submit a new leave request{% endif %}
+        </p>
+    </div>
+    <div>
+        <a href="{% url 'attendance:leave_request_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>Leave Request Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Leave Type</label>
+                            {{ form.leave_type }}
+                            {% if form.leave_type.errors %}
+                                <div class="text-danger small">{{ form.leave_type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Start Date</label>
+                            {{ form.start_date }}
+                            {% if form.start_date.errors %}
+                                <div class="text-danger small">{{ form.start_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">End Date</label>
+                            {{ form.end_date }}
+                            {% if form.end_date.errors %}
+                                <div class="text-danger small">{{ form.end_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Reason</label>
+                        {{ form.reason }}
+                        {% if form.reason.errors %}
+                            <div class="text-danger small">{{ form.reason.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text">Please provide a detailed reason for your leave request</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Supporting Document</label>
+                        {{ form.supporting_document }}
+                        {% if form.supporting_document.errors %}
+                            <div class="text-danger small">{{ form.supporting_document.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text">Upload any supporting documents (optional)</div>
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            {% if object %}Update{% else %}Submit{% endif %}
+                        </button>
+                        <a href="{% url 'attendance:leave_request_list' %}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Instructions Card -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Leave Request Guidelines
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Submit requests at least 3 days in advance for planned leaves
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Provide detailed reasons for better approval chances
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Upload supporting documents for medical or emergency leaves
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Ensure dates are within the academic calendar
+                    </li>
+                    <li>
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Contact your supervisor for urgent leave requests
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startDateInput = document.getElementById('id_start_date');
+    const endDateInput = document.getElementById('id_end_date');
+    
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    startDateInput.min = today;
+    endDateInput.min = today;
+    
+    // Update end date minimum when start date changes
+    startDateInput.addEventListener('change', function() {
+        endDateInput.min = this.value;
+        if (endDateInput.value && endDateInput.value < this.value) {
+            endDateInput.value = this.value;
+        }
+    });
+    
+    // Update start date maximum when end date changes
+    endDateInput.addEventListener('change', function() {
+        startDateInput.max = this.value;
+    });
+});
+</script>
+{% endblock %}

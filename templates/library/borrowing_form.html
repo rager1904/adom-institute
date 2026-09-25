@@ -1,0 +1,814 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create New Borrowing - Library{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .form-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        padding: 40px;
+        margin-bottom: 30px;
+    }
+    .form-header {
+        background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-left: 4px solid #fc4a1a;
+    }
+    .form-section h5 {
+        color: #495057;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 12px 15px;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #fc4a1a;
+        box-shadow: 0 0 0 0.2rem rgba(252,74,26,0.25);
+    }
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+    .btn-primary {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
+        border: none;
+    }
+    .btn-secondary {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+    }
+    .search-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 15px;
+        padding: 30px;
+        text-align: center;
+        background: #fafafa;
+        transition: all 0.3s ease;
+        margin-bottom: 25px;
+    }
+    .search-area.active {
+        border-color: #fc4a1a;
+        background: #fff5f5;
+    }
+    .selection-card {
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .selection-card:hover {
+        border-color: #fc4a1a;
+        background: #fff5f5;
+    }
+    .selection-card.selected {
+        border-color: #fc4a1a;
+        background: #fff5f5;
+        box-shadow: 0 0 0 3px rgba(252,74,26,0.1);
+    }
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-right: 15px;
+    }
+    .book-thumbnail {
+        width: 60px;
+        height: 80px;
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        margin-right: 15px;
+    }
+    .search-results {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        background: white;
+        margin-top: 15px;
+    }
+    .search-result-item {
+        padding: 15px;
+        border-bottom: 1px solid #f8f9fa;
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
+    .search-result-item:hover {
+        background: #f8f9fa;
+    }
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+    .barcode-scanner {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .quick-select {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    .quick-select-item {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .quick-select-item:hover {
+        border-color: #fc4a1a;
+        background: #fff5f5;
+    }
+    .field-help {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    .required-asterisk {
+        color: #dc3545;
+    }
+    .availability-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-left: 10px;
+    }
+    .availability-indicator.available {
+        background: #d4edda;
+        color: #155724;
+    }
+    .availability-indicator.unavailable {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    .summary-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+    .summary-item {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    .summary-item:last-child {
+        border-bottom: none;
+    }
+    .date-calculator {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+    .suggestions-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 200px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+    }
+    .suggestion-item {
+        padding: 10px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    .suggestion-item:hover {
+        background: #f8f9fa;
+    }
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'library:dashboard' %}">Library</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'library:borrowing_list' %}">Borrowings</a></li>
+            <li class="breadcrumb-item active">Create Borrowing</li>
+        </ol>
+    </nav>
+
+    <div class="form-container">
+        <!-- Form Header -->
+        <div class="form-header">
+            <h1 class="mb-3">
+                <i class="fas fa-hand-holding me-3"></i>
+                Create New Borrowing
+            </h1>
+            <p class="mb-0">
+                Issue a book to a student, teacher, or staff member. Fill in the details below to create a new borrowing record.
+            </p>
+        </div>
+
+        <!-- Form -->
+        <form method="post" id="borrowingForm">
+            {% csrf_token %}
+            
+            <!-- User Selection Section -->
+            <div class="form-section">
+                <h5><i class="fas fa-user me-2"></i>Select Borrower</h5>
+                
+                <!-- Barcode Scanner -->
+                <div class="barcode-scanner">
+                    <i class="fas fa-barcode fa-2x mb-2"></i>
+                    <h6>Scan User ID Card</h6>
+                    <input type="text" class="form-control bg-transparent border-light text-white" 
+                           id="userBarcodeInput" placeholder="Scan user ID card or enter user ID..." style="max-width: 300px; margin: 10px auto;">
+                </div>
+                
+                <!-- Manual Search -->
+                <div class="search-area" id="userSearchArea">
+                    <i class="fas fa-search fa-2x text-muted mb-3"></i>
+                    <h5 class="text-muted">Search for User</h5>
+                    <div class="position-relative" style="max-width: 400px; margin: 0 auto;">
+                        <input type="text" class="form-control" id="userSearchInput" 
+                               placeholder="Search by name, username, or email...">
+                        <ul class="suggestions-list" id="userSuggestions" style="display: none;"></ul>
+                    </div>
+                </div>
+                
+                <!-- Selected User Display -->
+                <div id="selectedUserDisplay" style="display: none;">
+                    <div class="selection-card selected">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar" id="selectedUserAvatar"></div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1" id="selectedUserName"></h6>
+                                <p class="text-muted mb-1" id="selectedUserDetails"></p>
+                                <p class="text-muted small mb-0" id="selectedUserStats"></p>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearUserSelection()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                {{ form.user }}
+                {% if form.user.errors %}
+                    <div class="text-danger mt-2">{{ form.user.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Book Selection Section -->
+            <div class="form-section">
+                <h5><i class="fas fa-book me-2"></i>Select Book</h5>
+                
+                <!-- Barcode Scanner -->
+                <div class="barcode-scanner">
+                    <i class="fas fa-barcode fa-2x mb-2"></i>
+                    <h6>Scan Book Barcode</h6>
+                    <input type="text" class="form-control bg-transparent border-light text-white" 
+                           id="bookBarcodeInput" placeholder="Scan book barcode or enter ISBN..." style="max-width: 300px; margin: 10px auto;">
+                </div>
+                
+                <!-- Manual Search -->
+                <div class="search-area" id="bookSearchArea">
+                    <i class="fas fa-search fa-2x text-muted mb-3"></i>
+                    <h5 class="text-muted">Search for Book</h5>
+                    <div class="position-relative" style="max-width: 400px; margin: 0 auto;">
+                        <input type="text" class="form-control" id="bookSearchInput" 
+                               placeholder="Search by title, author, or ISBN...">
+                        <ul class="suggestions-list" id="bookSuggestions" style="display: none;"></ul>
+                    </div>
+                </div>
+                
+                <!-- Quick Select Popular Books -->
+                <div class="mt-3">
+                    <small class="text-muted d-block mb-2">Quick Select - Popular Books:</small>
+                    <div class="quick-select" id="popularBooks">
+                        {% for book in popular_books %}
+                        <div class="quick-select-item" onclick="selectBook({{ book.id }}, '{{ book.title|escapejs }}', '{{ book.author|escapejs }}', {{ book.is_available|yesno:'true,false' }})">
+                            <i class="fas fa-book text-primary mb-2"></i>
+                            <h6 class="mb-1">{{ book.title|truncatechars:30 }}</h6>
+                            <small class="text-muted">{{ book.author }}</small>
+                            <div class="availability-indicator {% if book.is_available %}available{% else %}unavailable{% endif %}">
+                                {% if book.is_available %}Available{% else %}Not Available{% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Selected Book Display -->
+                <div id="selectedBookDisplay" style="display: none;">
+                    <div class="selection-card selected">
+                        <div class="d-flex align-items-center">
+                            <div class="book-thumbnail" id="selectedBookThumbnail">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1" id="selectedBookTitle"></h6>
+                                <p class="text-muted mb-1" id="selectedBookAuthor"></p>
+                                <p class="text-muted small mb-0" id="selectedBookDetails"></p>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearBookSelection()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                {{ form.book }}
+                {% if form.book.errors %}
+                    <div class="text-danger mt-2">{{ form.book.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Borrowing Details Section -->
+            <div class="form-section">
+                <h5><i class="fas fa-calendar me-2"></i>Borrowing Details</h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.due_date.id_for_label }}" class="form-label">
+                                Due Date <span class="required-asterisk">*</span>
+                            </label>
+                            {{ form.due_date }}
+                            {% if form.due_date.errors %}
+                                <div class="text-danger mt-1">{{ form.due_date.errors }}</div>
+                            {% endif %}
+                            <div class="field-help">Book must be returned by this date</div>
+                            
+                            <div class="date-calculator">
+                                <small class="text-muted d-block mb-2">Quick Date Selection:</small>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDueDate(7)">1 Week</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDueDate(14)">2 Weeks</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDueDate(30)">1 Month</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">Notes (Optional)</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger mt-1">{{ form.notes.errors }}</div>
+                            {% endif %}
+                            <div class="field-help">Any special instructions or notes</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Section -->
+            <div class="summary-section" id="borrowingSummary" style="display: none;">
+                <h5><i class="fas fa-clipboard-check me-2"></i>Borrowing Summary</h5>
+                
+                <div class="summary-item">
+                    <span>Borrower:</span>
+                    <span id="summaryBorrower">-</span>
+                </div>
+                <div class="summary-item">
+                    <span>Book:</span>
+                    <span id="summaryBook">-</span>
+                </div>
+                <div class="summary-item">
+                    <span>Due Date:</span>
+                    <span id="summaryDueDate">-</span>
+                </div>
+                <div class="summary-item">
+                    <span>Days to Return:</span>
+                    <span id="summaryDaysToReturn">-</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="text-center mt-4">
+                <a href="{% url 'library:borrowing_list' %}" class="btn btn-secondary me-3">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                    <i class="fas fa-check me-2"></i>Create Borrowing
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('borrowingForm');
+    const userInput = document.querySelector('#{{ form.user.id_for_label }}');
+    const bookInput = document.querySelector('#{{ form.book.id_for_label }}');
+    const dueDateInput = document.querySelector('#{{ form.due_date.id_for_label }}');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    let selectedUser = null;
+    let selectedBook = null;
+    
+    // Hide original inputs
+    userInput.style.display = 'none';
+    bookInput.style.display = 'none';
+    
+    // Set default due date (2 weeks from today)
+    const today = new Date();
+    const twoWeeksLater = new Date(today.getTime() + (14 * 24 * 60 * 60 * 1000));
+    dueDateInput.value = twoWeeksLater.toISOString().split('T')[0];
+    dueDateInput.min = today.toISOString().split('T')[0];
+    
+    // User search functionality
+    const userSearchInput = document.getElementById('userSearchInput');
+    const userSuggestions = document.getElementById('userSuggestions');
+    let userSearchTimeout;
+    
+    userSearchInput.addEventListener('input', function() {
+        clearTimeout(userSearchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            userSuggestions.style.display = 'none';
+            return;
+        }
+        
+        userSearchTimeout = setTimeout(() => {
+            searchUsers(query);
+        }, 300);
+    });
+    
+    function searchUsers(query) {
+        fetch(`/library/search/users/?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                userSuggestions.innerHTML = '';
+                
+                if (data.users && data.users.length > 0) {
+                    data.users.forEach(user => {
+                        const li = document.createElement('li');
+                        li.className = 'suggestion-item';
+                        li.innerHTML = `
+                            <div class="d-flex align-items-center">
+                                <div style="width: 30px; height: 30px; background: #007bff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; margin-right: 10px;">
+                                    ${user.first_name.charAt(0)}${user.last_name.charAt(0)}
+                                </div>
+                                <div>
+                                    <div class="fw-bold">${user.full_name}</div>
+                                    <small class="text-muted">${user.username} • ${user.user_type}</small>
+                                </div>
+                            </div>
+                        `;
+                        li.addEventListener('click', () => selectUser(user));
+                        userSuggestions.appendChild(li);
+                    });
+                    userSuggestions.style.display = 'block';
+                } else {
+                    userSuggestions.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error searching users:', error);
+            });
+    }
+    
+    function selectUser(user) {
+        selectedUser = user;
+        userInput.value = user.id;
+        
+        // Update display
+        document.getElementById('selectedUserAvatar').textContent = user.first_name.charAt(0) + user.last_name.charAt(0);
+        document.getElementById('selectedUserName').textContent = user.full_name;
+        document.getElementById('selectedUserDetails').textContent = `${user.username} • ${user.user_type}`;
+        document.getElementById('selectedUserStats').textContent = `Active Borrowings: ${user.active_borrowings || 0} • Total Borrowed: ${user.total_borrowed || 0}`;
+        
+        document.getElementById('userSearchArea').style.display = 'none';
+        document.getElementById('selectedUserDisplay').style.display = 'block';
+        userSuggestions.style.display = 'none';
+        
+        updateSummary();
+        checkFormCompletion();
+    }
+    
+    window.clearUserSelection = function() {
+        selectedUser = null;
+        userInput.value = '';
+        document.getElementById('userSearchArea').style.display = 'block';
+        document.getElementById('selectedUserDisplay').style.display = 'none';
+        userSearchInput.value = '';
+        updateSummary();
+        checkFormCompletion();
+    };
+    
+    // Book search functionality
+    const bookSearchInput = document.getElementById('bookSearchInput');
+    const bookSuggestions = document.getElementById('bookSuggestions');
+    let bookSearchTimeout;
+    
+    bookSearchInput.addEventListener('input', function() {
+        clearTimeout(bookSearchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            bookSuggestions.style.display = 'none';
+            return;
+        }
+        
+        bookSearchTimeout = setTimeout(() => {
+            searchBooks(query);
+        }, 300);
+    });
+    
+    function searchBooks(query) {
+        fetch(`/library/search/books/?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                bookSuggestions.innerHTML = '';
+                
+                if (data.books && data.books.length > 0) {
+                    data.books.forEach(book => {
+                        const li = document.createElement('li');
+                        li.className = 'suggestion-item';
+                        li.innerHTML = `
+                            <div class="d-flex align-items-center">
+                                <div style="width: 30px; height: 40px; background: #28a745; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; margin-right: 10px;">
+                                    <i class="fas fa-book"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold">${book.title}</div>
+                                    <small class="text-muted">${book.author} • ISBN: ${book.isbn || 'N/A'}</small>
+                                    <div class="small ${book.is_available ? 'text-success' : 'text-danger'}">
+                                        ${book.is_available ? 'Available' : 'Not Available'} (${book.available_copies}/${book.total_copies})
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        li.addEventListener('click', () => selectBookFromSearch(book));
+                        bookSuggestions.appendChild(li);
+                    });
+                    bookSuggestions.style.display = 'block';
+                } else {
+                    bookSuggestions.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error searching books:', error);
+            });
+    }
+    
+    function selectBookFromSearch(book) {
+        selectBook(book.id, book.title, book.author, book.is_available, book.isbn, book.available_copies, book.total_copies);
+    }
+    
+    window.selectBook = function(id, title, author, isAvailable, isbn = '', availableCopies = 0, totalCopies = 0) {
+        selectedBook = {
+            id: id,
+            title: title,
+            author: author,
+            is_available: isAvailable,
+            isbn: isbn,
+            available_copies: availableCopies,
+            total_copies: totalCopies
+        };
+        
+        bookInput.value = id;
+        
+        // Update display
+        document.getElementById('selectedBookTitle').textContent = title;
+        document.getElementById('selectedBookAuthor').textContent = author;
+        document.getElementById('selectedBookDetails').textContent = `ISBN: ${isbn || 'N/A'} • Available: ${availableCopies || 0}/${totalCopies || 0}`;
+        
+        document.getElementById('bookSearchArea').style.display = 'none';
+        document.getElementById('selectedBookDisplay').style.display = 'block';
+        bookSuggestions.style.display = 'none';
+        
+        updateSummary();
+        checkFormCompletion();
+        
+        if (!isAvailable) {
+            alert('This book is currently not available for borrowing.');
+        }
+    };
+    
+    window.clearBookSelection = function() {
+        selectedBook = null;
+        bookInput.value = '';
+        document.getElementById('bookSearchArea').style.display = 'block';
+        document.getElementById('selectedBookDisplay').style.display = 'none';
+        bookSearchInput.value = '';
+        updateSummary();
+        checkFormCompletion();
+    };
+    
+    // Barcode functionality
+    document.getElementById('userBarcodeInput').addEventListener('input', function() {
+        const barcode = this.value.trim();
+        if (barcode.length > 3) {
+            searchUserByBarcode(barcode);
+        }
+    });
+    
+    document.getElementById('bookBarcodeInput').addEventListener('input', function() {
+        const barcode = this.value.trim();
+        if (barcode.length > 3) {
+            searchBookByBarcode(barcode);
+        }
+    });
+    
+    function searchUserByBarcode(barcode) {
+        fetch(`/library/barcode-scan/user/?barcode=${encodeURIComponent(barcode)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.user) {
+                    selectUser(data.user);
+                    document.getElementById('userBarcodeInput').value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error scanning user barcode:', error);
+            });
+    }
+    
+    function searchBookByBarcode(barcode) {
+        fetch(`/library/barcode-scan/?barcode=${encodeURIComponent(barcode)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.book) {
+                    selectBook(data.book.id, data.book.title, data.book.author, data.book.is_available, 
+                              data.book.isbn, data.book.available_copies, data.book.total_copies);
+                    document.getElementById('bookBarcodeInput').value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error scanning book barcode:', error);
+            });
+    }
+    
+    // Due date quick selection
+    window.setDueDate = function(days) {
+        const date = new Date();
+        date.setDate(date.getDate() + days);
+        dueDateInput.value = date.toISOString().split('T')[0];
+        updateSummary();
+    };
+    
+    // Update summary
+    function updateSummary() {
+        const summarySection = document.getElementById('borrowingSummary');
+        
+        if (selectedUser && selectedBook && dueDateInput.value) {
+            summarySection.style.display = 'block';
+            
+            document.getElementById('summaryBorrower').textContent = selectedUser.full_name;
+            document.getElementById('summaryBook').textContent = selectedBook.title;
+            document.getElementById('summaryDueDate').textContent = new Date(dueDateInput.value).toLocaleDateString();
+            
+            const dueDate = new Date(dueDateInput.value);
+            const today = new Date();
+            const daysDiff = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+            document.getElementById('summaryDaysToReturn').textContent = `${daysDiff} days`;
+        } else {
+            summarySection.style.display = 'none';
+        }
+    }
+    
+    // Check form completion
+    function checkFormCompletion() {
+        const isComplete = selectedUser && selectedBook && dueDateInput.value;
+        submitBtn.disabled = !isComplete;
+        
+        if (isComplete && selectedBook && !selectedBook.is_available) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-times me-2"></i>Book Not Available';
+            submitBtn.className = 'btn btn-danger';
+        } else if (isComplete) {
+            submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Create Borrowing';
+            submitBtn.className = 'btn btn-primary';
+        }
+    }
+    
+    // Listen for due date changes
+    dueDateInput.addEventListener('change', updateSummary);
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.position-relative')) {
+            userSuggestions.style.display = 'none';
+            bookSuggestions.style.display = 'none';
+        }
+    });
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        if (!selectedUser || !selectedBook || !dueDateInput.value) {
+            e.preventDefault();
+            alert('Please select both a user and a book, and set a due date.');
+            return;
+        }
+        
+        if (selectedBook && !selectedBook.is_available) {
+            e.preventDefault();
+            alert('The selected book is not available for borrowing.');
+            return;
+        }
+        
+        const dueDate = new Date(dueDateInput.value);
+        const today = new Date();
+        if (dueDate <= today) {
+            e.preventDefault();
+            alert('Due date must be in the future.');
+            return;
+        }
+    });
+    
+    // Check for pre-selected values from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const preSelectedBook = urlParams.get('book');
+    const preSelectedUser = urlParams.get('user');
+    
+    if (preSelectedBook) {
+        fetch(`/library/books/${preSelectedBook}/details/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    selectBook(data.book.id, data.book.title, data.book.author, data.book.is_available, 
+                              data.book.isbn, data.book.available_copies, data.book.total_copies);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading pre-selected book:', error);
+            });
+    }
+    
+    if (preSelectedUser) {
+        fetch(`/library/users/${preSelectedUser}/details/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    selectUser(data.user);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading pre-selected user:', error);
+            });
+    }
+});
+</script>
+{% endblock %}

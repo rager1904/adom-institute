@@ -1,0 +1,328 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit Class{% else %}Add New Class{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-{% if form.instance.pk %}edit{% else %}plus{% endif %} text-primary"></i> 
+                    {% if form.instance.pk %}Edit Class{% else %}Add New Class{% endif %}
+                </h1>
+                <div>
+                    <a href="{% url 'students:class_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Class Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" novalidate>
+                                {% csrf_token %}
+                                
+                                <!-- Basic Information -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="text-primary mb-3">
+                                            <i class="fas fa-chalkboard"></i> Basic Information
+                                        </h6>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                                {{ form.name.label }} <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.name }}
+                                            {% if form.name.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.name.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                            <small class="form-text text-muted">e.g., Class10A, Grade5B</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.display_name.id_for_label }}" class="form-label">
+                                                {{ form.display_name.label }} <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.display_name }}
+                                            {% if form.display_name.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.display_name.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                            <small class="form-text text-muted">e.g., Class 10 Section A, Grade 5 Section B</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Academic Year and Section -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="text-primary mb-3">
+                                            <i class="fas fa-calendar"></i> Academic Information
+                                        </h6>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.academic_year.id_for_label }}" class="form-label">
+                                                {{ form.academic_year.label }} <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.academic_year }}
+                                            {% if form.academic_year.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.academic_year.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.section.id_for_label }}" class="form-label">
+                                                {{ form.section.label }}
+                                            </label>
+                                            {{ form.section }}
+                                            {% if form.section.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.section.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                            <small class="form-text text-muted">e.g., A, B, C, Morning, Afternoon</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Capacity and Status -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="text-primary mb-3">
+                                            <i class="fas fa-cog"></i> Settings
+                                        </h6>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.capacity.id_for_label }}" class="form-label">
+                                                {{ form.capacity.label }} <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.capacity }}
+                                            {% if form.capacity.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.capacity.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                            <small class="form-text text-muted">Maximum number of students allowed</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.is_active }}
+                                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                                    {{ form.is_active.label }}
+                                                </label>
+                                            </div>
+                                            {% if form.is_active.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.is_active.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                            <small class="form-text text-muted">Active classes can enroll students</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Form Errors -->
+                                {% if form.non_field_errors %}
+                                    <div class="alert alert-danger">
+                                        <h6><i class="fas fa-exclamation-triangle"></i> Please correct the following errors:</h6>
+                                        <ul class="mb-0">
+                                            {% for error in form.non_field_errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
+
+                                <!-- Submit Buttons -->
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'students:class_list' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> 
+                                        {% if form.instance.pk %}Update Class{% else %}Create Class{% endif %}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Help Information -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-question-circle"></i> Help
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-info"></i> Required Fields</h6>
+                            <p class="text-muted">Fields marked with <span class="text-danger">*</span> are required.</p>
+                            
+                            <h6><i class="fas fa-chalkboard"></i> Class Name</h6>
+                            <p class="text-muted">Use a short, unique identifier for the class (e.g., Class10A).</p>
+                            
+                            <h6><i class="fas fa-tag"></i> Display Name</h6>
+                            <p class="text-muted">A more descriptive name that will be shown to users.</p>
+                            
+                            <h6><i class="fas fa-users"></i> Capacity</h6>
+                            <p class="text-muted">Maximum number of students that can be enrolled in this class.</p>
+                            
+                            <h6><i class="fas fa-calendar"></i> Academic Year</h6>
+                            <p class="text-muted">Select the academic year this class belongs to.</p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-bolt"></i> Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'students:class_list' %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-list"></i> View All Classes
+                                </a>
+                                <a href="{% url 'students:dashboard' %}" class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Academic Year Info -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-calendar-alt"></i> Academic Year Info
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Make sure you have created an academic year before adding classes.</p>
+                            <a href="{% url 'students:class_list' %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-calendar"></i> Review Classes
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.invalid-feedback {
+    display: block;
+    font-size: 0.875rem;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.form-text {
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-generate display name if empty
+document.addEventListener('DOMContentLoaded', function() {
+    const nameField = document.getElementById('{{ form.name.id_for_label }}');
+    const displayNameField = document.getElementById('{{ form.display_name.id_for_label }}');
+    
+    if (nameField && displayNameField) {
+        nameField.addEventListener('input', function() {
+            if (!displayNameField.value && this.value) {
+                // Convert name to display name format
+                let displayName = this.value;
+                // Add spaces before capital letters
+                displayName = displayName.replace(/([A-Z])/g, ' $1');
+                // Capitalize first letter
+                displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+                displayNameField.value = displayName;
+            }
+        });
+    }
+    
+    // Set default capacity if empty
+    const capacityField = document.getElementById('{{ form.capacity.id_for_label }}');
+    if (capacityField && !capacityField.value) {
+        capacityField.value = '30';
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const requiredFields = this.querySelectorAll('[required]');
+    let isValid = true;
+    
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            field.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            field.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+    }
+});
+</script>
+{% endblock %}

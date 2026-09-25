@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Teaching{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+        <h2 class="mb-1"><i class="fas fa-chalkboard-user me-3 text-primary"></i>My Teaching</h2>
+        <p class="text-muted mb-0">Your classes, timetable, assignments, grading queue, and attendance actions.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'academics:assignment_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Assignment
+        </a>
+        <a href="{% url 'attendance:bulk_attendance' %}" class="btn btn-outline-primary">
+            <i class="fas fa-calendar-check me-2"></i>Attendance
+        </a>
+    </div>
+</div>
+
+{% if teacher %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Active Classes</div><div class="h3 mb-0">{{ classes|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Students Reached</div><div class="h3 mb-0">{{ student_count }}</div></div></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Ungraded Work</div><div class="h3 mb-0">{{ ungraded_submissions|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Attendance Pending</div><div class="h3 mb-0">{{ pending_attendance_classes|length }}</div></div></div></div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Today</h5>
+                <a href="{% url 'timetable:my_schedule' %}" class="btn btn-sm btn-outline-primary">Timetable</a>
+            </div>
+            <div class="card-body p-0">
+                {% for schedule in today_schedules %}
+                <a href="{% url 'timetable:schedule_detail' schedule.pk %}" class="list-group-item list-group-item-action border-0 py-3">
+                    <div class="d-flex justify-content-between gap-2">
+                        <div>
+                            <h6 class="mb-1">{{ schedule.subject.name }}</h6>
+                            <div class="text-muted small">{{ schedule.class_obj.display_name }} - {{ schedule.room.name }}</div>
+                        </div>
+                        <span class="badge bg-light text-dark align-self-start">{{ schedule.time_slot.start_time|time:"H:i" }}</span>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="text-center py-4 text-muted">No classes scheduled today.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Grading Queue</h5>
+                <a href="{% url 'academics:grading_queue' %}" class="btn btn-sm btn-outline-primary">Open Queue</a>
+            </div>
+            <div class="card-body">
+                {% for submission in ungraded_submissions %}
+                <div class="border-bottom py-2">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ submission.assignment.title }}</strong>
+                        <span class="badge bg-warning text-dark">Ungraded</span>
+                    </div>
+                    <div class="text-muted small">{{ submission.student.user.get_full_name }} - {{ submission.assignment.class_obj.display_name }}</div>
+                </div>
+                {% empty %}
+                <div class="text-muted">No ungraded submissions.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h5 class="mb-0">Recent Assignments</h5></div>
+            <div class="card-body">
+                {% for assignment in recent_assignments %}
+                <a href="{% url 'academics:assignment_detail' assignment.pk %}" class="d-flex justify-content-between border-bottom py-2 text-decoration-none">
+                    <span>{{ assignment.title }}</span>
+                    <small>{{ assignment.class_obj.display_name }}</small>
+                </a>
+                {% empty %}
+                <div class="text-muted">No assignments created yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h5 class="mb-0">Attendance Pending</h5></div>
+            <div class="card-body">
+                {% for class_obj in pending_attendance_classes %}
+                <div class="d-flex justify-content-between border-bottom py-2">
+                    <span>{{ class_obj.display_name }}</span>
+                    <a href="{% url 'attendance:bulk_attendance' %}" class="btn btn-sm btn-outline-primary">Mark</a>
+                </div>
+                {% empty %}
+                <div class="text-muted">Attendance is marked for assigned classes today.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-chalkboard-user fa-2x text-muted mb-3"></i>
+        <h6>No teacher profile found</h6>
+        <p class="text-muted mb-0">A teacher profile is required before teaching workflows are available.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

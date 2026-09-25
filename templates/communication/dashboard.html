@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Communication Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-comments me-3 text-primary"></i>Communication Dashboard
+        </h2>
+        <p class="text-muted mb-0">{% if role_ui.can_manage_academics %}Manage messages, announcements, and notifications{% else %}View your messages, announcements, and notifications{% endif %}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'communication:inbox' %}" class="btn btn-outline-primary">
+            <i class="fas fa-inbox me-2"></i>Inbox
+        </a>
+        <a href="{% url 'communication:message_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>New Message
+        </a>
+        {% if role_ui.can_manage_academics %}
+            <a href="{% url 'communication:announcement_create' %}" class="btn btn-success">
+                <i class="fas fa-bullhorn me-2"></i>New Announcement
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body bg-primary text-white">
+                <div class="h3 mb-1">{{ total_messages }}</div>
+                <div class="small">Total Messages</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body bg-success text-white">
+                <div class="h3 mb-1">{{ total_announcements }}</div>
+                <div class="small">Total Announcements</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body bg-warning text-white">
+                <div class="h3 mb-1">{{ unread_messages }}</div>
+                <div class="small">Unread Messages</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body bg-info text-white">
+                <div class="h3 mb-1">{{ unread_notifications }}</div>
+                <div class="small">Unread Notifications</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Messages -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-envelope me-2"></i>Recent Messages
+                    </h5>
+                    <a href="{% url 'communication:inbox' %}" class="btn btn-sm btn-outline-primary">
+                        Open Inbox
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_messages %}
+                <div class="list-group list-group-flush">
+                    {% for message in recent_messages %}
+                    <div class="list-group-item border-0">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                {{ message.sender.first_name|first|upper }}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ message.subject }}</h6>
+                                <small class="text-muted">
+                                    From: {{ message.sender.get_full_name }} • 
+                                    {{ message.sent_at|timesince }} ago
+                                </small>
+                            </div>
+                            <div class="ms-3">
+                                {% if message.is_urgent %}
+                                <span class="badge bg-danger">Urgent</span>
+                                {% endif %}
+                                {% if message.is_important %}
+                                <span class="badge bg-warning">Important</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-envelope fa-2x text-muted mb-3"></i>
+                    <h6>No Recent Messages</h6>
+                    <p class="text-muted mb-0">No messages found.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Announcements -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bullhorn me-2"></i>Recent Announcements
+                    </h5>
+                    <a href="{% url 'communication:announcement_list' %}" class="btn btn-sm btn-outline-success">
+                        View All
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_announcements %}
+                <div class="list-group list-group-flush">
+                    {% for announcement in recent_announcements %}
+                    <div class="list-group-item border-0">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                <i class="fas fa-bullhorn"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ announcement.title }}</h6>
+                                <small class="text-muted">
+                                    {{ announcement.get_announcement_type_display }} • 
+                                    {{ announcement.created_at|timesince }} ago
+                                </small>
+                            </div>
+                            <div class="ms-3">
+                                {% if announcement.is_urgent %}
+                                <span class="badge bg-danger">Urgent</span>
+                                {% endif %}
+                                {% if announcement.is_featured %}
+                                <span class="badge bg-warning">Featured</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-bullhorn fa-2x text-muted mb-3"></i>
+                    <h6>No Recent Announcements</h6>
+                    <p class="text-muted mb-0">No announcements found.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="{% url 'communication:message_create' %}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-envelope me-2"></i>Send Message
+                        </a>
+                    </div>
+                    {% if role_ui.can_manage_academics %}
+                        <div class="col-md-3">
+                            <a href="{% url 'communication:announcement_create' %}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-bullhorn me-2"></i>Create Announcement
+                            </a>
+                        </div>
+                    {% endif %}
+                    <div class="col-md-3">
+                        <a href="{% url 'communication:message_list' %}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-inbox me-2"></i>View Messages
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'communication:notification_list' %}" class="btn btn-outline-warning w-100">
+                            <i class="fas fa-bell me-2"></i>View Notifications
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

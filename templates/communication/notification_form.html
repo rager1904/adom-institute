@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit Notification{% else %}Create Notification{% endif %} - Communication{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    {% if form.instance.pk %}
+                        <i class="fas fa-edit text-primary"></i> Edit Notification
+                    {% else %}
+                        <i class="fas fa-plus text-success"></i> Create Notification
+                    {% endif %}
+                </h1>
+                <a href="{% url 'communication:notification_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Notifications
+                </a>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-bell"></i> Notification Details
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                
+                                {% if form.non_field_errors %}
+                                    <div class="alert alert-danger">
+                                        {% for error in form.non_field_errors %}
+                                            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.recipient.id_for_label }}" class="form-label">
+                                                <i class="fas fa-user"></i> Recipient <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.recipient }}
+                                            {% if form.recipient.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.recipient.errors %}
+                                                        <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.notification_type.id_for_label }}" class="form-label">
+                                                <i class="fas fa-tag"></i> Notification Type <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.notification_type }}
+                                            {% if form.notification_type.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.notification_type.errors %}
+                                                        <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.title.id_for_label }}" class="form-label">
+                                        <i class="fas fa-heading"></i> Title <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.title }}
+                                    {% if form.title.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.title.errors %}
+                                                <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.message.id_for_label }}" class="form-label">
+                                        <i class="fas fa-comment"></i> Message <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.message }}
+                                    <div class="form-text">
+                                        <span id="char-count">0</span> characters
+                                    </div>
+                                    {% if form.message.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.message.errors %}
+                                                <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.related_message.id_for_label }}" class="form-label">
+                                                <i class="fas fa-envelope"></i> Related Message
+                                            </label>
+                                            {{ form.related_message }}
+                                            {% if form.related_message.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.related_message.errors %}
+                                                        <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.related_announcement.id_for_label }}" class="form-label">
+                                                <i class="fas fa-bullhorn"></i> Related Announcement
+                                            </label>
+                                            {{ form.related_announcement }}
+                                            {% if form.related_announcement.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.related_announcement.errors %}
+                                                        <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.status.id_for_label }}" class="form-label">
+                                                <i class="fas fa-info-circle"></i> Status
+                                            </label>
+                                            {{ form.status }}
+                                            {% if form.status.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.status.errors %}
+                                                        <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.is_urgent }}
+                                                <label class="form-check-label" for="{{ form.is_urgent.id_for_label }}">
+                                                    <i class="fas fa-exclamation-triangle text-warning"></i> Urgent Notification
+                                                </label>
+                                            </div>
+                                            {% if form.is_urgent.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.is_urgent.errors %}
+                                                        <i class="fas fa-exclamation-circle"></i> {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> 
+                                        {% if form.instance.pk %}Update Notification{% else %}Create Notification{% endif %}
+                                    </button>
+                                    <a href="{% url 'communication:notification_list' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-tag"></i> Notification Types</h6>
+                            <ul class="list-unstyled small">
+                                <li><span class="badge bg-primary">Message</span> - Related to messages</li>
+                                <li><span class="badge bg-success">Announcement</span> - Related to announcements</li>
+                                <li><span class="badge bg-warning">Attendance</span> - Attendance alerts</li>
+                                <li><span class="badge bg-info">Exam</span> - Exam notifications</li>
+                                <li><span class="badge bg-danger">Fee</span> - Fee reminders</li>
+                                <li><span class="badge bg-secondary">Assignment</span> - Assignment updates</li>
+                                <li><span class="badge bg-dark">System</span> - System notifications</li>
+                            </ul>
+
+                            <hr>
+
+                            <h6><i class="fas fa-info-circle"></i> Status Options</h6>
+                            <ul class="list-unstyled small">
+                                <li><span class="badge bg-warning">Pending</span> - Waiting to be sent</li>
+                                <li><span class="badge bg-info">Sent</span> - Successfully sent</li>
+                                <li><span class="badge bg-success">Delivered</span> - Delivered to recipient</li>
+                                <li><span class="badge bg-primary">Read</span> - Read by recipient</li>
+                                <li><span class="badge bg-danger">Failed</span> - Failed to send</li>
+                            </ul>
+
+                            <hr>
+
+                            <h6><i class="fas fa-lightbulb"></i> Quick Actions</h6>
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'communication:notification_list' %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-list"></i> View All Notifications
+                                </a>
+                                <a href="{% url 'communication:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-tachometer-alt"></i> Communication Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Character counter for message field
+    const messageField = document.getElementById('{{ form.message.id_for_label }}');
+    const charCount = document.getElementById('char-count');
+    
+    if (messageField && charCount) {
+        function updateCharCount() {
+            charCount.textContent = messageField.value.length;
+        }
+        
+        messageField.addEventListener('input', updateCharCount);
+        updateCharCount(); // Initial count
+    }
+
+    // Auto-select notification type based on related objects
+    const relatedMessage = document.getElementById('{{ form.related_message.id_for_label }}');
+    const relatedAnnouncement = document.getElementById('{{ form.related_announcement.id_for_label }}');
+    const notificationType = document.getElementById('{{ form.notification_type.id_for_label }}');
+    
+    function updateNotificationType() {
+        if (relatedMessage.value) {
+            notificationType.value = 'message';
+        } else if (relatedAnnouncement.value) {
+            notificationType.value = 'announcement';
+        }
+    }
+    
+    if (relatedMessage) relatedMessage.addEventListener('change', updateNotificationType);
+    if (relatedAnnouncement) relatedAnnouncement.addEventListener('change', updateNotificationType);
+});
+</script>
+{% endblock %}

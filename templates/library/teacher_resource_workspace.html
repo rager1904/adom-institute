@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Teaching Resources{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+        <h2 class="mb-1"><i class="fas fa-folder-open me-3 text-primary"></i>Teaching Resources</h2>
+        <p class="text-muted mb-0">Upload, organize, and monitor learning materials shared through ADOM Institute.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'library:teacher_resource_upload' %}" class="btn btn-primary">
+            <i class="fas fa-upload me-2"></i>Upload Resource
+        </a>
+        <a href="{% url 'library:resource_discovery' %}" class="btn btn-outline-primary">
+            <i class="fas fa-compass me-2"></i>Discover
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Resources</div><div class="h3 mb-0">{{ total_resources }}</div></div></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">For Students</div><div class="h3 mb-0">{{ student_resources }}</div></div></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">For Teachers</div><div class="h3 mb-0">{{ teacher_resources }}</div></div></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Downloads</div><div class="h3 mb-0">{{ total_downloads }}</div></div></div></div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h5 class="mb-0">My Resource Library</h5></div>
+            <div class="card-body p-0">
+                {% if resources %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Title</th><th>Subject</th><th>Access</th><th>Downloads</th><th></th></tr></thead>
+                        <tbody>
+                        {% for resource in resources %}
+                        <tr>
+                            <td>
+                                <strong>{{ resource.title }}</strong>
+                                <div class="text-muted small">{{ resource.get_resource_type_display }}{% if resource.grade_level %} - {{ resource.grade_level }}{% endif %}</div>
+                            </td>
+                            <td>{{ resource.subject|default:"General" }}</td>
+                            <td><span class="badge bg-light text-dark">{{ resource.get_access_level_display }}</span></td>
+                            <td>{{ resource.current_downloads }}</td>
+                            <td class="text-end"><a href="{% url 'library:digital_resource_detail' resource.pk %}" class="btn btn-sm btn-outline-primary">Open</a></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-folder-open fa-2x mb-3"></i>
+                    <h6>No resources uploaded</h6>
+                    <p class="mb-0">Upload notes, past papers, worksheets, or presentations for your learners.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h5 class="mb-0">Recent Access</h5></div>
+            <div class="card-body">
+                {% for access in recent_access %}
+                <div class="border-bottom py-2">
+                    <strong>{{ access.resource.title }}</strong>
+                    <div class="text-muted small">{{ access.user.get_full_name|default:access.user.email }} {{ access.get_action_display|lower }} - {{ access.access_date|timesince }} ago</div>
+                </div>
+                {% empty %}
+                <div class="text-muted">No resource access yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

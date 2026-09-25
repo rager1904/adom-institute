@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Room - {{ room.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Confirm Delete
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-building fa-4x text-danger mb-3"></i>
+                        <h4>Delete Room</h4>
+                        <p class="text-muted">Are you sure you want to delete this room?</p>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Warning</h6>
+                        <p class="mb-0">
+                            <strong>{{ room.name }}</strong> has 
+                            <strong>{{ room.schedules.count }}</strong> schedule(s) assigned.
+                            This action cannot be undone.
+                        </p>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Room Information</h6>
+                            <ul class="list-unstyled text-start">
+                                <li><strong>Name:</strong> {{ room.name }}</li>
+                                <li><strong>Type:</strong> {{ room.get_room_type_display }}</li>
+                                <li><strong>Capacity:</strong> {{ room.capacity }} students</li>
+                                <li><strong>Status:</strong> {% if room.is_active %}Active{% else %}Inactive{% endif %}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Assigned Schedules</h6>
+                            {% if room.schedules.all %}
+                                <ul class="list-unstyled text-start">
+                                    {% for schedule in room.schedules.all %}
+                                        <li><i class="fas fa-calendar text-primary"></i> {{ schedule.class_obj.name }} - {{ schedule.subject.name }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted">No schedules assigned</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'timetable:room_detail' room.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Delete Room
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.alert {
+    border-left: 4px solid #ffc107;
+}
+</style>
+{% endblock %}

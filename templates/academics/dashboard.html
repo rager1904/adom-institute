@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Academics - ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Academics</div>
+            <h1 class="dashboard-title">{{ role_ui.academic_scope_label }}</h1>
+            <p class="dashboard-subtitle">
+                {% if role_ui.can_manage_academics %}Exams, assignments, submissions, grading, and curriculum-aligned teaching workflows.{% elif role_ui.is_parent %}Assignments, exams, submissions, and progress for your children.{% else %}Assignments, exams, submissions, and learning progress for your class.{% endif %}
+            </p>
+        </div>
+        <div class="status-strip">
+            <a class="btn btn-outline-primary" href="{% url 'academics:course_list' %}">Courses</a>
+            <a class="btn btn-outline-primary" href="{% url 'academics:exam_list' %}">Exams</a>
+            <a class="btn btn-primary" href="{% url 'academics:assignment_list' %}">Assignments</a>
+        </div>
+    </div>
+
+    <section class="metric-grid">
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-file-circle-check"></i></span>
+            <div class="metric-value">{{ total_exams }}</div>
+            <div class="metric-label">Total Exams</div>
+            <div class="metric-detail">{{ active_exams }} active</div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-clipboard-list"></i></span>
+            <div class="metric-value">{{ total_assignments }}</div>
+            <div class="metric-label">Assignments</div>
+            <div class="metric-detail">{{ active_assignments }} active</div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-pen-to-square"></i></span>
+            <div class="metric-value">{{ graded_submissions }}</div>
+            <div class="metric-label">Graded Submissions</div>
+            <div class="metric-detail">Completed marking records</div>
+        </article>
+    </section>
+
+    <div class="dashboard-layout">
+        <main>
+            <section class="panel">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Upcoming Assignments</h2>
+                    {% if role_ui.can_manage_academics %}
+                        <a href="{% url 'academics:assignment_create' %}" class="btn btn-sm btn-outline-primary">Create</a>
+                    {% endif %}
+                </div>
+                <div class="focus-list">
+                    {% for assignment in upcoming_assignments %}
+                        <div class="focus-item">
+                            <span class="focus-icon"><i class="fas fa-clipboard-list"></i></span>
+                            <div>
+                                <div class="focus-category">{{ assignment.class_obj.display_name }}</div>
+                                <div class="focus-title">{{ assignment.title }}</div>
+                            </div>
+                            <div class="focus-date">{{ assignment.due_date|date:"M d, Y" }}</div>
+                        </div>
+                    {% empty %}
+                        <div class="focus-item">
+                            <span class="focus-icon"><i class="fas fa-check"></i></span>
+                            <div>
+                                <div class="focus-category">Clear</div>
+                                <div class="focus-title">No upcoming assignments</div>
+                            </div>
+                            <div class="focus-date">Now</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </main>
+
+        <aside>
+            <section class="panel">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Recent Exams</h2>
+                    {% if role_ui.can_manage_academics %}
+                        <a href="{% url 'academics:exam_create' %}" class="btn btn-sm btn-outline-primary">Create</a>
+                    {% endif %}
+                </div>
+                <div class="focus-list">
+                    {% for exam in recent_exams %}
+                        <div class="focus-item">
+                            <span class="focus-icon"><i class="fas fa-file-lines"></i></span>
+                            <div>
+                                <div class="focus-category">{{ exam.class_obj.display_name }}</div>
+                                <div class="focus-title">{{ exam.name }}</div>
+                            </div>
+                            <div class="focus-date">{{ exam.start_date|date:"M d" }}</div>
+                        </div>
+                    {% empty %}
+                        <div class="focus-item">
+                            <span class="focus-icon"><i class="fas fa-circle-info"></i></span>
+                            <div>
+                                <div class="focus-category">Setup</div>
+                                <div class="focus-title">No exams created yet</div>
+                            </div>
+                            <div class="focus-date">Open</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+{% endblock %}

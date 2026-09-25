@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Fee Reports{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-chart-bar me-3 text-primary"></i>Fee Reports
+        </h2>
+        <p class="text-muted mb-0">Generate and view detailed fee reports</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" onclick="exportReport()">
+            <i class="fas fa-download me-2"></i>Export
+        </button>
+        <button class="btn btn-primary" onclick="printReport()">
+            <i class="fas fa-print me-2"></i>Print
+        </button>
+    </div>
+</div>
+
+<!-- Report Filters -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">
+            <i class="fas fa-filter me-2"></i>Report Filters
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Academic Year</label>
+                {{ form.academic_year }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Class</label>
+                {{ form.class_obj }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Fee Category</label>
+                {{ form.fee_category }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Date From</label>
+                {{ form.date_from }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Date To</label>
+                {{ form.date_to }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Report Type</label>
+                {{ form.report_type }}
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-2"></i>Generate Report
+                </button>
+                <a href="{% url 'fees:fee_report' %}" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-times me-2"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if report_data %}
+<!-- Report Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body bg-primary text-white">
+                <div class="h3 mb-1" id="totalAmount">₹0</div>
+                <div class="small">Total Amount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body bg-success text-white">
+                <div class="h3 mb-1" id="collectedAmount">₹0</div>
+                <div class="small">Collected Amount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body bg-warning text-white">
+                <div class="h3 mb-1" id="outstandingAmount">₹0</div>
+                <div class="small">Outstanding Amount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body bg-info text-white">
+                <div class="h3 mb-1" id="collectionPercentage">0%</div>
+                <div class="small">Collection Rate</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Report -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                {% if report_type == 'collection' %}Fee Collection Report
+                {% elif report_type == 'outstanding' %}Outstanding Fees Report
+                {% elif report_type == 'discount' %}Discount Report
+                {% else %}Summary Report{% endif %}
+            </h5>
+            <div class="text-muted">
+                {% if date_from and date_to %}
+                    Period: {{ date_from|date:"M d, Y" }} - {{ date_to|date:"M d, Y" }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if report_type == 'collection' %}
+            <!-- Collection Report Table -->
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Student</th>
+                            <th>Class</th>
+                            <th>Fee Category</th>
+                            <th>Amount</th>
+                            <th>Payment Method</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in report_data %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                        {{ payment.student.user.first_name|first|upper }}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">{{ payment.student.user.get_full_name }}</h6>
+                                        <small class="text-muted">{{ payment.student.student_id }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">{{ payment.student.current_class.name }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">{{ payment.student_fee.fee_structure_detail.fee_category.name }}</span>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-success">₹{{ payment.amount }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">{{ payment.get_payment_method_display }}</span>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ payment.payment_date|date:"M d, Y" }}</small>
+                            </td>
+                            <td>
+                                {% if payment.payment_status == 'completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% elif report_type == 'outstanding' %}
+            <!-- Outstanding Report Table -->
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Student</th>
+                            <th>Class</th>
+                            <th>Fee Category</th>
+                            <th>Total Amount</th>
+                            <th>Paid Amount</th>
+                            <th>Outstanding</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fee in report_data %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                        {{ fee.student.user.first_name|first|upper }}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">{{ fee.student.user.get_full_name }}</h6>
+                                        <small class="text-muted">{{ fee.student.student_id }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">{{ fee.student.current_class.name }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">{{ fee.fee_structure_detail.fee_category.name }}</span>
+                            </td>
+                            <td>
+                                <span class="fw-semibold">₹{{ fee.amount }}</span>
+                            </td>
+                            <td>
+                                <span class="text-success">₹{{ fee.paid_amount }}</span>
+                            </td>
+                            <td>
+                                <span class="text-danger fw-semibold">₹{{ fee.balance_amount }}</span>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ fee.due_date|date:"M d, Y" }}</small>
+                            </td>
+                            <td>
+                                {% if fee.payment_status == 'paid' %}
+                                    <span class="badge bg-success">Paid</span>
+                                {% elif fee.payment_status == 'partial' %}
+                                    <span class="badge bg-warning">Partial</span>
+                                {% elif fee.payment_status == 'pending' %}
+                                    <span class="badge bg-info">Pending</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Overdue</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <!-- Summary Report -->
+            <div class="p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Summary Statistics</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Total Collection:</strong> ₹{{ report_data.total_collection }}</li>
+                            <li><strong>Total Outstanding:</strong> ₹{{ report_data.total_outstanding }}</li>
+                            <li><strong>Total Discounts:</strong> ₹{{ report_data.total_discounts }}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Collection Chart</h6>
+                        <canvas id="collectionChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<!-- Empty State -->
+<div class="text-center py-5">
+    <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+    <h5>No Report Data</h5>
+    <p class="text-muted mb-4">Select filters and generate a report to view fee statistics.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if report_data and report_type == 'summary' %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Create collection chart
+    const ctx = document.getElementById('collectionChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Collected', 'Outstanding', 'Discounts'],
+            datasets: [{
+                data: [
+                    {{ report_data.total_collection }},
+                    {{ report_data.total_outstanding }},
+                    {{ report_data.total_discounts }}
+                ],
+                backgroundColor: ['#10b981', '#f59e0b', '#3b82f6'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+
+<script>
+function exportReport() {
+    // Implementation for exporting report
+    alert('Export functionality will be implemented here');
+}
+
+function printReport() {
+    window.print();
+}
+
+// Update summary statistics if report data exists
+{% if report_data %}
+document.addEventListener('DOMContentLoaded', function() {
+    // Calculate and update summary statistics
+    let totalAmount = 0, collectedAmount = 0, outstandingAmount = 0;
+    
+    {% if report_type == 'collection' %}
+        {% for payment in report_data %}
+            collectedAmount += {{ payment.amount }};
+        {% endfor %}
+    {% elif report_type == 'outstanding' %}
+        {% for fee in report_data %}
+            totalAmount += {{ fee.amount }};
+            outstandingAmount += {{ fee.balance_amount }};
+        {% endfor %}
+        collectedAmount = totalAmount - outstandingAmount;
+    {% endif %}
+    
+    document.getElementById('totalAmount').textContent = '₹' + totalAmount.toLocaleString();
+    document.getElementById('collectedAmount').textContent = '₹' + collectedAmount.toLocaleString();
+    document.getElementById('outstandingAmount').textContent = '₹' + outstandingAmount.toLocaleString();
+    
+    const collectionPercentage = totalAmount > 0 ? ((collectedAmount / totalAmount) * 100).toFixed(1) : 0;
+    document.getElementById('collectionPercentage').textContent = collectionPercentage + '%';
+});
+{% endif %}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+@media print {
+    .btn, .card-header {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}

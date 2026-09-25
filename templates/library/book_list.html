@@ -1,0 +1,565 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Library - Books{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .book-card {
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .book-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    .book-cover {
+        height: 200px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .book-cover::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="book-pattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23book-pattern)"/></svg>');
+        opacity: 0.3;
+    }
+    .availability-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+    }
+    .search-filters {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .category-filter {
+        display: inline-block;
+        margin: 5px;
+        padding: 8px 15px;
+        background: #fff;
+        border: 2px solid #e9ecef;
+        border-radius: 25px;
+        text-decoration: none;
+        color: #495057;
+        transition: all 0.3s ease;
+    }
+    .category-filter.active,
+    .category-filter:hover {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+        text-decoration: none;
+    }
+    .book-actions {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .book-card:hover .book-actions {
+        opacity: 1;
+    }
+    .bulk-actions {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        display: none;
+    }
+    .bulk-actions.show {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-book me-2"></i>{% if role_ui.can_manage_library %}Library Books{% else %}Library Catalog{% endif %}
+            </h1>
+            <p class="text-muted">{% if role_ui.can_manage_library %}Manage your library's book collection{% else %}Search available books and learning resources{% endif %}</p>
+        </div>
+        {% if role_ui.can_manage_library %}
+        <div class="btn-group">
+            <a href="{% url 'library:book_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add Book
+            </a>
+            <a href="{% url 'library:bulk_import' %}" class="btn btn-info">
+                <i class="fas fa-upload me-2"></i>Bulk Import
+            </a>
+            <button type="button" class="btn btn-secondary" id="toggleBulkSelect">
+                <i class="fas fa-check-square me-2"></i>Bulk Select
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <i class="fas fa-book fa-2x mb-2"></i>
+                <h4>{{ total_books|default:0 }}</h4>
+                <p class="mb-0">Total Books</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <h4>{{ available_books|default:0 }}</h4>
+                <p class="mb-0">Available</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);">
+                <i class="fas fa-hand-holding fa-2x mb-2"></i>
+                <h4>{{ borrowed_books|default:0 }}</h4>
+                <p class="mb-0">Borrowed</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">
+                <i class="fas fa-clock fa-2x mb-2"></i>
+                <h4>{{ overdue_books|default:0 }}</h4>
+                <p class="mb-0">Overdue</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="search-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search Books</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ request.GET.search }}" placeholder="Search by title, author, ISBN...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label for="category" class="form-label">Category</label>
+                <select class="form-select" id="category" name="category">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Status</option>
+                    <option value="available" {% if request.GET.status == 'available' %}selected{% endif %}>Available</option>
+                    <option value="borrowed" {% if request.GET.status == 'borrowed' %}selected{% endif %}>Borrowed</option>
+                    <option value="reserved" {% if request.GET.status == 'reserved' %}selected{% endif %}>Reserved</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid gap-2 d-md-flex">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-1"></i>Filter
+                    </button>
+                    <a href="{% url 'library:book_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bulk Actions -->
+    {% if role_ui.can_manage_library %}
+    <div class="bulk-actions" id="bulkActions">
+        <div class="d-flex justify-content-between align-items-center">
+            <span id="selectedCount">0 books selected</span>
+            <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-danger" id="bulkDelete">
+                    <i class="fas fa-trash me-1"></i>Delete Selected
+                </button>
+                <button type="button" class="btn btn-sm btn-warning" id="bulkUpdateCategory">
+                    <i class="fas fa-tag me-1"></i>Update Category
+                </button>
+                <button type="button" class="btn btn-sm btn-info" id="bulkExport">
+                    <i class="fas fa-download me-1"></i>Export Selected
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Book Grid -->
+    <div class="row">
+        {% for book in books %}
+        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+            <div class="card book-card h-100" data-book-id="{{ book.id }}">
+                <div class="book-cover position-relative">
+                    <div class="book-actions">
+                        <input type="checkbox" class="form-check-input book-checkbox" value="{{ book.id }}" style="display: none;">
+                    </div>
+                    {% if book.cover_image %}
+                        <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="img-fluid h-100 w-100" style="object-fit: cover;">
+                    {% else %}
+                        <i class="fas fa-book"></i>
+                    {% endif %}
+                    <span class="badge availability-badge {% if book.is_available %}bg-success{% elif book.copies_borrowed >= book.total_copies %}bg-danger{% else %}bg-warning{% endif %}">
+                        {% if book.is_available %}
+                            Available
+                        {% elif book.copies_borrowed >= book.total_copies %}
+                            Borrowed
+                        {% else %}
+                            Limited
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <h6 class="card-title mb-2">{{ book.title|truncatechars:40 }}</h6>
+                    <p class="card-text text-muted small mb-2">
+                        <i class="fas fa-user me-1"></i>{{ book.author }}<br>
+                        <i class="fas fa-tag me-1"></i>{{ book.category.name }}<br>
+                        <i class="fas fa-barcode me-1"></i>{{ book.isbn }}
+                    </p>
+                    <div class="mt-auto">
+                        <div class="row text-center mb-2">
+                            <div class="col-4">
+                                <small class="text-muted">Total</small><br>
+                                <strong>{{ book.total_copies }}</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">Available</small><br>
+                                <strong class="text-success">{{ book.available_copies }}</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">Borrowed</small><br>
+                                <strong class="text-danger">{{ book.copies_borrowed }}</strong>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'library:book_detail' book.pk %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if role_ui.can_manage_library %}
+                                    <a href="{% url 'library:book_update' book.pk %}" class="btn btn-outline-warning btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                {% endif %}
+                                {% if book.is_available %}
+                                <button type="button" class="btn btn-outline-success btn-sm borrow-btn" data-book-id="{{ book.id }}">
+                                    <i class="fas fa-hand-holding"></i>
+                                </button>
+                                {% endif %}
+                                <button type="button" class="btn btn-outline-info btn-sm reserve-btn" data-book-id="{{ book.id }}">
+                                    <i class="fas fa-bookmark"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-book fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No books found</h4>
+                <p class="text-muted">
+                    {% if request.GET.search or request.GET.category or request.GET.status %}
+                        Try adjusting your search criteria or <a href="{% url 'library:book_list' %}">clear filters</a>.
+                    {% else %}
+                        {% if role_ui.can_manage_library %}Start building your library by <a href="{% url 'library:book_create' %}">adding your first book</a>.{% else %}No books are available in the catalog yet.{% endif %}
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Books pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page=1">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.next_page_number }}">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- Borrow Book Modal -->
+<div class="modal fade" id="borrowModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-hand-holding me-2"></i>Borrow Book</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="borrowForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" id="borrowBookId" name="book_id">
+                    <div class="mb-3">
+                        <label for="borrowUser" class="form-label">Borrower</label>
+                        <select class="form-select" id="borrowUser" name="user_id" required>
+                            <option value="">Select a user...</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.get_full_name }} ({{ user.username }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="dueDate" class="form-label">Due Date</label>
+                        <input type="date" class="form-control" id="dueDate" name="due_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check me-2"></i>Borrow Book
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reserve Book Modal -->
+<div class="modal fade" id="reserveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-bookmark me-2"></i>Reserve Book</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="reserveForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" id="reserveBookId" name="book_id">
+                    <div class="mb-3">
+                        <label for="reserveUser" class="form-label">User</label>
+                        <select class="form-select" id="reserveUser" name="user_id" required>
+                            <option value="">Select a user...</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.get_full_name }} ({{ user.username }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reserveNotes" class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="reserveNotes" name="notes" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check me-2"></i>Reserve Book
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Bulk selection functionality
+    const toggleBulkBtn = document.getElementById('toggleBulkSelect');
+    const bulkActions = document.getElementById('bulkActions');
+    const bookCheckboxes = document.querySelectorAll('.book-checkbox');
+    const selectedCount = document.getElementById('selectedCount');
+    let bulkMode = false;
+
+    if (!toggleBulkBtn) {
+        return;
+    }
+
+    toggleBulkBtn.addEventListener('click', function() {
+        bulkMode = !bulkMode;
+        if (bulkMode) {
+            bookCheckboxes.forEach(cb => cb.style.display = 'block');
+            toggleBulkBtn.innerHTML = '<i class="fas fa-times me-2"></i>Cancel Selection';
+            toggleBulkBtn.className = 'btn btn-warning';
+        } else {
+            bookCheckboxes.forEach(cb => {
+                cb.style.display = 'none';
+                cb.checked = false;
+            });
+            bulkActions.classList.remove('show');
+            toggleBulkBtn.innerHTML = '<i class="fas fa-check-square me-2"></i>Bulk Select';
+            toggleBulkBtn.className = 'btn btn-secondary';
+        }
+        updateSelectedCount();
+    });
+
+    // Update selected count
+    function updateSelectedCount() {
+        const selected = document.querySelectorAll('.book-checkbox:checked').length;
+        selectedCount.textContent = `${selected} books selected`;
+        if (selected > 0 && bulkMode) {
+            bulkActions.classList.add('show');
+        } else {
+            bulkActions.classList.remove('show');
+        }
+    }
+
+    bookCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelectedCount);
+    });
+
+    // Borrow book functionality
+    const borrowBtns = document.querySelectorAll('.borrow-btn');
+    const borrowModal = new bootstrap.Modal(document.getElementById('borrowModal'));
+    const borrowForm = document.getElementById('borrowForm');
+    const borrowBookId = document.getElementById('borrowBookId');
+
+    borrowBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            borrowBookId.value = this.dataset.bookId;
+            borrowModal.show();
+        });
+    });
+
+    borrowForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        fetch('{% url "library:borrowing_create" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                borrowModal.hide();
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to borrow book'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while borrowing the book');
+        });
+    });
+
+    // Reserve book functionality
+    const reserveBtns = document.querySelectorAll('.reserve-btn');
+    const reserveModal = new bootstrap.Modal(document.getElementById('reserveModal'));
+    const reserveForm = document.getElementById('reserveForm');
+    const reserveBookId = document.getElementById('reserveBookId');
+
+    reserveBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            reserveBookId.value = this.dataset.bookId;
+            reserveModal.show();
+        });
+    });
+
+    reserveForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        fetch('{% url "library:reservation_create" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                reserveModal.hide();
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to reserve book'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while reserving the book');
+        });
+    });
+
+    // Set default due date (2 weeks from today)
+    const dueDateInput = document.getElementById('dueDate');
+    const today = new Date();
+    const twoWeeksLater = new Date(today.getTime() + (14 * 24 * 60 * 60 * 1000));
+    dueDateInput.value = twoWeeksLater.toISOString().split('T')[0];
+});
+</script>
+{% endblock %}

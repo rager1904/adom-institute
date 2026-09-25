@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ room.name }} - Room Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-building text-primary"></i> Room Details
+                </h1>
+                <div>
+                    <a href="{% url 'timetable:room_update' room.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit Room
+                    </a>
+                    <a href="{% url 'timetable:room_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Room Information -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Room Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-building"></i> Room Name</h6>
+                                    <p class="mb-3">{{ room.name }}</p>
+                                    
+                                    <h6><i class="fas fa-tag"></i> Room Type</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-info">{{ room.get_room_type_display }}</span>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-users"></i> Capacity</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-secondary">{{ room.capacity }} students</span>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-toggle-on"></i> Status</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{% if room.is_active %}success{% else %}danger{% endif %}">
+                                            {% if room.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-map-marker-alt"></i> Location</h6>
+                                    <p class="mb-3">
+                                        {% if room.building %}
+                                            <div><i class="fas fa-building text-muted"></i> {{ room.building }}</div>
+                                        {% endif %}
+                                        {% if room.floor %}
+                                            <div><i class="fas fa-layer-group text-muted"></i> Floor {{ room.floor }}</div>
+                                        {% endif %}
+                                        {% if not room.building and not room.floor %}
+                                            <span class="text-muted">Location not specified</span>
+                                        {% endif %}
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-align-left"></i> Description</h6>
+                                    <p class="mb-3">
+                                        {% if room.description %}
+                                            {{ room.description }}
+                                        {% else %}
+                                            <span class="text-muted">No description available</span>
+                                        {% endif %}
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-calendar"></i> Assigned Schedules</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-success">{{ room.schedules.count }} schedules</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Room Schedules -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-calendar-alt"></i> Room Schedules ({{ room.schedules.count }})
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if room.schedules.all %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Day</th>
+                                                <th>Time</th>
+                                                <th>Class</th>
+                                                <th>Subject</th>
+                                                <th>Teacher</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for schedule in room.schedules.all %}
+                                                <tr>
+                                                    <td>
+                                                        <span class="badge bg-primary">{{ schedule.time_slot.get_day_display }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <small>{{ schedule.time_slot.start_time }} - {{ schedule.time_slot.end_time }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <a href="{% url 'students:class_detail' schedule.class_obj.pk %}">
+                                                            {{ schedule.class_obj.name }}
+                                                        </a>
+                                                    </td>
+                                                    <td>
+                                                        <a href="{% url 'teachers:subject_detail' schedule.subject.pk %}">
+                                                            {{ schedule.subject.name }}
+                                                        </a>
+                                                    </td>
+                                                    <td>
+                                                        <a href="{% url 'teachers:teacher_detail' schedule.teacher.pk %}">
+                                                            {{ schedule.teacher.user.get_full_name }}
+                                                        </a>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-{% if schedule.is_active %}success{% else %}danger{% endif %}">
+                                                            {% if schedule.is_active %}Active{% else %}Inactive{% endif %}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group" role="group">
+                                                            <a href="{% url 'timetable:schedule_detail' schedule.pk %}" class="btn btn-sm btn-outline-primary">
+                                                                <i class="fas fa-eye"></i>
+                                                            </a>
+                                                            <a href="{% url 'timetable:schedule_update' schedule.pk %}" class="btn btn-sm btn-outline-warning">
+                                                                <i class="fas fa-edit"></i>
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No schedules assigned</h5>
+                                    <p class="text-muted">This room has no schedules assigned yet.</p>
+                                    <a href="{% url 'timetable:schedule_create' %}" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> Add Schedule
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Quick Actions -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-bolt"></i> Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'timetable:room_update' room.pk %}" class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Edit Room
+                                </a>
+                                <a href="{% url 'timetable:schedule_create' %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add Schedule
+                                </a>
+                                <a href="{% url 'timetable:room_delete' room.pk %}" class="btn btn-outline-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Delete Room
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Room Statistics -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-bar"></i> Room Statistics
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                        Active Schedules
+                                    </div>
+                                    <div class="h6 mb-0 font-weight-bold text-gray-800">
+                                        {{ room.schedules.filter.is_active.count }}
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        Utilization
+                                    </div>
+                                    <div class="h6 mb-0 font-weight-bold text-gray-800">
+                                        {% if room.schedules.count > 0 %}
+                                            {{ room.schedules.count|floatformat:0 }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Information -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-cog"></i> System Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-calendar-plus"></i> Created</h6>
+                            <p class="mb-3">{{ room.created_at|date:"F j, Y g:i A" }}</p>
+                            
+                            <h6><i class="fas fa-calendar-edit"></i> Last Updated</h6>
+                            <p class="mb-3">{{ room.updated_at|date:"F j, Y g:i A" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.text-xs {
+    font-size: 0.7rem;
+}
+
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+
+.btn-group .btn {
+    margin-right: 2px;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+</style>
+{% endblock %}

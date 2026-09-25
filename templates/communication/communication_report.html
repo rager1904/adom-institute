@@ -1,0 +1,493 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Communication Report - Communication{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-chart-bar text-primary"></i> Communication Report
+                </h1>
+                <div>
+                    <button type="button" class="btn btn-success" onclick="exportReport()">
+                        <i class="fas fa-download"></i> Export Report
+                    </button>
+                    <a href="{% url 'communication:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Date Range Filter -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calendar"></i> Report Period
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                                   value="{{ request.GET.start_date|default:start_date }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" 
+                                   value="{{ request.GET.end_date|default:end_date }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="communication_type" class="form-label">Type</label>
+                            <select class="form-control" id="communication_type" name="communication_type">
+                                <option value="">All Types</option>
+                                <option value="email" {% if request.GET.communication_type == 'email' %}selected{% endif %}>Email</option>
+                                <option value="sms" {% if request.GET.communication_type == 'sms' %}selected{% endif %}>SMS</option>
+                                <option value="push" {% if request.GET.communication_type == 'push' %}selected{% endif %}>Push Notification</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Generate Report
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Summary Statistics -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ total_communications }}</h4>
+                                    <p class="mb-0">Total Communications</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-envelope fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ successful_communications }}</h4>
+                                    <p class="mb-0">Successful</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-check-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ pending_communications }}</h4>
+                                    <p class="mb-0">Pending</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-clock fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ failed_communications }}</h4>
+                                    <p class="mb-0">Failed</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-exclamation-triangle fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row mb-4">
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-pie"></i> Communication by Type
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="typeChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-line"></i> Daily Communication Volume
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="volumeChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Distribution and Success Rate -->
+            <div class="row mb-4">
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-doughnut"></i> Status Distribution
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="statusChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-percentage"></i> Success Rate by Type
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="successRateChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Statistics -->
+            <div class="row mb-4">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-table"></i> Communication Statistics by Type
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Total</th>
+                                            <th>Successful</th>
+                                            <th>Pending</th>
+                                            <th>Failed</th>
+                                            <th>Success Rate</th>
+                                            <th>Avg Delivery Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for stat in type_statistics %}
+                                            <tr>
+                                                <td>
+                                                    <span class="badge bg-{% if stat.type == 'email' %}primary{% elif stat.type == 'sms' %}success{% else %}warning{% endif %}">
+                                                        {{ stat.get_type_display }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ stat.total }}</td>
+                                                <td>
+                                                    <span class="text-success">{{ stat.successful }}</span>
+                                                </td>
+                                                <td>
+                                                    <span class="text-warning">{{ stat.pending }}</span>
+                                                </td>
+                                                <td>
+                                                    <span class="text-danger">{{ stat.failed }}</span>
+                                                </td>
+                                                <td>
+                                                    <div class="progress" style="height: 20px;">
+                                                        <div class="progress-bar bg-success" role="progressbar" 
+                                                             style="width: {{ stat.success_rate }}%" 
+                                                             aria-valuenow="{{ stat.success_rate }}" 
+                                                             aria-valuemin="0" aria-valuemax="100">
+                                                            {{ stat.success_rate }}%
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>{{ stat.avg_delivery_time|default:"N/A" }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-trophy"></i> Top Performers
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-envelope text-primary"></i> Most Active Recipients</h6>
+                            <ul class="list-unstyled">
+                                {% for recipient in top_recipients %}
+                                    <li class="mb-2">
+                                        <div class="d-flex justify-content-between">
+                                            <span>{{ recipient.get_full_name }}</span>
+                                            <span class="badge bg-primary">{{ recipient.communication_count }}</span>
+                                        </div>
+                                    </li>
+                                {% empty %}
+                                    <li class="text-muted">No data available</li>
+                                {% endfor %}
+                            </ul>
+                            
+                            <hr>
+                            
+                            <h6><i class="fas fa-clock text-success"></i> Fastest Delivery Times</h6>
+                            <ul class="list-unstyled">
+                                {% for record in fastest_deliveries %}
+                                    <li class="mb-2">
+                                        <div class="d-flex justify-content-between">
+                                            <span>{{ record.get_type_display }}</span>
+                                            <span class="badge bg-success">{{ record.delivery_time }}</span>
+                                        </div>
+                                    </li>
+                                {% empty %}
+                                    <li class="text-muted">No data available</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Analysis -->
+            {% if error_analysis %}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-exclamation-triangle"></i> Error Analysis
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Error Type</th>
+                                        <th>Count</th>
+                                        <th>Percentage</th>
+                                        <th>Most Common Cause</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for error in error_analysis %}
+                                        <tr>
+                                            <td>{{ error.error_type }}</td>
+                                            <td>{{ error.count }}</td>
+                                            <td>
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar bg-danger" role="progressbar" 
+                                                         style="width: {{ error.percentage }}%" 
+                                                         aria-valuenow="{{ error.percentage }}" 
+                                                         aria-valuemin="0" aria-valuemax="100">
+                                                        {{ error.percentage }}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>{{ error.common_cause }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Hidden data for charts -->
+<div id="chart-data" style="display: none;">
+    <div id="type-data" data-type-data="{{ type_chart_data|safe }}"></div>
+    <div id="volume-data" data-volume-data="{{ volume_chart_data|safe }}"></div>
+    <div id="status-data" data-status-data="{{ status_chart_data|safe }}"></div>
+    <div id="success-rate-data" data-success-rate-data="{{ success_rate_chart_data|safe }}"></div>
+</div>
+
+<style>
+.progress {
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Parse chart data from hidden elements
+const typeData = JSON.parse(document.getElementById('type-data').getAttribute('data-type-data'));
+const volumeData = JSON.parse(document.getElementById('volume-data').getAttribute('data-volume-data'));
+const statusData = JSON.parse(document.getElementById('status-data').getAttribute('data-status-data'));
+const successRateData = JSON.parse(document.getElementById('success-rate-data').getAttribute('data-success-rate-data'));
+
+// Communication by Type Chart
+const typeCtx = document.getElementById('typeChart').getContext('2d');
+new Chart(typeCtx, {
+    type: 'pie',
+    data: {
+        labels: typeData.labels,
+        datasets: [{
+            data: typeData.data,
+            backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545'],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Daily Volume Chart
+const volumeCtx = document.getElementById('volumeChart').getContext('2d');
+new Chart(volumeCtx, {
+    type: 'line',
+    data: {
+        labels: volumeData.labels,
+        datasets: [{
+            label: 'Communications',
+            data: volumeData.data,
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Status Distribution Chart
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: statusData.labels,
+        datasets: [{
+            data: statusData.data,
+            backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#6c757d'],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Success Rate Chart
+const successRateCtx = document.getElementById('successRateChart').getContext('2d');
+new Chart(successRateCtx, {
+    type: 'bar',
+    data: {
+        labels: successRateData.labels,
+        datasets: [{
+            label: 'Success Rate (%)',
+            data: successRateData.data,
+            backgroundColor: ['#007bff', '#28a745', '#ffc107'],
+            borderColor: ['#0056b3', '#1e7e34', '#e0a800'],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100
+            }
+        }
+    }
+});
+
+function exportReport() {
+    // Get current URL with parameters
+    const currentUrl = window.location.href;
+    const exportUrl = currentUrl + (currentUrl.includes('?') ? '&' : '?') + 'export=true';
+    
+    // Create a temporary link to download the report
+    const link = document.createElement('a');
+    link.href = exportUrl;
+    link.download = 'communication_report.html';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Auto-submit form on filter change
+document.addEventListener('DOMContentLoaded', function() {
+    const filterSelects = document.querySelectorAll('#communication_type');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            this.closest('form').submit();
+        });
+    });
+});
+</script>
+{% endblock %}

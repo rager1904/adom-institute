@@ -1,0 +1,353 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ class_obj.display_name }} - Class Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-chalkboard text-primary"></i> {% if role_ui.can_manage_people %}Class Details{% else %}My Class{% endif %}
+                </h1>
+                <div>
+                    {% if role_ui.can_manage_people %}
+                    <a href="{% url 'students:class_update' class_obj.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit Class
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'students:class_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Class Information -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Class Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-chalkboard"></i> Class Name</h6>
+                                    <p class="mb-3">
+                                        <strong>{{ class_obj.display_name }}</strong><br>
+                                        <small class="text-muted">{{ class_obj.name }}</small>
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-calendar"></i> Academic Year</h6>
+                                    <p class="mb-3">
+                                        {{ class_obj.academic_year.name }}
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-hashtag"></i> Section</h6>
+                                    <p class="mb-3">
+                                        {% if class_obj.section %}
+                                            <span class="badge bg-secondary">{{ class_obj.section }}</span>
+                                        {% else %}
+                                            <span class="text-muted">Not specified</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-users"></i> Capacity</h6>
+                                    <p class="mb-3">
+                                        <strong>{{ class_obj.capacity }}</strong> students
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-user-check"></i> Current Enrollment</h6>
+                                    <p class="mb-3">
+                                        <strong>{{ class_obj.students.count }}</strong> students
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-toggle-on"></i> Status</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{% if class_obj.is_active %}success{% else %}danger{% endif %}">
+                                            {% if class_obj.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Capacity Utilization -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-bar"></i> Capacity Utilization
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% with utilization=class_obj.students.count|div:class_obj.capacity|mul:100 %}
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="progress mb-3" style="height: 30px;">
+                                            <div class="progress-bar bg-{% if utilization < 80 %}success{% elif utilization < 95 %}warning{% else %}danger{% endif %}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ utilization }}%" 
+                                                 aria-valuenow="{{ utilization }}" 
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                                {{ utilization|floatformat:1 }}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <h4 class="text-{% if utilization < 80 %}success{% elif utilization < 95 %}warning{% else %}danger{% endif %}">
+                                            {{ class_obj.students.count }}/{{ class_obj.capacity }}
+                                        </h4>
+                                        <small class="text-muted">Students</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="row text-center mt-3">
+                                    <div class="col-md-4">
+                                        <div class="stat-item">
+                                            <h4 class="text-success">{{ class_obj.capacity|sub:class_obj.students.count }}</h4>
+                                            <small class="text-muted">Available Seats</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="stat-item">
+                                            <h4 class="text-info">{{ utilization|floatformat:1 }}%</h4>
+                                            <small class="text-muted">Utilization Rate</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="stat-item">
+                                            <h4 class="text-primary">{{ class_obj.students.count }}</h4>
+                                            <small class="text-muted">Enrolled Students</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Class Statistics -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-pie"></i> Statistics
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="stat-item">
+                                        <h4 class="text-primary">{{ class_obj.students.count }}</h4>
+                                        <small class="text-muted">Students</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-item">
+                                        <h4 class="text-info">{{ class_obj.capacity }}</h4>
+                                        <small class="text-muted">Capacity</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if role_ui.can_manage_people %}
+                    <!-- Quick Actions -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-bolt"></i> Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'students:class_update' class_obj.pk %}" class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Edit Class
+                                </a>
+                                <a href="{% url 'students:student_create' %}?class={{ class_obj.pk }}" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-user-plus"></i> Add Student
+                                </a>
+                                <a href="{% url 'students:class_delete' class_obj.pk %}" class="btn btn-outline-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Delete Class
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Academic Year Information -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-calendar-alt"></i> Academic Year
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-calendar"></i> Year</h6>
+                            <p class="mb-3">{{ class_obj.academic_year.name }}</p>
+                            
+                            <h6><i class="fas fa-calendar-plus"></i> Start Date</h6>
+                            <p class="mb-3">{{ class_obj.academic_year.start_date|date:"F j, Y" }}</p>
+                            
+                            <h6><i class="fas fa-calendar-minus"></i> End Date</h6>
+                            <p class="mb-3">{{ class_obj.academic_year.end_date|date:"F j, Y" }}</p>
+                            
+                            <h6><i class="fas fa-toggle-on"></i> Status</h6>
+                            <p class="mb-3">
+                                <span class="badge bg-{% if class_obj.academic_year.is_active %}success{% else %}secondary{% endif %}">
+                                    {% if class_obj.academic_year.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Section -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-users"></i> Enrolled Students ({{ class_obj.students.count }})
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if class_obj.students.all %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Student ID</th>
+                                                <th>Name</th>
+                                                <th>Gender</th>
+                                                <th>Admission Status</th>
+                                                <th>Parents</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for student in class_obj.students.all %}
+                                                <tr>
+                                                    <td>
+                                                        <strong>{{ student.student_id }}</strong><br>
+                                                        <small class="text-muted">{{ student.admission_number }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="avatar-sm me-3">
+                                                                <i class="fas fa-user-circle fa-2x text-primary"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="mb-0">
+                                                                    <a href="{% url 'students:student_detail' student.pk %}">
+                                                                        {{ student.user.get_full_name }}
+                                                                    </a>
+                                                                </h6>
+                                                                <small class="text-muted">{{ student.user.email }}</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-{% if student.gender == 'male' %}primary{% elif student.gender == 'female' %}danger{% else %}secondary{% endif %}">
+                                                            {{ student.get_gender_display }}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-{% if student.admission_status == 'approved' %}success{% elif student.admission_status == 'pending' %}warning{% else %}danger{% endif %}">
+                                                            {{ student.get_admission_status_display }}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-info">{{ student.parents.count }} parent(s)</span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group" role="group">
+                                                            <a href="{% url 'students:student_detail' student.pk %}" class="btn btn-sm btn-outline-primary">
+                                                                <i class="fas fa-eye"></i>
+                                                            </a>
+                                                            {% if role_ui.can_manage_people %}
+                                                            <a href="{% url 'students:student_update' student.pk %}" class="btn btn-sm btn-outline-warning">
+                                                                <i class="fas fa-edit"></i>
+                                                            </a>
+                                                            {% endif %}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No students enrolled</h5>
+                                    <p class="text-muted">This class doesn't have any students enrolled yet.</p>
+                                    {% if role_ui.can_manage_people %}
+                                    <a href="{% url 'students:student_create' %}?class={{ class_obj.pk }}" class="btn btn-primary">
+                                        <i class="fas fa-user-plus"></i> Add Student
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.stat-item h4 {
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.stat-item small {
+    font-size: 0.75rem;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-group .btn {
+    margin-right: 2px;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+</style>
+{% endblock %}

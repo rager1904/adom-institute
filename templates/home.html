@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+
+{% block title %}ADOM Institute - AI Education Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .home-shell {
+        min-height: 100vh;
+        background: radial-gradient(circle at top left, #e7f2ff 0, transparent 34%), var(--edu-bg);
+        color: var(--edu-text);
+    }
+
+    .home-nav {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        margin: 0 auto;
+        max-width: 1180px;
+        padding: 1.1rem 1.25rem;
+    }
+
+    .home-brand {
+        align-items: center;
+        color: var(--edu-navy);
+        display: flex;
+        font-weight: 900;
+        gap: .7rem;
+        text-decoration: none;
+    }
+
+    .home-brand span:first-child {
+        align-items: center;
+        background: var(--edu-navy);
+        border-radius: var(--edu-radius);
+        color: #fff;
+        display: inline-flex;
+        height: 38px;
+        justify-content: center;
+        width: 38px;
+    }
+
+    .home-actions {
+        display: flex;
+        gap: .6rem;
+    }
+
+    .home-hero {
+        display: grid;
+        gap: 2rem;
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 520px);
+        margin: 0 auto;
+        max-width: 1180px;
+        padding: 4rem 1.25rem 2.2rem;
+    }
+
+    .home-title {
+        color: var(--edu-navy);
+        font-size: clamp(2.5rem, 6vw, 4.9rem);
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: .98;
+        margin-bottom: 1.25rem;
+    }
+
+    .home-copy {
+        color: var(--edu-muted);
+        font-size: 1.15rem;
+        line-height: 1.7;
+        max-width: 650px;
+    }
+
+    .home-cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        margin-top: 1.7rem;
+    }
+
+    .home-preview {
+        background: var(--edu-surface);
+        border: 1px solid var(--edu-border);
+        border-radius: var(--edu-radius);
+        box-shadow: var(--edu-shadow);
+        padding: 1rem;
+    }
+
+    .preview-top {
+        align-items: center;
+        border-bottom: 1px solid var(--edu-border);
+        display: flex;
+        justify-content: space-between;
+        padding-bottom: .8rem;
+    }
+
+    .preview-grid {
+        display: grid;
+        gap: .7rem;
+        grid-template-columns: repeat(2, 1fr);
+        margin-top: 1rem;
+    }
+
+    .preview-card,
+    .module-card {
+        background: var(--edu-surface);
+        border: 1px solid var(--edu-border);
+        border-radius: var(--edu-radius);
+        padding: 1rem;
+    }
+
+    .preview-value {
+        color: var(--edu-navy);
+        font-size: 1.65rem;
+        font-weight: 900;
+    }
+
+    .preview-label {
+        color: var(--edu-muted);
+        font-size: .85rem;
+    }
+
+    .modules-section {
+        margin: 0 auto;
+        max-width: 1180px;
+        padding: 1.5rem 1.25rem 4rem;
+    }
+
+    .module-grid {
+        display: grid;
+        gap: .9rem;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    }
+
+    .module-icon {
+        align-items: center;
+        background: var(--edu-azure-soft);
+        border-radius: var(--edu-radius);
+        color: var(--edu-azure);
+        display: inline-flex;
+        height: 42px;
+        justify-content: center;
+        width: 42px;
+    }
+
+    .module-card h2 {
+        font-size: 1rem;
+        font-weight: 900;
+        margin: .85rem 0 .35rem;
+    }
+
+    .module-card p {
+        color: var(--edu-muted);
+        margin: 0;
+    }
+
+    @media (max-width: 900px) {
+        .home-hero {
+            grid-template-columns: 1fr;
+            padding-top: 2.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="home-shell">
+    <nav class="home-nav">
+        <a class="home-brand" href="{% url 'home' %}">
+            <span>S</span>
+            <span>ADOM Institute</span>
+        </a>
+        <div class="home-actions">
+            <a class="btn btn-outline-primary" href="{% url 'accounts:login' %}">Sign In</a>
+            <a class="btn btn-primary" href="{% url 'accounts:register' %}">Create Account</a>
+        </div>
+    </nav>
+
+    <section class="home-hero">
+        <div>
+            <h1 class="home-title">AI-powered education management for African institutions.</h1>
+            <p class="home-copy">
+                ADOM Institute brings students, teachers, administrators, fees, attendance, library,
+                analytics, and open-source AI agents into one secure platform designed for
+                schools, colleges, and universities.
+            </p>
+            <div class="home-cta">
+                <a class="btn btn-primary btn-lg" href="{% url 'accounts:login' %}">Open Dashboard</a>
+                <a class="btn btn-outline-primary btn-lg" href="{% url 'accounts:register' %}">Register Institution</a>
+            </div>
+        </div>
+
+        <aside class="home-preview" aria-label="ADOM Institute dashboard preview">
+            <div class="preview-top">
+                <strong>Institution Overview</strong>
+                <span class="badge bg-success">Operational</span>
+            </div>
+            <div class="preview-grid">
+                {% for stat in platform_stats %}
+                    <div class="preview-card">
+                        <div class="preview-value">{{ stat.value }}</div>
+                        <div class="preview-label">{{ stat.label }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </aside>
+    </section>
+
+    <section class="modules-section">
+        <div class="module-grid">
+            {% for module in modules %}
+                <article class="module-card">
+                    <span class="module-icon"><i class="fas {{ module.icon }}"></i></span>
+                    <h2>{{ module.name }}</h2>
+                    <p>{{ module.text }}</p>
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

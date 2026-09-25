@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ role_ui.teacher_scope_label }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-chalkboard-teacher text-primary"></i> {{ role_ui.teacher_scope_label }}
+                </h1>
+                {% if role_ui.can_manage_people %}
+                <div>
+                    <a href="{% url 'teachers:class_subject_assignment' %}" class="btn btn-primary">
+                        <i class="fas fa-link"></i> Assign Class/Subject
+                    </a>
+                    <a href="{% url 'teachers:teacher_create' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Add Teacher
+                    </a>
+                    <a href="{% url 'teachers:subject_create' %}" class="btn btn-info">
+                        <i class="fas fa-book"></i> Add Subject
+                    </a>
+                    <a href="{% url 'teachers:department_create' %}" class="btn btn-warning">
+                        <i class="fas fa-building"></i> Add Department
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-primary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                        Total Teachers
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_teachers }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-users fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-success shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                        Active Teachers
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ active_teachers }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-info shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        Full-Time Teachers
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ full_time_teachers }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-clock fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-warning shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                        Class Teachers
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ class_teachers }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-chalkboard fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row mb-4">
+                <div class="col-xl-6 col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                            <h6 class="m-0 font-weight-bold text-primary">Employment Type Distribution</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="employmentTypeChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-6 col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                            <h6 class="m-0 font-weight-bold text-primary">Employment Status Distribution</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="employmentStatusChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Statistics -->
+            <div class="row mb-4">
+                <div class="col-xl-4 col-lg-4">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Subject Statistics</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-primary">{{ total_subjects }}</h4>
+                                        <small class="text-muted">Total Subjects</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-success">{{ active_subjects }}</h4>
+                                        <small class="text-muted">Active Subjects</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-4 col-lg-4">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Department Statistics</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-primary">{{ total_departments }}</h4>
+                                        <small class="text-muted">Total Departments</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-success">{{ active_departments }}</h4>
+                                        <small class="text-muted">Active Departments</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-4 col-lg-4">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Employment Breakdown</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-info">{{ full_time_teachers }}</h4>
+                                        <small class="text-muted">Full-Time</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-warning">{{ part_time_teachers }}</h4>
+                                        <small class="text-muted">Part-Time</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Teachers -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                            <h6 class="m-0 font-weight-bold text-primary">Recent Teachers</h6>
+                            <a href="{% url 'teachers:teacher_list' %}" class="btn btn-sm btn-primary">
+                                View All
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            {% if recent_teachers %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Employee ID</th>
+                                                <th>Employment Type</th>
+                                                <th>Status</th>
+                                                <th>Qualification</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for teacher in recent_teachers %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="avatar-sm me-3">
+                                                                <i class="fas fa-user-circle fa-2x text-primary"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="mb-0">{{ teacher.user.get_full_name }}</h6>
+                                                                <small class="text-muted">{{ teacher.user.email }}</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>{{ teacher.employee_id }}</td>
+                                                    <td>
+                                                        <span class="badge bg-{% if teacher.employment_type == 'full_time' %}primary{% elif teacher.employment_type == 'part_time' %}warning{% else %}secondary{% endif %}">
+                                                            {{ teacher.get_employment_type_display }}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-{% if teacher.employment_status == 'active' %}success{% elif teacher.employment_status == 'inactive' %}danger{% else %}warning{% endif %}">
+                                                            {{ teacher.get_employment_status_display }}
+                                                        </span>
+                                                    </td>
+                                                    <td>{{ teacher.qualification }}</td>
+                                                    <td>
+                                                        <div class="btn-group" role="group">
+                                                            <a href="{% url 'teachers:teacher_detail' teacher.pk %}" class="btn btn-sm btn-outline-primary">
+                                                                <i class="fas fa-eye"></i>
+                                                            </a>
+                                                            {% if role_ui.can_manage_people %}
+                                                            <a href="{% url 'teachers:teacher_update' teacher.pk %}" class="btn btn-sm btn-outline-warning">
+                                                                <i class="fas fa-edit"></i>
+                                                            </a>
+                                                            {% endif %}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No teachers found</h5>
+                                    <p class="text-muted">{% if role_ui.can_manage_people %}Start by adding your first teacher.{% else %}No teachers are available in your current view.{% endif %}</p>
+                                    {% if role_ui.can_manage_people %}
+                                    <a href="{% url 'teachers:teacher_create' %}" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> Add First Teacher
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+
+.text-gray-300 {
+    color: #dddfeb !important;
+}
+
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-group .btn {
+    margin-right: 2px;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Employment Type Chart
+const employmentTypeCtx = document.getElementById('employmentTypeChart').getContext('2d');
+const employmentTypeChart = new Chart(employmentTypeCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [
+            {% for key, value in employment_type_data.items %}
+                '{{ key|title }}',
+            {% endfor %}
+        ],
+        datasets: [{
+            data: [
+                {% for key, value in employment_type_data.items %}
+                    {{ value }},
+                {% endfor %}
+            ],
+            backgroundColor: [
+                '#4e73df',
+                '#1cc88a',
+                '#36b9cc',
+                '#f6c23e'
+            ],
+            hoverBackgroundColor: [
+                '#2e59d9',
+                '#17a673',
+                '#2c9faf',
+                '#e0b038'
+            ],
+            hoverBorderColor: "rgba(234, 236, 244, 1)",
+        }],
+    },
+    options: {
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    },
+});
+
+// Employment Status Chart
+const employmentStatusCtx = document.getElementById('employmentStatusChart').getContext('2d');
+const employmentStatusChart = new Chart(employmentStatusCtx, {
+    type: 'pie',
+    data: {
+        labels: [
+            {% for key, value in employment_status_data.items %}
+                '{{ key|title }}',
+            {% endfor %}
+        ],
+        datasets: [{
+            data: [
+                {% for key, value in employment_status_data.items %}
+                    {{ value }},
+                {% endfor %}
+            ],
+            backgroundColor: [
+                '#1cc88a',
+                '#e74a3b',
+                '#f6c23e',
+                '#858796'
+            ],
+            hoverBackgroundColor: [
+                '#17a673',
+                '#be2617',
+                '#e0b038',
+                '#6e707e'
+            ],
+            hoverBorderColor: "rgba(234, 236, 244, 1)",
+        }],
+    },
+    options: {
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    },
+});
+</script>
+{% endblock %}

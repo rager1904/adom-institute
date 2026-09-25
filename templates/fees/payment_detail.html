@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-credit-card me-3 text-primary"></i>Payment Details
+        </h2>
+        <p class="text-muted mb-0">View detailed information about this payment</p>
+    </div>
+    <div class="d-flex gap-2">
+        {% if receipt %}
+        <a href="{% url 'fees:receipt_detail' receipt.pk %}" class="btn btn-success">
+            <i class="fas fa-receipt me-2"></i>View Receipt
+        </a>
+        {% endif %}
+        <a href="{% url 'fees:payment_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Payment Information -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Payment Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Student</label>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                {{ payment.student.user.first_name|first|upper }}
+                            </div>
+                            <div>
+                                <h6 class="mb-0">{{ payment.student.user.get_full_name }}</h6>
+                                <small class="text-muted">{{ payment.student.student_id }} | {{ payment.student.current_class.name }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Fee Category</label>
+                        <div>
+                            <span class="badge bg-light text-dark fs-6">{{ payment.student_fee.fee_structure_detail.fee_category.name }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-muted">Payment Amount</label>
+                        <div class="h4 text-success mb-0">₹{{ payment.amount }}</div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-muted">Payment Method</label>
+                        <div>
+                            <span class="badge bg-light text-dark fs-6">{{ payment.get_payment_method_display }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-muted">Payment Status</label>
+                        <div>
+                            {% if payment.payment_status == 'completed' %}
+                                <span class="badge bg-success fs-6">Completed</span>
+                            {% elif payment.payment_status == 'pending' %}
+                                <span class="badge bg-warning fs-6">Pending</span>
+                            {% elif payment.payment_status == 'failed' %}
+                                <span class="badge bg-danger fs-6">Failed</span>
+                            {% elif payment.payment_status == 'cancelled' %}
+                                <span class="badge bg-secondary fs-6">Cancelled</span>
+                            {% else %}
+                                <span class="badge bg-info fs-6">Refunded</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Payment Date</label>
+                        <div class="h6 mb-0">
+                            {{ payment.payment_date|date:"F d, Y" }}
+                            <small class="text-muted">({{ payment.payment_date|date:"l" }})</small>
+                        </div>
+                        <small class="text-muted">{{ payment.payment_date|date:"H:i" }}</small>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Received By</label>
+                        <div>
+                            {% if payment.received_by %}
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                        {{ payment.received_by.user.first_name|first|upper }}
+                                    </div>
+                                    <span>{{ payment.received_by.user.get_full_name }}</span>
+                                </div>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if payment.transaction_id %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Transaction ID</label>
+                        <div class="font-monospace">{{ payment.transaction_id }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if payment.reference_number %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Reference Number</label>
+                        <div class="font-monospace">{{ payment.reference_number }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if payment.remarks %}
+                    <div class="col-12">
+                        <label class="form-label fw-semibold text-muted">Remarks</label>
+                        <div class="p-3 bg-light rounded">{{ payment.remarks }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Created Date</label>
+                        <div>{{ payment.created_at|date:"F d, Y H:i" }}</div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Last Updated</label>
+                        <div>{{ payment.updated_at|date:"F d, Y H:i" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Related Fee Information -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-invoice-dollar me-2"></i>Related Fee Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-muted">Total Fee Amount</label>
+                        <div class="h5 text-primary mb-0">₹{{ payment.student_fee.amount }}</div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-muted">Total Paid</label>
+                        <div class="h5 text-success mb-0">₹{{ payment.student_fee.paid_amount }}</div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-muted">Remaining Balance</label>
+                        <div class="h5 {% if payment.student_fee.balance_amount == 0 %}text-success{% elif payment.student_fee.balance_amount < 0 %}text-danger{% else %}text-warning{% endif %} mb-0">
+                            ₹{{ payment.student_fee.balance_amount }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Due Date</label>
+                        <div class="h6 mb-0">
+                            {{ payment.student_fee.due_date|date:"F d, Y" }}
+                            <small class="text-muted">({{ payment.student_fee.due_date|date:"l" }})</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Fee Status</label>
+                        <div>
+                            {% if payment.student_fee.payment_status == 'paid' %}
+                                <span class="badge bg-success fs-6">Paid</span>
+                            {% elif payment.student_fee.payment_status == 'partial' %}
+                                <span class="badge bg-warning fs-6">Partial</span>
+                            {% elif payment.student_fee.payment_status == 'pending' %}
+                                <span class="badge bg-info fs-6">Pending</span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">Overdue</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if receipt %}
+                    <a href="{% url 'fees:receipt_detail' receipt.pk %}" class="btn btn-success">
+                        <i class="fas fa-receipt me-2"></i>View Receipt
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'fees:student_fee_detail' payment.student_fee.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>View Fee Details
+                    </a>
+                    <a href="{% url 'fees:payment_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-2"></i>View All Payments
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payment Summary -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Payment Summary
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small text-muted">Fee Payment Progress</span>
+                        <span class="small fw-semibold">{{ payment.student_fee.paid_amount|floatformat:0 }} / {{ payment.student_fee.amount|floatformat:0 }}</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        {% widthratio payment.student_fee.paid_amount payment.student_fee.amount 100 as progress %}
+                        <div class="progress-bar bg-success" style="width: {{ progress }}%"></div>
+                    </div>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <div class="h5 text-success mb-1">₹{{ payment.student_fee.paid_amount }}</div>
+                            <small class="text-muted">Total Paid</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="h5 {% if payment.student_fee.balance_amount == 0 %}text-success{% elif payment.student_fee.balance_amount < 0 %}text-danger{% else %}text-warning{% endif %} mb-1">
+                            ₹{{ payment.student_fee.balance_amount }}
+                        </div>
+                        <small class="text-muted">Balance</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

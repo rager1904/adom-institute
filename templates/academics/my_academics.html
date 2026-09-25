@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Academics{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+        <h2 class="mb-1"><i class="fas fa-book-open me-3 text-primary"></i>My Academics</h2>
+        <p class="text-muted mb-0">Assignments, submissions, exams, and results for your scoped learner profile.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'academics:course_list' %}" class="btn btn-outline-primary">
+            <i class="fas fa-layer-group me-2"></i>Courses
+        </a>
+        <a href="{% url 'students:student_portal' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Student Portal
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Learners</div><div class="h3 mb-0">{{ academic_students|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Upcoming Assignments</div><div class="h3 mb-0">{{ upcoming_assignments|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Upcoming Exams</div><div class="h3 mb-0">{{ upcoming_exams|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Recent Results</div><div class="h3 mb-0">{{ results|length }}</div></div></div></div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h5 class="mb-0">Assignment Deadlines</h5></div>
+            <div class="card-body p-0">
+                {% for assignment in upcoming_assignments %}
+                <a href="{% url 'academics:assignment_detail' assignment.pk %}" class="list-group-item list-group-item-action border-0 py-3">
+                    <div class="d-flex justify-content-between gap-2">
+                        <div>
+                            <h6 class="mb-1">{{ assignment.title }}</h6>
+                            <div class="text-muted small">{{ assignment.subject.name }} - {{ assignment.class_obj.display_name }}</div>
+                        </div>
+                        <div class="text-end small">
+                            <div>{{ assignment.due_date|date:"M d" }}</div>
+                            {% if assignment.pk in submitted_assignment_ids %}
+                            <span class="badge bg-success">Submitted</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="text-center py-4 text-muted">No upcoming assignments.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h5 class="mb-0">Upcoming Exams</h5></div>
+            <div class="card-body p-0">
+                {% for exam_subject in upcoming_exams %}
+                <a href="{% url 'academics:exam_detail' exam_subject.exam.pk %}" class="list-group-item list-group-item-action border-0 py-3">
+                    <div class="d-flex justify-content-between gap-2">
+                        <div>
+                            <h6 class="mb-1">{{ exam_subject.exam.name }}</h6>
+                            <div class="text-muted small">{{ exam_subject.subject.name }} - {{ exam_subject.exam.class_obj.display_name }}</div>
+                        </div>
+                        <span class="badge bg-light text-dark align-self-start">{{ exam_subject.exam_date|date:"M d" }}</span>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="text-center py-4 text-muted">No upcoming exams.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h5 class="mb-0">Submissions</h5></div>
+            <div class="card-body">
+                {% for submission in submissions %}
+                <div class="border-bottom py-2">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ submission.assignment.title }}</strong>
+                        {% if submission.is_graded %}<span class="badge bg-success">Graded</span>{% else %}<span class="badge bg-secondary">Submitted</span>{% endif %}
+                    </div>
+                    <div class="text-muted small">{{ submission.student.user.get_full_name }} - {{ submission.submitted_at|date:"M d, Y" }}</div>
+                </div>
+                {% empty %}
+                <div class="text-muted">No submissions yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h5 class="mb-0">Results</h5></div>
+            <div class="card-body">
+                {% for result in results %}
+                <div class="border-bottom py-2">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ result.exam_subject.subject.name }}</strong>
+                        <span>{{ result.marks_obtained }} / {{ result.exam_subject.max_marks }}</span>
+                    </div>
+                    <div class="text-muted small">{{ result.student.user.get_full_name }} - {{ result.exam_subject.exam.name }}</div>
+                </div>
+                {% empty %}
+                <div class="text-muted">No results published yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

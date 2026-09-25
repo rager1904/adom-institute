@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Agent Task - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">{{ task.status }}</div>
+            <h1 class="dashboard-title">{{ task.get_agent_key_display }}</h1>
+            <p class="dashboard-subtitle">{{ task.model_profile }} - {{ task.institution.name|default:"Personal" }}</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="{% url 'adom_institute:agent_task_list' %}">Back</a>
+    </div>
+    <section class="panel">
+        <h2 class="panel-title">Input</h2>
+        <pre class="bg-light p-3 rounded">{{ task.input_payload }}</pre>
+        <h2 class="panel-title">Output</h2>
+        <pre class="bg-light p-3 rounded">{{ task.output_payload }}</pre>
+        {% if task.error_message %}<div class="alert alert-warning">{{ task.error_message }}</div>{% endif %}
+    </section>
+</div>
+{% endblock %}

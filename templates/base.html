@@ -1,0 +1,155 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ADOM Institute{% endblock %}</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/adom-theme.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if user.is_authenticated %}
+        <div class="edu-app">
+            <aside class="edu-sidebar" id="adomSidebar">
+                <div class="edu-brand">
+                    <span class="edu-brand-mark">A</span>
+                    <div>
+                        <div class="edu-brand-name">ADOM Institute</div>
+                        <div class="edu-brand-subtitle">AI education platform</div>
+                    </div>
+                </div>
+
+                <nav class="edu-nav" aria-label="Primary navigation">
+                    <div class="edu-nav-section">Operations</div>
+                    <a class="edu-nav-link" href="{% url 'accounts:dashboard' %}"><i class="fas fa-gauge-high"></i><span>Dashboard</span></a>
+                    {% if user.user_type == 'super_admin' or user.user_type == 'administrator' %}
+                        <a class="edu-nav-link" href="{% url 'students:student_list' %}"><i class="fas fa-user-graduate"></i><span>Students</span></a>
+                        <a class="edu-nav-link" href="{% url 'teachers:teacher_list' %}"><i class="fas fa-chalkboard-user"></i><span>Teachers</span></a>
+                    {% elif user.user_type == 'teacher' %}
+                        <a class="edu-nav-link" href="{% url 'students:student_list' %}"><i class="fas fa-user-graduate"></i><span>My Students</span></a>
+                        <a class="edu-nav-link" href="{% url 'teachers:my_teaching' %}"><i class="fas fa-chalkboard-user"></i><span>My Teaching</span></a>
+                    {% elif user.user_type == 'student' %}
+                        <a class="edu-nav-link" href="{% url 'students:student_portal' %}"><i class="fas fa-user-graduate"></i><span>Student Portal</span></a>
+                    {% elif user.user_type == 'parent' %}
+                        <a class="edu-nav-link" href="{% url 'students:student_portal' %}"><i class="fas fa-user-graduate"></i><span>My Children</span></a>
+                    {% endif %}
+                    {% if user.user_type == 'super_admin' or user.user_type == 'administrator' or user.user_type == 'teacher' %}
+                        <a class="edu-nav-link" href="{% url 'academics:dashboard' %}"><i class="fas fa-book-open-reader"></i><span>Academics</span></a>
+                        <a class="edu-nav-link" href="{% url 'attendance:attendance_list' %}"><i class="fas fa-calendar-check"></i><span>Attendance</span></a>
+                    {% elif user.user_type == 'student' or user.user_type == 'parent' %}
+                        <a class="edu-nav-link" href="{% url 'academics:my_academics' %}"><i class="fas fa-book-open-reader"></i><span>My Academics</span></a>
+                        <a class="edu-nav-link" href="{% url 'attendance:my_attendance' %}"><i class="fas fa-calendar-check"></i><span>My Attendance</span></a>
+                    {% endif %}
+                    {% if user.user_type == 'super_admin' or user.user_type == 'administrator' or user.user_type == 'accountant' %}
+                        <a class="edu-nav-link" href="{% url 'fees:dashboard' %}"><i class="fas fa-credit-card"></i><span>Fees</span></a>
+                    {% elif user.user_type == 'student' or user.user_type == 'parent' %}
+                        <a class="edu-nav-link" href="{% url 'fees:my_fees' %}"><i class="fas fa-credit-card"></i><span>My Fees</span></a>
+                    {% endif %}
+
+                    <div class="edu-nav-section">Learning</div>
+                    <a class="edu-nav-link" href="{% url 'library:dashboard' %}"><i class="fas fa-layer-group"></i><span>Library</span></a>
+                    {% if user.user_type == 'teacher' or user.user_type == 'administrator' or user.user_type == 'super_admin' %}
+                        <a class="edu-nav-link" href="{% url 'library:teacher_resource_workspace' %}"><i class="fas fa-folder-open"></i><span>Resources</span></a>
+                    {% endif %}
+                    <a class="edu-nav-link" href="{% url 'communication:message_list' %}"><i class="fas fa-comments"></i><span>Communication</span></a>
+                    {% if user.user_type == 'super_admin' or user.user_type == 'administrator' or user.user_type == 'teacher' or user.user_type == 'student' or user.user_type == 'parent' %}
+                        <a class="edu-nav-link" href="{% url 'timetable:my_schedule' %}"><i class="fas fa-clock"></i><span>Timetable</span></a>
+                    {% endif %}
+
+                    <div class="edu-nav-section">Intelligence</div>
+                    {% if user.user_type == 'super_admin' or user.user_type == 'administrator' %}
+                        <a class="edu-nav-link" href="{% url 'analytics:dashboard' %}"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
+                    {% endif %}
+                    {% if user.user_type == 'super_admin' or user.user_type == 'administrator' or user.user_type == 'teacher' or user.user_type == 'student' %}
+                        <a class="edu-nav-link" href="{% url 'adom_institute:dashboard' %}"><i class="fas fa-robot"></i><span>ADOM Institute</span></a>
+                    {% endif %}
+                </nav>
+
+                <div class="edu-sidebar-footer">
+                    <div class="adom-institute-mini">
+                        <strong>Open-source ADOM Institute AI</strong>
+                        <span>Ollama, vLLM, pgvector, ECZ curriculum agents</span>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="edu-main">
+                <header class="edu-topbar">
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="edu-icon-button edu-mobile-toggle" type="button" data-adom-sidebar-toggle aria-label="Toggle navigation">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <label class="edu-search mb-0">
+                            <i class="fas fa-search"></i>
+                            <input type="search" placeholder="Search students, courses, fees, reports">
+                        </label>
+                    </div>
+
+                    <div class="edu-topbar-actions">
+                        <a class="edu-icon-button" href="{% url 'communication:notification_list' %}" aria-label="Notifications"><i class="fas fa-bell"></i></a>
+                        {% if user.user_type == 'super_admin' or user.user_type == 'administrator' %}
+                            <a class="edu-icon-button" href="{% url 'analytics:dashboard' %}" aria-label="Analytics"><i class="fas fa-chart-simple"></i></a>
+                        {% endif %}
+                        <div class="dropdown">
+                            <a class="edu-user-button dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="edu-user-avatar"><i class="fas fa-user"></i></span>
+                                <span class="d-none d-sm-inline">{{ user.get_full_name|default:user.email }}</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="fas fa-user me-2"></i>Profile</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'accounts:logout' %}"><i class="fas fa-right-from-bracket me-2"></i>Logout</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </header>
+                <main class="edu-content">
+    {% else %}
+        <main class="edu-auth-main">
+            {% if messages %}
+                <div class="container pt-3">
+            {% endif %}
+    {% endif %}
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+    {% if user.is_authenticated %}
+                </main>
+            </div>
+        </div>
+    {% else %}
+            {% if messages %}
+                </div>
+            {% endif %}
+        </main>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggle = document.querySelector('[data-adom-sidebar-toggle]');
+            const sidebar = document.getElementById('adomSidebar');
+            if (toggle && sidebar) {
+                toggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                });
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

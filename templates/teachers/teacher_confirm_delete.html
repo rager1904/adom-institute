@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Teacher - {{ teacher.user.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Confirm Delete
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-chalkboard-teacher fa-4x text-danger mb-3"></i>
+                        <h4>Delete Teacher</h4>
+                        <p class="text-muted">Are you sure you want to delete this teacher?</p>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Warning</h6>
+                        <p class="mb-0">
+                            <strong>{{ teacher.user.get_full_name }}</strong> has 
+                            <strong>{{ teacher.teacher_subjects.count }}</strong> subject(s) and 
+                            <strong>{{ teacher.teacher_departments.count }}</strong> department(s) assigned.
+                            This action cannot be undone.
+                        </p>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Teacher Information</h6>
+                            <ul class="list-unstyled text-start">
+                                <li><strong>Name:</strong> {{ teacher.user.get_full_name }}</li>
+                                <li><strong>Employee ID:</strong> {{ teacher.employee_id }}</li>
+                                <li><strong>Employment Type:</strong> {{ teacher.get_employment_type_display }}</li>
+                                <li><strong>Status:</strong> {{ teacher.get_employment_status_display }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Assignments</h6>
+                            {% if teacher.teacher_subjects.all %}
+                                <p><strong>Subjects:</strong></p>
+                                <ul class="list-unstyled text-start">
+                                    {% for teacher_subject in teacher.teacher_subjects.all %}
+                                        <li><i class="fas fa-book text-primary"></i> {{ teacher_subject.subject.name }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted">No subjects assigned</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'teachers:teacher_detail' teacher.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Delete Teacher
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.alert {
+    border-left: 4px solid #ffc107;
+}
+</style>
+{% endblock %}
+

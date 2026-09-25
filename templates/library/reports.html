@@ -1,0 +1,757 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Library Reports - Library{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .reports-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        padding: 40px;
+        margin-bottom: 30px;
+    }
+    .reports-header {
+        background: linear-gradient(135deg, #6f42c1 0%, #5a67d8 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .report-card {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+    }
+    .report-card:hover {
+        border-color: #6f42c1;
+        background: #f3e8ff;
+        transform: translateY(-2px);
+        color: inherit;
+        text-decoration: none;
+    }
+    .report-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+    }
+    .quick-stats {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+    .stat-item {
+        text-align: center;
+        padding: 15px;
+    }
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+    .filter-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+    .report-preview {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+        display: none;
+    }
+    .report-preview.show {
+        display: block;
+    }
+    .export-options {
+        background: #e3f2fd;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'library:dashboard' %}">Library</a></li>
+            <li class="breadcrumb-item active">Reports</li>
+        </ol>
+    </nav>
+
+    <div class="reports-container">
+        <!-- Reports Header -->
+        <div class="reports-header">
+            <h1 class="mb-3">
+                <i class="fas fa-chart-bar fa-2x me-3"></i>
+                Library Reports & Analytics
+            </h1>
+            <p class="mb-0">Generate comprehensive reports and insights about your library operations</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ total_books|default:0 }}</div>
+                        <div class="stat-label">Total Books</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ total_borrowings|default:0 }}</div>
+                        <div class="stat-label">Total Borrowings</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ active_users|default:0 }}</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ overdue_count|default:0 }}</div>
+                        <div class="stat-label">Overdue Books</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Filters -->
+        <div class="filter-section">
+            <h5 class="mb-3">Report Filters</h5>
+            <form id="reportFilters">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Date Range</label>
+                        <select class="form-select" id="dateRange" name="date_range">
+                            <option value="7">Last 7 days</option>
+                            <option value="30" selected>Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                            <option value="365">Last year</option>
+                            <option value="custom">Custom range</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3" id="customDateRange" style="display: none;">
+                        <label class="form-label">From Date</label>
+                        <input type="date" class="form-control" id="fromDate" name="from_date">
+                    </div>
+                    <div class="col-md-3" id="customDateRange2" style="display: none;">
+                        <label class="form-label">To Date</label>
+                        <input type="date" class="form-control" id="toDate" name="to_date">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">User Type</label>
+                        <select class="form-select" id="userType" name="user_type">
+                            <option value="">All Users</option>
+                            <option value="student">Students</option>
+                            <option value="teacher">Teachers</option>
+                            <option value="staff">Staff</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Available Reports -->
+        <div class="row">
+            <div class="col-md-6 col-lg-4">
+                <div class="report-card" onclick="generateReport('borrowing_summary')">
+                    <div class="report-icon bg-primary text-white mx-auto">
+                        <i class="fas fa-hand-holding"></i>
+                    </div>
+                    <h6 class="text-center">Borrowing Summary</h6>
+                    <p class="text-center text-muted small mb-0">Overview of borrowing activities and trends</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4">
+                <div class="report-card" onclick="generateReport('overdue_books')">
+                    <div class="report-icon bg-danger text-white mx-auto">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h6 class="text-center">Overdue Books</h6>
+                    <p class="text-center text-muted small mb-0">List of overdue books and borrowers</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4">
+                <div class="report-card" onclick="generateReport('popular_books')">
+                    <div class="report-icon bg-success text-white mx-auto">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <h6 class="text-center">Popular Books</h6>
+                    <p class="text-center text-muted small mb-0">Most borrowed and requested books</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4">
+                <div class="report-card" onclick="generateReport('user_activity')">
+                    <div class="report-icon bg-info text-white mx-auto">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h6 class="text-center">User Activity</h6>
+                    <p class="text-center text-muted small mb-0">User borrowing patterns and statistics</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4">
+                <div class="report-card" onclick="generateReport('inventory_status')">
+                    <div class="report-icon bg-warning text-white mx-auto">
+                        <i class="fas fa-warehouse"></i>
+                    </div>
+                    <h6 class="text-center">Inventory Status</h6>
+                    <p class="text-center text-muted small mb-0">Book availability and stock levels</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4">
+                <div class="report-card" onclick="generateReport('fines_revenue')">
+                    <div class="report-icon bg-secondary text-white mx-auto">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <h6 class="text-center">Fines & Revenue</h6>
+                    <p class="text-center text-muted small mb-0">Late fees and financial overview</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4">
+                <div class="report-card" onclick="generateReport('digital_resources')">
+                    <div class="report-icon bg-purple text-white mx-auto" style="background: #6f42c1;">
+                        <i class="fas fa-cloud"></i>
+                    </div>
+                    <h6 class="text-center">Digital Resources</h6>
+                    <p class="text-center text-muted small mb-0">Digital library usage and downloads</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4">
+                <div class="report-card" onclick="generateReport('reservations')">
+                    <div class="report-icon bg-dark text-white mx-auto">
+                        <i class="fas fa-bookmark"></i>
+                    </div>
+                    <h6 class="text-center">Reservations</h6>
+                    <p class="text-center text-muted small mb-0">Book reservations and waiting lists</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4">
+                <div class="report-card" onclick="generateReport('monthly_stats')">
+                    <div class="report-icon bg-gradient text-white mx-auto" style="background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <h6 class="text-center">Monthly Statistics</h6>
+                    <p class="text-center text-muted small mb-0">Comprehensive monthly library stats</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Preview -->
+        <div class="report-preview" id="reportPreview">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 id="reportTitle">Report Preview</h5>
+                <div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="closePreview()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="reportContent">
+                <!-- Report content will be loaded here -->
+            </div>
+            
+            <div class="export-options">
+                <h6 class="mb-3">Export Options</h6>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary" onclick="exportReport('pdf')">
+                        <i class="fas fa-file-pdf me-2"></i>PDF
+                    </button>
+                    <button type="button" class="btn btn-outline-success" onclick="exportReport('excel')">
+                        <i class="fas fa-file-excel me-2"></i>Excel
+                    </button>
+                    <button type="button" class="btn btn-outline-info" onclick="exportReport('csv')">
+                        <i class="fas fa-file-csv me-2"></i>CSV
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="printReport()">
+                        <i class="fas fa-print me-2"></i>Print
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Generating Report...</h5>
+                <p class="text-muted mb-0">Please wait while we compile your data.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dateRangeSelect = document.getElementById('dateRange');
+    const customDateRange = document.getElementById('customDateRange');
+    const customDateRange2 = document.getElementById('customDateRange2');
+    
+    // Handle custom date range visibility
+    dateRangeSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customDateRange.style.display = 'block';
+            customDateRange2.style.display = 'block';
+        } else {
+            customDateRange.style.display = 'none';
+            customDateRange2.style.display = 'none';
+        }
+    });
+    
+    let currentReportType = null;
+    let currentReportData = null;
+    
+    window.generateReport = function(reportType) {
+        currentReportType = reportType;
+        
+        // Show loading modal
+        const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+        loadingModal.show();
+        
+        // Get filter values
+        const filters = new FormData(document.getElementById('reportFilters'));
+        const params = new URLSearchParams();
+        
+        for (let [key, value] of filters.entries()) {
+            if (value) params.append(key, value);
+        }
+        
+        params.append('report_type', reportType);
+        
+        fetch(`/library/reports/generate/?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                loadingModal.hide();
+                if (data.success) {
+                    currentReportData = data;
+                    showReportPreview(reportType, data);
+                } else {
+                    alert('Error generating report: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                loadingModal.hide();
+                console.error('Error:', error);
+                alert('An error occurred while generating the report');
+            });
+    };
+    
+    function showReportPreview(reportType, data) {
+        const preview = document.getElementById('reportPreview');
+        const title = document.getElementById('reportTitle');
+        const content = document.getElementById('reportContent');
+        
+        // Set title
+        const titles = {
+            'borrowing_summary': 'Borrowing Summary Report',
+            'overdue_books': 'Overdue Books Report',
+            'popular_books': 'Popular Books Report',
+            'user_activity': 'User Activity Report',
+            'inventory_status': 'Inventory Status Report',
+            'fines_revenue': 'Fines & Revenue Report',
+            'digital_resources': 'Digital Resources Report',
+            'reservations': 'Reservations Report',
+            'monthly_stats': 'Monthly Statistics Report'
+        };
+        
+        title.textContent = titles[reportType] || 'Report Preview';
+        
+        // Generate content based on report type
+        content.innerHTML = generateReportContent(reportType, data);
+        
+        // Show preview
+        preview.classList.add('show');
+        preview.scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    function generateReportContent(reportType, data) {
+        switch (reportType) {
+            case 'borrowing_summary':
+                return generateBorrowingSummary(data);
+            case 'overdue_books':
+                return generateOverdueBooks(data);
+            case 'popular_books':
+                return generatePopularBooks(data);
+            case 'user_activity':
+                return generateUserActivity(data);
+            case 'inventory_status':
+                return generateInventoryStatus(data);
+            case 'fines_revenue':
+                return generateFinesRevenue(data);
+            case 'digital_resources':
+                return generateDigitalResources(data);
+            case 'reservations':
+                return generateReservations(data);
+            case 'monthly_stats':
+                return generateMonthlyStats(data);
+            default:
+                return '<p>Report type not found.</p>';
+        }
+    }
+    
+    function generateBorrowingSummary(data) {
+        return `
+            <div class="row mb-4">
+                <div class="col-md-3 text-center">
+                    <h4 class="text-primary">${data.total_borrowings}</h4>
+                    <small class="text-muted">Total Borrowings</small>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h4 class="text-success">${data.active_borrowings}</h4>
+                    <small class="text-muted">Active</small>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h4 class="text-warning">${data.returned_borrowings}</h4>
+                    <small class="text-muted">Returned</small>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h4 class="text-danger">${data.overdue_borrowings}</h4>
+                    <small class="text-muted">Overdue</small>
+                </div>
+            </div>
+            <canvas id="borrowingChart" width="400" height="200"></canvas>
+        `;
+    }
+    
+    function generateOverdueBooks(data) {
+        let html = `
+            <div class="alert alert-warning">
+                <h6><i class="fas fa-exclamation-triangle me-2"></i>Total Overdue Books: ${data.overdue_books.length}</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Book Title</th>
+                            <th>Borrower</th>
+                            <th>Due Date</th>
+                            <th>Days Overdue</th>
+                            <th>Fine Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.overdue_books.forEach(book => {
+            html += `
+                <tr>
+                    <td>${book.title}</td>
+                    <td>${book.borrower}</td>
+                    <td>${book.due_date}</td>
+                    <td class="text-danger">${book.days_overdue}</td>
+                    <td>$${book.fine_amount}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    function generatePopularBooks(data) {
+        let html = `
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <h6>Top 10 Most Borrowed Books</h6>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Book Title</th>
+                                    <th>Author</th>
+                                    <th>Borrow Count</th>
+                                    <th>Popularity Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+        `;
+        
+        data.popular_books.forEach((book, index) => {
+            html += `
+                <tr>
+                    <td><span class="badge bg-primary">#${index + 1}</span></td>
+                    <td>${book.title}</td>
+                    <td>${book.author}</td>
+                    <td>${book.borrow_count}</td>
+                    <td>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar" style="width: ${book.popularity_score}%">${book.popularity_score}%</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    function generateUserActivity(data) {
+        return `
+            <div class="row mb-4">
+                <div class="col-md-4 text-center">
+                    <h4 class="text-info">${data.active_users}</h4>
+                    <small class="text-muted">Active Users</small>
+                </div>
+                <div class="col-md-4 text-center">
+                    <h4 class="text-success">${data.new_users}</h4>
+                    <small class="text-muted">New Users</small>
+                </div>
+                <div class="col-md-4 text-center">
+                    <h4 class="text-primary">${data.avg_books_per_user}</h4>
+                    <small class="text-muted">Avg Books/User</small>
+                </div>
+            </div>
+            <canvas id="userActivityChart" width="400" height="200"></canvas>
+        `;
+    }
+    
+    function generateInventoryStatus(data) {
+        return `
+            <div class="row mb-4">
+                <div class="col-md-3 text-center">
+                    <h4 class="text-primary">${data.total_books}</h4>
+                    <small class="text-muted">Total Books</small>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h4 class="text-success">${data.available_books}</h4>
+                    <small class="text-muted">Available</small>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h4 class="text-warning">${data.borrowed_books}</h4>
+                    <small class="text-muted">Borrowed</small>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h4 class="text-info">${data.reserved_books}</h4>
+                    <small class="text-muted">Reserved</small>
+                </div>
+            </div>
+            <canvas id="inventoryChart" width="400" height="200"></canvas>
+        `;
+    }
+    
+    function generateFinesRevenue(data) {
+        return `
+            <div class="row mb-4">
+                <div class="col-md-4 text-center">
+                    <h4 class="text-success">$${data.total_revenue}</h4>
+                    <small class="text-muted">Total Revenue</small>
+                </div>
+                <div class="col-md-4 text-center">
+                    <h4 class="text-warning">$${data.pending_fines}</h4>
+                    <small class="text-muted">Pending Fines</small>
+                </div>
+                <div class="col-md-4 text-center">
+                    <h4 class="text-info">$${data.collected_fines}</h4>
+                    <small class="text-muted">Collected</small>
+                </div>
+            </div>
+            <canvas id="revenueChart" width="400" height="200"></canvas>
+        `;
+    }
+    
+    function generateDigitalResources(data) {
+        return `
+            <div class="row mb-4">
+                <div class="col-md-3 text-center">
+                    <h4 class="text-primary">${data.total_resources}</h4>
+                    <small class="text-muted">Total Resources</small>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h4 class="text-success">${data.total_downloads}</h4>
+                    <small class="text-muted">Downloads</small>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h4 class="text-info">${data.unique_users}</h4>
+                    <small class="text-muted">Unique Users</small>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h4 class="text-warning">${data.avg_downloads}</h4>
+                    <small class="text-muted">Avg Downloads</small>
+                </div>
+            </div>
+            <canvas id="digitalChart" width="400" height="200"></canvas>
+        `;
+    }
+    
+    function generateReservations(data) {
+        return `
+            <div class="row mb-4">
+                <div class="col-md-4 text-center">
+                    <h4 class="text-primary">${data.total_reservations}</h4>
+                    <small class="text-muted">Total Reservations</small>
+                </div>
+                <div class="col-md-4 text-center">
+                    <h4 class="text-warning">${data.active_reservations}</h4>
+                    <small class="text-muted">Active</small>
+                </div>
+                <div class="col-md-4 text-center">
+                    <h4 class="text-success">${data.fulfilled_reservations}</h4>
+                    <small class="text-muted">Fulfilled</small>
+                </div>
+            </div>
+            <canvas id="reservationsChart" width="400" height="200"></canvas>
+        `;
+    }
+    
+    function generateMonthlyStats(data) {
+        return `
+            <div class="row mb-4">
+                <div class="col-md-2 text-center">
+                    <h5 class="text-primary">${data.monthly_borrowings}</h5>
+                    <small class="text-muted">Borrowings</small>
+                </div>
+                <div class="col-md-2 text-center">
+                    <h5 class="text-success">${data.monthly_returns}</h5>
+                    <small class="text-muted">Returns</small>
+                </div>
+                <div class="col-md-2 text-center">
+                    <h5 class="text-warning">${data.monthly_reservations}</h5>
+                    <small class="text-muted">Reservations</small>
+                </div>
+                <div class="col-md-2 text-center">
+                    <h5 class="text-info">${data.monthly_new_books}</h5>
+                    <small class="text-muted">New Books</small>
+                </div>
+                <div class="col-md-2 text-center">
+                    <h5 class="text-danger">${data.monthly_fines}</h5>
+                    <small class="text-muted">Fines</small>
+                </div>
+                <div class="col-md-2 text-center">
+                    <h5 class="text-dark">${data.monthly_users}</h5>
+                    <small class="text-muted">Active Users</small>
+                </div>
+            </div>
+            <canvas id="monthlyChart" width="400" height="200"></canvas>
+        `;
+    }
+    
+    window.closePreview = function() {
+        document.getElementById('reportPreview').classList.remove('show');
+    };
+    
+    window.exportReport = function(format) {
+        if (!currentReportType || !currentReportData) {
+            alert('No report data available');
+            return;
+        }
+        
+        const filters = new FormData(document.getElementById('reportFilters'));
+        const params = new URLSearchParams();
+        
+        for (let [key, value] of filters.entries()) {
+            if (value) params.append(key, value);
+        }
+        
+        params.append('report_type', currentReportType);
+        params.append('format', format);
+        
+        // Create a temporary link to trigger download
+        const link = document.createElement('a');
+        link.href = `/library/reports/export/?${params.toString()}`;
+        link.download = `library_report_${currentReportType}_${format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+    
+    window.printReport = function() {
+        const reportContent = document.getElementById('reportContent').innerHTML;
+        const reportTitle = document.getElementById('reportTitle').textContent;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>${reportTitle}</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+                    <style>
+                        @media print {
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container-fluid">
+                        <h2 class="mb-4">${reportTitle}</h2>
+                        <p class="text-muted mb-4">Generated on: ${new Date().toLocaleString()}</p>
+                        ${reportContent}
+                    </div>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    };
+});
+</script>
+{% endblock %}

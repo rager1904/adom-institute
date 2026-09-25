@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ document.title }} - ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">{{ document.get_source_type_display }}</div>
+            <h1 class="dashboard-title">{{ document.title }}</h1>
+            <p class="dashboard-subtitle">{{ document.institution.name }} - {{ document.get_processing_status_display }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <form method="post" action="{% url 'adom_institute:knowledge_document_process' document.pk %}">
+                {% csrf_token %}
+                <button class="btn btn-primary" type="submit"><i class="fas fa-gears"></i> Process</button>
+            </form>
+            <a class="btn btn-outline-secondary" href="{% url 'adom_institute:knowledge_document_list' %}">Back</a>
+        </div>
+    </div>
+
+    <section class="metric-grid">
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-fingerprint"></i></span>
+            <div class="metric-value">{{ document.checksum|default:"Pending" }}</div>
+            <div class="metric-label">Checksum</div>
+            <div class="metric-detail">Generated during processing</div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-layer-group"></i></span>
+            <div class="metric-value">{{ document.chunks.count }}</div>
+            <div class="metric-label">Chunks</div>
+            <div class="metric-detail">Ready for retrieval</div>
+        </article>
+    </section>
+
+    {% if document.error_message %}
+        <div class="alert alert-warning">{{ document.error_message }}</div>
+    {% endif %}
+
+    <section class="panel">
+        <div class="panel-heading"><h2 class="panel-title">Chunks</h2></div>
+        <div class="focus-list">
+            {% for chunk in document.chunks.all %}
+                <div class="focus-item">
+                    <span class="focus-icon"><i class="fas fa-quote-left"></i></span>
+                    <div>
+                        <div class="focus-category">Chunk {{ chunk.chunk_index }}</div>
+                        <div class="metric-detail">{{ chunk.content|truncatechars:320 }}</div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state"><p>No chunks yet. Process the document to extract text chunks.</p></div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

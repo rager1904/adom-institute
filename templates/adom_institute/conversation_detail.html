@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}{{ conversation.title }} - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">{{ conversation.get_agent_key_display }}</div>
+            <h1 class="dashboard-title">{{ conversation.title }}</h1>
+        </div>
+        <a class="btn btn-outline-secondary" href="{% url 'adom_institute:conversation_list' %}">Back</a>
+    </div>
+    <section class="panel mb-3"><div class="focus-list">
+        {% for message in conversation.messages.all %}
+            <div class="focus-item">
+                <span class="focus-icon"><i class="fas fa-comment"></i></span>
+                <div>
+                    <div class="focus-category">{{ message.role }}</div>
+                    <div class="metric-detail">{{ message.content }}</div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state"><p>No messages yet.</p></div>
+        {% endfor %}
+    </div></section>
+    <section class="panel">
+        <form method="post" action="{% url 'adom_institute:message_create' conversation.pk %}">
+            {% csrf_token %}
+            {{ message_form.content }}
+            <button class="btn btn-primary mt-2" type="submit">Add Message</button>
+        </form>
+    </section>
+</div>
+{% endblock %}

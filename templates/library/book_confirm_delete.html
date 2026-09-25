@@ -1,0 +1,423 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete {{ book.title }} - Library{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .delete-container {
+        max-width: 600px;
+        margin: 50px auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    .delete-header {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        padding: 40px;
+        text-align: center;
+    }
+    .delete-content {
+        padding: 40px;
+    }
+    .book-info-card {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-left: 4px solid #dc3545;
+    }
+    .book-cover-small {
+        width: 80px;
+        height: 120px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        margin-right: 20px;
+    }
+    .warning-list {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    .warning-list ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    .warning-list li {
+        color: #856404;
+        margin-bottom: 8px;
+    }
+    .btn-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+    }
+    .btn-secondary {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+    }
+    .confirmation-checkbox {
+        background: #ffe6e6;
+        border: 2px solid #ffcccc;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    .stat-item {
+        text-align: center;
+        padding: 15px;
+        background: white;
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+    }
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #495057;
+    }
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .related-data-section {
+        background: #f8d7da;
+        border: 1px solid #f1aeb5;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    .related-data-section h6 {
+        color: #721c24;
+        margin-bottom: 15px;
+    }
+    .related-item {
+        background: white;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border-left: 3px solid #dc3545;
+    }
+    .pulse-animation {
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'library:dashboard' %}">Library</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'library:book_list' %}">Books</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'library:book_detail' book.pk %}">{{ book.title|truncatechars:30 }}</a></li>
+            <li class="breadcrumb-item active">Delete</li>
+        </ol>
+    </nav>
+
+    <div class="delete-container">
+        <!-- Delete Header -->
+        <div class="delete-header">
+            <div class="pulse-animation">
+                <i class="fas fa-exclamation-triangle fa-4x mb-3"></i>
+            </div>
+            <h1 class="h3 mb-3">Delete Book</h1>
+            <p class="mb-0">This action cannot be undone. Please review the information below carefully.</p>
+        </div>
+
+        <div class="delete-content">
+            <!-- Book Information -->
+            <div class="book-info-card">
+                <div class="d-flex align-items-start">
+                    <div class="book-cover-small">
+                        {% if book.cover_image %}
+                            <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="img-fluid h-100 w-100" style="object-fit: cover; border-radius: 10px;">
+                        {% else %}
+                            <i class="fas fa-book"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h4 class="mb-2">{{ book.title }}</h4>
+                        <p class="mb-1"><strong>Author:</strong> {{ book.author }}</p>
+                        <p class="mb-1"><strong>ISBN:</strong> {{ book.isbn|default:"Not specified" }}</p>
+                        <p class="mb-1"><strong>Category:</strong> {{ book.category.name }}</p>
+                        <p class="mb-0"><strong>Total Copies:</strong> {{ book.total_copies }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Book Statistics -->
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">{{ book.total_copies }}</div>
+                    <div class="stat-label">Total Copies</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ book.copies_borrowed }}</div>
+                    <div class="stat-label">Currently Borrowed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ book.copies_reserved }}</div>
+                    <div class="stat-label">Reserved</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ book.total_borrowings }}</div>
+                    <div class="stat-label">Total Borrowings</div>
+                </div>
+            </div>
+
+            <!-- Warning Message -->
+            <div class="warning-list">
+                <h5 class="text-warning mb-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Warning: Deleting this book will also:
+                </h5>
+                <ul>
+                    <li>Remove all borrowing history for this book</li>
+                    <li>Cancel all active reservations</li>
+                    <li>Delete associated reviews and ratings</li>
+                    <li>Remove the book from all course reading lists</li>
+                    <li>Clear all statistical data related to this book</li>
+                </ul>
+            </div>
+
+            <!-- Related Data that will be affected -->
+            {% if current_borrowings or current_reservations %}
+            <div class="related-data-section">
+                <h6><i class="fas fa-exclamation-circle me-2"></i>Active Records That Will Be Affected:</h6>
+                
+                {% if current_borrowings %}
+                <div class="mb-3">
+                    <strong>Current Borrowings ({{ current_borrowings.count }}):</strong>
+                    {% for borrowing in current_borrowings %}
+                    <div class="related-item">
+                        <i class="fas fa-user me-2"></i>
+                        {{ borrowing.user.get_full_name }} - Due: {{ borrowing.due_date|date:"M d, Y" }}
+                        {% if borrowing.is_overdue %}
+                            <span class="badge bg-danger ms-2">Overdue</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if current_reservations %}
+                <div class="mb-3">
+                    <strong>Current Reservations ({{ current_reservations.count }}):</strong>
+                    {% for reservation in current_reservations %}
+                    <div class="related-item">
+                        <i class="fas fa-bookmark me-2"></i>
+                        {{ reservation.user.get_full_name }} - Reserved: {{ reservation.reserved_date|date:"M d, Y" }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Confirmation Form -->
+            <form method="post" id="deleteForm">
+                {% csrf_token %}
+                
+                <div class="confirmation-checkbox">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="confirmDelete" required>
+                        <label class="form-check-label" for="confirmDelete">
+                            <strong>I understand that this action cannot be undone and I want to permanently delete this book and all its associated data.</strong>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="confirmation-checkbox">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="confirmBorrowing" required {% if not current_borrowings %}disabled{% endif %}>
+                        <label class="form-check-label" for="confirmBorrowing">
+                            {% if current_borrowings %}
+                                <strong>I understand that {{ current_borrowings.count }} active borrowing(s) will be affected and users will need to return their copies.</strong>
+                            {% else %}
+                                <span class="text-muted">No active borrowings to confirm.</span>
+                            {% endif %}
+                        </label>
+                    </div>
+                </div>
+
+                <div class="confirmation-checkbox">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="confirmReservation" required {% if not current_reservations %}disabled{% endif %}>
+                        <label class="form-check-label" for="confirmReservation">
+                            {% if current_reservations %}
+                                <strong>I understand that {{ current_reservations.count }} active reservation(s) will be cancelled.</strong>
+                            {% else %}
+                                <span class="text-muted">No active reservations to confirm.</span>
+                            {% endif %}
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Final Warning -->
+                <div class="alert alert-danger" role="alert">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-skull-crossbones me-2"></i>
+                        Final Warning
+                    </h5>
+                    <p class="mb-0">
+                        You are about to permanently delete <strong>"{{ book.title }}"</strong> and all its associated data. 
+                        This action cannot be reversed. If you're sure you want to proceed, click the "Delete Book" button below.
+                    </p>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'library:book_detail' book.pk %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancel
+                    </a>
+                    
+                    <button type="submit" class="btn btn-danger" id="deleteBtn" disabled>
+                        <i class="fas fa-trash me-2"></i>Delete Book Forever
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Countdown Modal -->
+<div class="modal fade" id="countdownModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-countdown me-2"></i>Confirming Deletion
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-4">
+                    <i class="fas fa-exclamation-triangle fa-4x text-danger pulse-animation"></i>
+                </div>
+                <h4>Deleting book in <span id="countdown">5</span> seconds...</h4>
+                <p class="text-muted">This is your last chance to cancel this action.</p>
+                <div class="progress mt-3">
+                    <div class="progress-bar bg-danger progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 100%" id="progressBar"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cancelDeletion()">
+                    <i class="fas fa-times me-2"></i>Cancel Deletion
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForm = document.getElementById('deleteForm');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const checkboxes = document.querySelectorAll('.confirmation-checkbox input[type="checkbox"]');
+    const countdownModal = new bootstrap.Modal(document.getElementById('countdownModal'));
+    
+    let deletionTimeout;
+    let countdownInterval;
+    
+    // Enable/disable delete button based on checkboxes
+    function updateDeleteButton() {
+        const allChecked = Array.from(checkboxes).every(checkbox => 
+            checkbox.checked || checkbox.disabled
+        );
+        deleteBtn.disabled = !allChecked;
+        
+        if (allChecked) {
+            deleteBtn.classList.remove('btn-danger');
+            deleteBtn.classList.add('btn-danger');
+        }
+    }
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateDeleteButton);
+    });
+    
+    // Handle form submission with countdown
+    deleteForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Show countdown modal
+        countdownModal.show();
+        
+        let timeLeft = 5;
+        const countdownElement = document.getElementById('countdown');
+        const progressBar = document.getElementById('progressBar');
+        
+        // Update countdown
+        countdownInterval = setInterval(() => {
+            timeLeft--;
+            countdownElement.textContent = timeLeft;
+            progressBar.style.width = (timeLeft / 5) * 100 + '%';
+            
+            if (timeLeft <= 0) {
+                clearInterval(countdownInterval);
+                // Actually submit the form
+                deleteForm.submit();
+            }
+        }, 1000);
+    });
+    
+    // Cancel deletion function
+    window.cancelDeletion = function() {
+        clearInterval(countdownInterval);
+        countdownModal.hide();
+        
+        // Reset countdown
+        document.getElementById('countdown').textContent = '5';
+        document.getElementById('progressBar').style.width = '100%';
+    };
+    
+    // Auto-check disabled checkboxes
+    checkboxes.forEach(checkbox => {
+        if (checkbox.disabled) {
+            checkbox.checked = true;
+        }
+    });
+    
+    // Initial button state check
+    updateDeleteButton();
+    
+    // Add warning on page unload
+    window.addEventListener('beforeunload', function(e) {
+        const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked && !cb.disabled);
+        if (checkedBoxes.length > 0) {
+            e.preventDefault();
+            e.returnValue = 'You have started the book deletion process. Are you sure you want to leave?';
+        }
+    });
+});
+</script>
+{% endblock %}

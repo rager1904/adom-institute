@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+{% if object %}Edit Announcement{% else %}New Announcement{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-{% if object %}edit{% else %}bullhorn{% endif %} me-3 text-primary"></i>
+            {% if object %}Edit Announcement{% else %}New Announcement{% endif %}
+        </h2>
+        <p class="text-muted mb-0">
+            {% if object %}Update announcement information{% else %}Create a new announcement{% endif %}
+        </p>
+    </div>
+    <div>
+        <a href="{% url 'communication:announcement_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>Announcement Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Title</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.title.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Announcement Type</label>
+                            {{ form.announcement_type }}
+                            {% if form.announcement_type.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.announcement_type.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Target Audience</label>
+                            {{ form.target_audience }}
+                            {% if form.target_audience.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.target_audience.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Content</label>
+                            {{ form.content }}
+                            {% if form.content.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.content.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Target Classes</label>
+                            {{ form.target_classes }}
+                            {% if form.target_classes.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.target_classes.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Select specific classes (optional)</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Expires At</label>
+                            {{ form.expires_at }}
+                            {% if form.expires_at.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.expires_at.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Optional - when announcement expires</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Attachment</label>
+                            {{ form.attachment }}
+                            {% if form.attachment.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.attachment.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Optional - attach a file</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Publishing</label>
+                            <div class="mt-2">
+                                <div class="form-check">
+                                    {{ form.is_published }}
+                                    <label class="form-check-label" for="{{ form.is_published.id_for_label }}">
+                                        Publish immediately
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Priority & Flags</label>
+                            <div class="mt-2">
+                                <div class="form-check form-check-inline">
+                                    {{ form.is_urgent }}
+                                    <label class="form-check-label" for="{{ form.is_urgent.id_for_label }}">
+                                        Urgent
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    {{ form.is_featured }}
+                                    <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">
+                                        Featured
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger mt-3">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            {% if object %}Update Announcement{% else %}Create Announcement{% endif %}
+                        </button>
+                        <a href="{% url 'communication:announcement_list' %}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Announcement Types:</h6>
+                    <ul class="list-unstyled small">
+                        <li><span class="badge bg-light text-dark me-2">General</span> General announcements</li>
+                        <li><span class="badge bg-light text-dark me-2">Academic</span> Academic related</li>
+                        <li><span class="badge bg-light text-dark me-2">Event</span> Event announcements</li>
+                        <li><span class="badge bg-light text-dark me-2">Emergency</span> Emergency notifications</li>
+                        <li><span class="badge bg-light text-dark me-2">Holiday</span> Holiday announcements</li>
+                    </ul>
+                </div>
+
+                <div class="mb-3">
+                    <h6>Target Audiences:</h6>
+                    <ul class="list-unstyled small">
+                        <li><span class="badge bg-light text-dark me-2">All</span> Everyone</li>
+                        <li><span class="badge bg-light text-dark me-2">Students</span> Students only</li>
+                        <li><span class="badge bg-light text-dark me-2">Teachers</span> Teachers only</li>
+                        <li><span class="badge bg-light text-dark me-2">Parents</span> Parents only</li>
+                        <li><span class="badge bg-light text-dark me-2">Administrators</span> Staff only</li>
+                    </ul>
+                </div>
+
+                <div class="mb-3">
+                    <h6>Priority Flags:</h6>
+                    <ul class="list-unstyled small">
+                        <li><span class="badge bg-danger me-2">Urgent</span> High priority announcement</li>
+                        <li><span class="badge bg-warning me-2">Featured</span> Featured announcement</li>
+                    </ul>
+                </div>
+
+                <div class="mb-3">
+                    <h6>Quick Actions:</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'communication:announcement_list' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-2"></i>View Announcements
+                        </a>
+                        <a href="{% url 'communication:message_create' %}" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-envelope me-2"></i>Send Message
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Character counter for content
+    const contentField = document.getElementById('id_content');
+    if (contentField) {
+        const counter = document.createElement('small');
+        counter.className = 'text-muted mt-1';
+        contentField.parentNode.appendChild(counter);
+        
+        function updateCounter() {
+            const length = contentField.value.length;
+            counter.textContent = `${length} characters`;
+        }
+        
+        contentField.addEventListener('input', updateCounter);
+        updateCounter();
+    }
+    
+    // Set minimum date for expires_at field
+    const expiresAtField = document.getElementById('id_expires_at');
+    if (expiresAtField) {
+        const now = new Date();
+        const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        expiresAtField.setAttribute('min', localDateTime);
+    }
+});
+</script>
+{% endblock %}

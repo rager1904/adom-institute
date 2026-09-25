@@ -1,0 +1,664 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Barcode Scanner - Library{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .scanner-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        padding: 40px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .scanner-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    .barcode-input {
+        font-size: 1.5rem;
+        padding: 20px;
+        border: 3px solid #e9ecef;
+        border-radius: 15px;
+        text-align: center;
+        font-family: 'Courier New', monospace;
+        letter-spacing: 2px;
+        margin-bottom: 20px;
+    }
+    .barcode-input:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40,167,69,0.25);
+    }
+    .scan-result {
+        border-radius: 15px;
+        padding: 25px;
+        margin-top: 20px;
+        display: none;
+    }
+    .scan-result.success {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    .scan-result.error {
+        background: #f8d7da;
+        border: 1px solid #f1aeb5;
+        color: #721c24;
+    }
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 30px;
+    }
+    .action-card {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+    }
+    .action-card:hover {
+        border-color: #28a745;
+        background: #f0fff4;
+        color: inherit;
+        text-decoration: none;
+        transform: translateY(-2px);
+    }
+    .scanner-animation {
+        width: 200px;
+        height: 120px;
+        border: 3px solid #28a745;
+        border-radius: 10px;
+        margin: 20px auto;
+        position: relative;
+        overflow: hidden;
+    }
+    .scanner-line {
+        width: 100%;
+        height: 2px;
+        background: #dc3545;
+        position: absolute;
+        animation: scan 2s linear infinite;
+    }
+    @keyframes scan {
+        0% { top: 0; }
+        100% { top: 100%; }
+    }
+    .recent-scans {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-top: 30px;
+    }
+    .scan-history-item {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-left: 4px solid #28a745;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .sound-indicator {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 25px;
+        display: none;
+        z-index: 1000;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'library:dashboard' %}">Library</a></li>
+            <li class="breadcrumb-item active">Barcode Scanner</li>
+        </ol>
+    </nav>
+
+    <div class="scanner-container">
+        <!-- Scanner Header -->
+        <div class="scanner-header">
+            <h1 class="mb-3">
+                <i class="fas fa-barcode fa-2x me-3"></i>
+                Barcode Scanner
+            </h1>
+            <p class="mb-0">Scan book barcodes or user ID cards for quick check-in/check-out</p>
+        </div>
+
+        <!-- Scanner Animation -->
+        <div class="scanner-animation">
+            <div class="scanner-line"></div>
+            <div class="position-absolute top-50 start-50 translate-middle">
+                <i class="fas fa-barcode fa-3x text-muted"></i>
+            </div>
+        </div>
+
+        <!-- Barcode Input -->
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <label for="barcodeInput" class="form-label h5">Scan or Enter Barcode</label>
+                <input type="text" 
+                       class="form-control barcode-input" 
+                       id="barcodeInput" 
+                       placeholder="Position barcode in scanner view..." 
+                       autofocus>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Place the barcode under the red scanning line or type manually
+                </small>
+            </div>
+        </div>
+
+        <!-- Scan Result -->
+        <div id="scanResult" class="scan-result">
+            <div id="resultContent"></div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <a href="{% url 'library:borrowing_create' %}" class="action-card">
+                <i class="fas fa-hand-holding fa-2x text-primary mb-3"></i>
+                <h6>Create Borrowing</h6>
+                <small class="text-muted">Issue a book to user</small>
+            </a>
+            
+            <div class="action-card" onclick="switchMode('return')">
+                <i class="fas fa-undo fa-2x text-success mb-3"></i>
+                <h6>Return Book</h6>
+                <small class="text-muted">Check in returned books</small>
+            </div>
+            
+            <a href="{% url 'library:reservation_create' %}" class="action-card">
+                <i class="fas fa-bookmark fa-2x text-warning mb-3"></i>
+                <h6>Reserve Book</h6>
+                <small class="text-muted">Create reservation</small>
+            </div>
+            
+            <div class="action-card" onclick="switchMode('lookup')">
+                <i class="fas fa-search fa-2x text-info mb-3"></i>
+                <h6>Book Lookup</h6>
+                <small class="text-muted">Find book information</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Scans -->
+    <div class="recent-scans">
+        <h5 class="mb-3">
+            <i class="fas fa-history me-2"></i>
+            Recent Scans
+        </h5>
+        <div id="recentScansContainer">
+            <div class="text-center text-muted py-3">
+                <i class="fas fa-barcode fa-2x mb-2"></i>
+                <p>No recent scans. Start by scanning a barcode above.</p>
+            </div>
+        </div>
+        
+        <div class="text-center mt-3">
+            <button type="button" class="btn btn-outline-secondary" onclick="clearHistory()">
+                <i class="fas fa-trash me-2"></i>Clear History
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Sound Indicator -->
+<div class="sound-indicator" id="soundIndicator">
+    <i class="fas fa-volume-up me-2"></i>Beep!
+</div>
+
+<!-- Modals for different actions -->
+<div class="modal fade" id="actionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+            <div class="modal-footer" id="modalFooter">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const barcodeInput = document.getElementById('barcodeInput');
+    const scanResult = document.getElementById('scanResult');
+    const resultContent = document.getElementById('resultContent');
+    const recentScansContainer = document.getElementById('recentScansContainer');
+    const soundIndicator = document.getElementById('soundIndicator');
+    
+    let currentMode = 'lookup'; // lookup, borrow, return, reserve
+    let recentScans = JSON.parse(localStorage.getItem('libraryScanHistory') || '[]');
+    let lastScanTime = 0;
+    
+    // Load recent scans on page load
+    updateRecentScans();
+    
+    // Auto-focus on barcode input
+    barcodeInput.focus();
+    
+    // Handle barcode input
+    barcodeInput.addEventListener('input', function() {
+        const barcode = this.value.trim();
+        
+        // Trigger scan if barcode is complete (usually 10+ characters)
+        if (barcode.length >= 8) {
+            const now = Date.now();
+            // Prevent duplicate scans within 1 second
+            if (now - lastScanTime > 1000) {
+                lastScanTime = now;
+                processBarcode(barcode);
+            }
+        }
+    });
+    
+    // Handle Enter key
+    barcodeInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const barcode = this.value.trim();
+            if (barcode) {
+                processBarcode(barcode);
+            }
+        }
+    });
+    
+    // Clear input on focus for easy re-scanning
+    barcodeInput.addEventListener('focus', function() {
+        this.select();
+    });
+    
+    function processBarcode(barcode) {
+        showScanIndicator();
+        
+        // Add to recent scans
+        addToRecentScans(barcode);
+        
+        // Process based on current mode
+        switch(currentMode) {
+            case 'lookup':
+                lookupBarcode(barcode);
+                break;
+            case 'return':
+                returnBook(barcode);
+                break;
+            case 'borrow':
+                borrowBook(barcode);
+                break;
+            case 'reserve':
+                reserveBook(barcode);
+                break;
+        }
+    }
+    
+    function lookupBarcode(barcode) {
+        fetch(`/library/barcode-scan/?barcode=${encodeURIComponent(barcode)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccessResult(data);
+                } else {
+                    showErrorResult(data.error || 'Barcode not found');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorResult('Error processing barcode');
+            })
+            .finally(() => {
+                clearBarcodeInput();
+            });
+    }
+    
+    function returnBook(barcode) {
+        fetch(`/library/barcode-scan/return/?barcode=${encodeURIComponent(barcode)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showReturnModal(data.borrowing);
+                } else {
+                    showErrorResult(data.error || 'No active borrowing found for this barcode');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorResult('Error processing return');
+            })
+            .finally(() => {
+                clearBarcodeInput();
+            });
+    }
+    
+    function borrowBook(barcode) {
+        // For borrowing, we need to identify if it's a book or user
+        fetch(`/library/barcode-scan/identify/?barcode=${encodeURIComponent(barcode)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.type === 'book') {
+                    window.location.href = `/library/borrowings/create/?book=${data.id}`;
+                } else if (data.type === 'user') {
+                    window.location.href = `/library/borrowings/create/?user=${data.id}`;
+                } else {
+                    showErrorResult('Could not identify barcode type');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorResult('Error processing barcode');
+            })
+            .finally(() => {
+                clearBarcodeInput();
+            });
+    }
+    
+    function reserveBook(barcode) {
+        fetch(`/library/barcode-scan/?barcode=${encodeURIComponent(barcode)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.book) {
+                    window.location.href = `/library/reservations/create/?book=${data.book.id}`;
+                } else {
+                    showErrorResult(data.error || 'Book not found');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorResult('Error processing barcode');
+            })
+            .finally(() => {
+                clearBarcodeInput();
+            });
+    }
+    
+    function showSuccessResult(data) {
+        scanResult.className = 'scan-result success';
+        scanResult.style.display = 'block';
+        
+        if (data.book) {
+            resultContent.innerHTML = `
+                <h5><i class="fas fa-check-circle me-2"></i>Book Found</h5>
+                <div class="row align-items-center">
+                    <div class="col-md-2">
+                        ${data.book.cover_image ? 
+                            `<img src="${data.book.cover_image}" alt="${data.book.title}" class="img-fluid rounded">` : 
+                            '<div class="bg-secondary rounded p-3 text-center"><i class="fas fa-book fa-2x text-white"></i></div>'
+                        }
+                    </div>
+                    <div class="col-md-10">
+                        <h6 class="mb-1">${data.book.title}</h6>
+                        <p class="mb-1"><strong>Author:</strong> ${data.book.author}</p>
+                        <p class="mb-1"><strong>ISBN:</strong> ${data.book.isbn || 'N/A'}</p>
+                        <p class="mb-1"><strong>Status:</strong> 
+                            <span class="badge ${data.book.is_available ? 'bg-success' : 'bg-danger'}">
+                                ${data.book.is_available ? 'Available' : 'Not Available'}
+                            </span>
+                        </p>
+                        <p class="mb-0"><strong>Available Copies:</strong> ${data.book.available_copies}/${data.book.total_copies}</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    ${data.book.is_available ? 
+                        `<a href="/library/borrowings/create/?book=${data.book.id}" class="btn btn-primary me-2">
+                            <i class="fas fa-hand-holding me-1"></i>Borrow Book
+                        </a>` : 
+                        `<a href="/library/reservations/create/?book=${data.book.id}" class="btn btn-warning me-2">
+                            <i class="fas fa-bookmark me-1"></i>Reserve Book
+                        </a>`
+                    }
+                    <a href="/library/books/${data.book.id}/" class="btn btn-outline-primary">
+                        <i class="fas fa-eye me-1"></i>View Details
+                    </a>
+                </div>
+            `;
+        } else if (data.user) {
+            resultContent.innerHTML = `
+                <h5><i class="fas fa-check-circle me-2"></i>User Found</h5>
+                <div class="row align-items-center">
+                    <div class="col-md-2 text-center">
+                        <div class="bg-primary rounded-circle p-3 d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <span class="text-white fw-bold">${data.user.first_name.charAt(0)}${data.user.last_name.charAt(0)}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-10">
+                        <h6 class="mb-1">${data.user.full_name}</h6>
+                        <p class="mb-1"><strong>Username:</strong> ${data.user.username}</p>
+                        <p class="mb-1"><strong>Type:</strong> ${data.user.user_type}</p>
+                        <p class="mb-1"><strong>Active Borrowings:</strong> ${data.user.active_borrowings || 0}</p>
+                        <p class="mb-0"><strong>Total Borrowed:</strong> ${data.user.total_borrowed || 0}</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="/library/borrowings/create/?user=${data.user.id}" class="btn btn-primary me-2">
+                        <i class="fas fa-plus me-1"></i>Create Borrowing
+                    </a>
+                    <a href="/library/borrowings/?user=${data.user.id}" class="btn btn-outline-primary">
+                        <i class="fas fa-history me-1"></i>View History
+                    </a>
+                </div>
+            `;
+        }
+    }
+    
+    function showErrorResult(message) {
+        scanResult.className = 'scan-result error';
+        scanResult.style.display = 'block';
+        resultContent.innerHTML = `
+            <h5><i class="fas fa-exclamation-circle me-2"></i>Scan Error</h5>
+            <p class="mb-0">${message}</p>
+        `;
+    }
+    
+    function showReturnModal(borrowing) {
+        const modal = new bootstrap.Modal(document.getElementById('actionModal'));
+        document.getElementById('modalTitle').innerHTML = '<i class="fas fa-undo me-2"></i>Return Book';
+        document.getElementById('modalBody').innerHTML = `
+            <div class="text-center mb-3">
+                <h6>${borrowing.book_title}</h6>
+                <p class="text-muted">Borrowed by: ${borrowing.borrower_name}</p>
+                <p class="text-muted">Due: ${borrowing.due_date}</p>
+                ${borrowing.is_overdue ? '<p class="text-danger">This book is overdue!</p>' : ''}
+            </div>
+            <form id="returnForm">
+                <div class="mb-3">
+                    <label class="form-label">Return Notes (Optional)</label>
+                    <textarea class="form-control" id="returnNotes" rows="3"></textarea>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="bookDamaged">
+                    <label class="form-check-label" for="bookDamaged">
+                        Book has damage or issues
+                    </label>
+                </div>
+            </form>
+        `;
+        document.getElementById('modalFooter').innerHTML = `
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-success" onclick="confirmReturn(${borrowing.id})">
+                <i class="fas fa-check me-2"></i>Confirm Return
+            </button>
+        `;
+        modal.show();
+    }
+    
+    window.confirmReturn = function(borrowingId) {
+        const notes = document.getElementById('returnNotes').value;
+        const damaged = document.getElementById('bookDamaged').checked;
+        
+        fetch(`/library/borrowings/${borrowingId}/return/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                notes: notes,
+                damaged: damaged
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+                showSuccessResult({message: 'Book returned successfully!'});
+            } else {
+                alert('Error: ' + (data.error || 'Failed to return book'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while returning the book');
+        });
+    };
+    
+    function showScanIndicator() {
+        soundIndicator.style.display = 'block';
+        setTimeout(() => {
+            soundIndicator.style.display = 'none';
+        }, 1000);
+        
+        // Play sound if supported
+        try {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEcAzu60ezFdCMLKIrN8tqFNwgZZrjr66JWFAw+ntv0vGEcCEW29+3BdSUFJHfE8N+QQAoUXrPn66hUFAlCod7zvmEcA');
+            audio.play().catch(() => {}); // Ignore errors if audio fails
+        } catch (e) {
+            // Audio not supported, ignore
+        }
+    }
+    
+    function clearBarcodeInput() {
+        setTimeout(() => {
+            barcodeInput.value = '';
+            barcodeInput.focus();
+        }, 2000);
+    }
+    
+    function addToRecentScans(barcode) {
+        const scan = {
+            barcode: barcode,
+            timestamp: Date.now(),
+            mode: currentMode
+        };
+        
+        recentScans.unshift(scan);
+        recentScans = recentScans.slice(0, 10); // Keep only last 10 scans
+        
+        localStorage.setItem('libraryScanHistory', JSON.stringify(recentScans));
+        updateRecentScans();
+    }
+    
+    function updateRecentScans() {
+        if (recentScans.length === 0) {
+            recentScansContainer.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-barcode fa-2x mb-2"></i>
+                    <p>No recent scans. Start by scanning a barcode above.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        recentScansContainer.innerHTML = recentScans.map(scan => `
+            <div class="scan-history-item">
+                <div>
+                    <strong>${scan.barcode}</strong>
+                    <small class="text-muted d-block">
+                        ${new Date(scan.timestamp).toLocaleString()} • Mode: ${scan.mode}
+                    </small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="rescanBarcode('${scan.barcode}')">
+                    <i class="fas fa-redo"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+    
+    window.rescanBarcode = function(barcode) {
+        barcodeInput.value = barcode;
+        processBarcode(barcode);
+    };
+    
+    window.clearHistory = function() {
+        if (confirm('Clear all scan history?')) {
+            recentScans = [];
+            localStorage.removeItem('libraryScanHistory');
+            updateRecentScans();
+        }
+    };
+    
+    window.switchMode = function(mode) {
+        currentMode = mode;
+        
+        // Update UI to show current mode
+        const modeIndicator = document.createElement('div');
+        modeIndicator.className = 'alert alert-info text-center';
+        modeIndicator.innerHTML = `
+            <i class="fas fa-info-circle me-2"></i>
+            Scanner mode changed to: <strong>${mode.charAt(0).toUpperCase() + mode.slice(1)}</strong>
+        `;
+        
+        // Insert after scanner header
+        const header = document.querySelector('.scanner-header');
+        header.parentNode.insertBefore(modeIndicator, header.nextSibling);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            modeIndicator.remove();
+        }, 3000);
+        
+        barcodeInput.focus();
+    };
+    
+    // Auto-clear scan results after 10 seconds
+    let clearResultTimeout;
+    function showResult() {
+        clearTimeout(clearResultTimeout);
+        clearResultTimeout = setTimeout(() => {
+            scanResult.style.display = 'none';
+        }, 10000);
+    }
+    
+    // Override show functions to include auto-clear
+    const originalShowSuccess = showSuccessResult;
+    const originalShowError = showErrorResult;
+    
+    showSuccessResult = function(data) {
+        originalShowSuccess(data);
+        showResult();
+    };
+    
+    showErrorResult = function(message) {
+        originalShowError(message);
+        showResult();
+    };
+});
+</script>
+{% endblock %}

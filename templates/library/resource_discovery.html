@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Discover Resources - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Library</div>
+            <h1 class="dashboard-title">Discover Resources</h1>
+            <p class="dashboard-subtitle">Find active learning materials available to your role.</p>
+        </div>
+    </div>
+    <section class="panel mb-3">
+        <form method="get" class="row g-2">
+            <div class="col-md-10"><input class="form-control" type="search" name="q" value="{{ request.GET.q }}" placeholder="Search by title, subject, or description"></div>
+            <div class="col-md-2 d-grid"><button class="btn btn-primary" type="submit">Search</button></div>
+        </form>
+    </section>
+    <section class="panel">
+        <div class="focus-list">
+            {% for resource in resources %}
+                <div class="focus-item">
+                    <span class="focus-icon"><i class="fas fa-book-open"></i></span>
+                    <div>
+                        <div class="focus-category">{{ resource.get_resource_type_display }} - {{ resource.get_access_level_display }}</div>
+                        <div class="focus-title"><a href="{% url 'library:digital_resource_detail' resource.pk %}">{{ resource.title }}</a></div>
+                        <div class="metric-detail">{{ resource.subject|default:"General" }}</div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state"><p>No resources match your search.</p></div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

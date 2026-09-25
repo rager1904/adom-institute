@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Communication Logs - Communication{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-history text-primary"></i> Communication Logs
+                </h1>
+                <div>
+                    <a href="{% url 'communication:communication_report' %}" class="btn btn-info">
+                        <i class="fas fa-chart-bar"></i> View Report
+                    </a>
+                    <a href="{% url 'communication:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-search"></i> Search & Filter
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ request.GET.search }}" placeholder="Search by recipient or subject...">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="communication_type" class="form-label">Type</label>
+                            <select class="form-control" id="communication_type" name="communication_type">
+                                <option value="">All Types</option>
+                                {% for value, label in form.fields.communication_type.choices %}
+                                    <option value="{{ value }}" {% if request.GET.communication_type == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-control" id="status" name="status">
+                                <option value="">All Status</option>
+                                {% for value, label in form.fields.status.choices %}
+                                    <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="date_range" class="form-label">Date Range</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control" id="start_date" name="start_date" 
+                                       value="{{ request.GET.start_date }}">
+                                <span class="input-group-text">to</span>
+                                <input type="date" class="form-control" id="end_date" name="end_date" 
+                                       value="{{ request.GET.end_date }}">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Logs List -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list"></i> Communication Logs ({{ page_obj.paginator.count }})
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Recipient</th>
+                                        <th>Type</th>
+                                        <th>Subject</th>
+                                        <th>Status</th>
+                                        <th>Sent At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in page_obj %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-user text-primary me-2"></i>
+                                                    <div>
+                                                        <strong>{{ log.recipient.get_full_name }}</strong>
+                                                        <small class="text-muted d-block">{{ log.recipient.email }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{% if log.communication_type == 'email' %}primary{% elif log.communication_type == 'sms' %}success{% elif log.communication_type == 'push' %}warning{% else %}info{% endif %}">
+                                                    <i class="fas fa-{% if log.communication_type == 'email' %}envelope{% elif log.communication_type == 'sms' %}sms{% elif log.communication_type == 'push' %}mobile-alt{% else %}bell{% endif %}"></i>
+                                                    {{ log.get_communication_type_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ log.subject|default:log.content|truncatechars:50 }}">
+                                                    {{ log.subject|default:log.content|truncatechars:50 }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{% if log.status == 'pending' %}warning{% elif log.status == 'sent' %}info{% elif log.status == 'delivered' %}success{% else %}danger{% endif %}">
+                                                    {{ log.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {% if log.sent_at %}
+                                                        {{ log.sent_at|date:"M j, Y g:i A" }}
+                                                    {% else %}
+                                                        <span class="text-muted">Not sent</span>
+                                                    {% endif %}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'communication:communication_log_detail' log.pk %}" 
+                                                       class="btn btn-sm btn-outline-primary" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    {% if log.error_message %}
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                                onclick="showError('{{ log.error_message|escapejs }}')" title="View Error">
+                                                            <i class="fas fa-exclamation-triangle"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if page_obj.has_other_pages %}
+                            <div class="card-footer">
+                                <nav aria-label="Communication logs pagination">
+                                    <ul class="pagination justify-content-center mb-0">
+                                        {% if page_obj.has_previous %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.communication_type %}&communication_type={{ request.GET.communication_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">
+                                                    <i class="fas fa-angle-double-left"></i>
+                                                </a>
+                                            </li>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.communication_type %}&communication_type={{ request.GET.communication_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">
+                                                    <i class="fas fa-angle-left"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+
+                                        {% for num in page_obj.paginator.page_range %}
+                                            {% if page_obj.number == num %}
+                                                <li class="page-item active">
+                                                    <span class="page-link">{{ num }}</span>
+                                                </li>
+                                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.communication_type %}&communication_type={{ request.GET.communication_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">{{ num }}</a>
+                                                </li>
+                                            {% endif %}
+                                        {% endfor %}
+
+                                        {% if page_obj.has_next %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.communication_type %}&communication_type={{ request.GET.communication_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">
+                                                    <i class="fas fa-angle-right"></i>
+                                                </a>
+                                            </li>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.communication_type %}&communication_type={{ request.GET.communication_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">
+                                                    <i class="fas fa-angle-double-right"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No communication logs found</h5>
+                            <p class="text-muted">Communication logs will appear here when messages are sent.</p>
+                            <a href="{% url 'communication:dashboard' %}" class="btn btn-primary">
+                                <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i> Error Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="error-message"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showError(errorMessage) {
+    document.getElementById('error-message').textContent = errorMessage;
+    const modal = new bootstrap.Modal(document.getElementById('errorModal'));
+    modal.show();
+}
+
+// Auto-submit form on filter change
+document.addEventListener('DOMContentLoaded', function() {
+    const filterSelects = document.querySelectorAll('#communication_type, #status');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            this.closest('form').submit();
+        });
+    });
+});
+</script>
+{% endblock %}

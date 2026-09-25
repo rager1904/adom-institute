@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Exam{% endblock %}
+
+{% block content %}
+<section class="container-fluid py-3">
+    <div class="adom-card p-4">
+        <h1 class="h4 mb-2">Delete exam</h1>
+        <p class="text-muted mb-4">This will remove <strong>{{ object.name }}</strong> and its linked exam records. Review dependent results before confirming.</p>
+        <form method="post" class="d-flex gap-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Delete exam</button>
+            <a href="{% url 'academics:exam_detail' object.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</section>
+{% endblock %}

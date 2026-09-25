@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}Report Form{% endblock %}
+
+{% block content %}
+<section class="container-fluid py-3">
+    <div class="adom-card p-4">
+        <h1 class="h4 mb-3">{% if object %}Edit report{% else %}Create report{% endif %}</h1>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Save report</button>
+                <a href="{% url 'analytics:report_list' %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

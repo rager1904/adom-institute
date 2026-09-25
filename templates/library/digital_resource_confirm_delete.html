@@ -1,0 +1,545 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete {{ resource.title }} - Digital Resources{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .delete-container {
+        max-width: 600px;
+        margin: 50px auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    .delete-header {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        padding: 40px;
+        text-align: center;
+    }
+    .delete-content {
+        padding: 40px;
+    }
+    .resource-info-card {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-left: 4px solid #dc3545;
+    }
+    .resource-preview-small {
+        width: 80px;
+        height: 100px;
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        margin-right: 20px;
+    }
+    .warning-list {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    .warning-list ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    .warning-list li {
+        color: #856404;
+        margin-bottom: 8px;
+    }
+    .btn-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+    }
+    .btn-secondary {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+    }
+    .confirmation-checkbox {
+        background: #ffe6e6;
+        border: 2px solid #ffcccc;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    .stat-item {
+        text-align: center;
+        padding: 15px;
+        background: white;
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+    }
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #495057;
+    }
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .file-info-section {
+        background: #f8d7da;
+        border: 1px solid #f1aeb5;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    .file-info-section h6 {
+        color: #721c24;
+        margin-bottom: 15px;
+    }
+    .access-history-preview {
+        max-height: 200px;
+        overflow-y: auto;
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+    }
+    .access-item {
+        padding: 8px 0;
+        border-bottom: 1px solid #f8f9fa;
+        display: flex;
+        justify-content: between;
+        align-items: center;
+    }
+    .access-item:last-child {
+        border-bottom: none;
+    }
+    .pulse-animation {
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    .file-type-badge {
+        background: #6c757d;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-left: 8px;
+    }
+    .access-level-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-left: 8px;
+    }
+    .access-level-badge.public {
+        background: #d4edda;
+        color: #155724;
+    }
+    .access-level-badge.student {
+        background: #cce7ff;
+        color: #004085;
+    }
+    .access-level-badge.teacher {
+        background: #fff3cd;
+        color: #856404;
+    }
+    .access-level-badge.admin {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    .countdown-display {
+        font-size: 3rem;
+        font-weight: bold;
+        color: #dc3545;
+        text-align: center;
+        margin: 20px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'library:dashboard' %}">Library</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'library:digital_resource_list' %}">Digital Resources</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'library:digital_resource_detail' resource.pk %}">{{ resource.title|truncatechars:30 }}</a></li>
+            <li class="breadcrumb-item active">Delete</li>
+        </ol>
+    </nav>
+
+    <div class="delete-container">
+        <!-- Delete Header -->
+        <div class="delete-header">
+            <div class="pulse-animation">
+                <i class="fas fa-exclamation-triangle fa-4x mb-3"></i>
+            </div>
+            <h1 class="h3 mb-3">Delete Digital Resource</h1>
+            <p class="mb-0">This action cannot be undone. Please review the information below carefully.</p>
+        </div>
+
+        <div class="delete-content">
+            <!-- Resource Information -->
+            <div class="resource-info-card">
+                <div class="d-flex align-items-start">
+                    <div class="resource-preview-small">
+                        {% if resource.thumbnail %}
+                            <img src="{{ resource.thumbnail.url }}" alt="{{ resource.title }}" class="img-fluid h-100 w-100" style="object-fit: cover; border-radius: 10px;">
+                        {% else %}
+                            {% if resource.file_type == 'pdf' %}
+                                <i class="fas fa-file-pdf"></i>
+                            {% elif resource.file_type == 'video' %}
+                                <i class="fas fa-play-circle"></i>
+                            {% elif resource.file_type == 'audio' %}
+                                <i class="fas fa-music"></i>
+                            {% elif resource.file_type == 'image' %}
+                                <i class="fas fa-image"></i>
+                            {% else %}
+                                <i class="fas fa-file"></i>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h4 class="mb-2">
+                            {{ resource.title }}
+                            <span class="file-type-badge">{{ resource.file_type|upper }}</span>
+                            <span class="access-level-badge {{ resource.access_level }}">
+                                {{ resource.get_access_level_display }}
+                            </span>
+                        </h4>
+                        <p class="mb-1"><strong>Author:</strong> {{ resource.author|default:"Unknown" }}</p>
+                        <p class="mb-1"><strong>File Size:</strong> {{ resource.file_size_display }}</p>
+                        <p class="mb-1"><strong>Uploaded:</strong> {{ resource.created_at|date:"M d, Y" }}</p>
+                        {% if resource.subject %}
+                        <p class="mb-0"><strong>Subject:</strong> {{ resource.subject.name }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resource Statistics -->
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">{{ resource.download_count }}</div>
+                    <div class="stat-label">Downloads</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ resource.view_count|default:0 }}</div>
+                    <div class="stat-label">Views</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ resource.file_size_display }}</div>
+                    <div class="stat-label">File Size</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ access_count|default:0 }}</div>
+                    <div class="stat-label">Total Access</div>
+                </div>
+            </div>
+
+            <!-- Warning Message -->
+            <div class="warning-list">
+                <h5 class="text-warning mb-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Warning: Deleting this resource will also:
+                </h5>
+                <ul>
+                    <li>Permanently remove the file from the server</li>
+                    <li>Delete all download and access history</li>
+                    <li>Remove associated ratings and reviews</li>
+                    <li>Remove the resource from all course materials</li>
+                    <li>Delete any shared links and QR codes</li>
+                    <li>Clear all user bookmarks for this resource</li>
+                </ul>
+            </div>
+
+            <!-- File Information -->
+            <div class="file-info-section">
+                <h6><i class="fas fa-file me-2"></i>File Information:</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Original Filename:</strong> {{ resource.original_filename|default:"Unknown" }}</p>
+                        <p class="mb-1"><strong>MIME Type:</strong> {{ resource.mime_type|default:"Unknown" }}</p>
+                        <p class="mb-1"><strong>File Extension:</strong> {{ resource.file_extension|default:"Unknown" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Storage Location:</strong> Digital Library</p>
+                        <p class="mb-1"><strong>Backup Status:</strong> {% if resource.is_backed_up %}Backed up{% else %}Not backed up{% endif %}</p>
+                        <p class="mb-1"><strong>File Status:</strong> {% if resource.file %}Active{% else %}Missing{% endif %}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Access History -->
+            {% if recent_access %}
+            <div class="file-info-section">
+                <h6><i class="fas fa-history me-2"></i>Recent Access (Last 10):</h6>
+                <div class="access-history-preview">
+                    {% for access in recent_access %}
+                    <div class="access-item">
+                        <div>
+                            <strong>{{ access.user.get_full_name }}</strong>
+                            <small class="text-muted">
+                                - {{ access.access_type|title }} on {{ access.accessed_at|date:"M d, Y H:i" }}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Course Dependencies -->
+            {% if course_resources %}
+            <div class="file-info-section">
+                <h6><i class="fas fa-exclamation-circle me-2"></i>Used in Courses:</h6>
+                {% for course_resource in course_resources %}
+                <div class="alert alert-warning mb-2">
+                    <strong>{{ course_resource.course.name }}</strong> - {{ course_resource.course.subject.name }}
+                    <br><small>This resource will be removed from the course materials.</small>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Confirmation Form -->
+            <form method="post" id="deleteForm">
+                {% csrf_token %}
+                
+                <div class="confirmation-checkbox">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="confirmDelete" required>
+                        <label class="form-check-label" for="confirmDelete">
+                            <strong>I understand that this action cannot be undone and I want to permanently delete this digital resource and all its associated data.</strong>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="confirmation-checkbox">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="confirmFile" required>
+                        <label class="form-check-label" for="confirmFile">
+                            <strong>I understand that the file ({{ resource.file_size_display }}) will be permanently removed from the server and cannot be recovered.</strong>
+                        </label>
+                    </div>
+                </div>
+
+                {% if course_resources %}
+                <div class="confirmation-checkbox">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="confirmCourses" required>
+                        <label class="form-check-label" for="confirmCourses">
+                            <strong>I understand that this resource will be removed from {{ course_resources.count }} course(s) and may affect learning materials.</strong>
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="confirmation-checkbox">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="confirmAccess" required>
+                        <label class="form-check-label" for="confirmAccess">
+                            <strong>I understand that all access history ({{ access_count|default:0 }} records) and statistics will be permanently deleted.</strong>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Final Warning -->
+                <div class="alert alert-danger" role="alert">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-skull-crossbones me-2"></i>
+                        Final Warning
+                    </h5>
+                    <p class="mb-0">
+                        You are about to permanently delete <strong>"{{ resource.title }}"</strong> and its associated file. 
+                        This action cannot be reversed and will free up {{ resource.file_size_display }} of storage space.
+                        If you're sure you want to proceed, click the "Delete Resource" button below.
+                    </p>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'library:digital_resource_detail' resource.pk %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancel
+                    </a>
+                    
+                    <button type="submit" class="btn btn-danger" id="deleteBtn" disabled>
+                        <i class="fas fa-trash me-2"></i>Delete Resource Forever
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Countdown Modal -->
+<div class="modal fade" id="countdownModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-countdown me-2"></i>Confirming Deletion
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-4">
+                    <i class="fas fa-cloud fa-4x text-danger pulse-animation"></i>
+                </div>
+                <h4>Deleting resource in <span id="countdown">7</span> seconds...</h4>
+                <div class="countdown-display" id="countdownDisplay">7</div>
+                <p class="text-muted">This will permanently delete the file and free up {{ resource.file_size_display }} of storage space.</p>
+                <div class="progress mt-3">
+                    <div class="progress-bar bg-danger progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 100%" id="progressBar"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cancelDeletion()">
+                    <i class="fas fa-times me-2"></i>Cancel Deletion
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deletion Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>Resource Deleted
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-4">
+                    <i class="fas fa-check-circle fa-4x text-success"></i>
+                </div>
+                <h4>Resource successfully deleted!</h4>
+                <p class="text-muted">{{ resource.file_size_display }} of storage space has been freed up.</p>
+                <p class="text-muted">Redirecting to digital resources list...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForm = document.getElementById('deleteForm');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const checkboxes = document.querySelectorAll('.confirmation-checkbox input[type="checkbox"]');
+    const countdownModal = new bootstrap.Modal(document.getElementById('countdownModal'));
+    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+    
+    let deletionTimeout;
+    let countdownInterval;
+    
+    // Enable/disable delete button based on checkboxes
+    function updateDeleteButton() {
+        const allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
+        deleteBtn.disabled = !allChecked;
+        
+        if (allChecked) {
+            deleteBtn.classList.remove('btn-danger');
+            deleteBtn.classList.add('btn-danger');
+        }
+    }
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateDeleteButton);
+    });
+    
+    // Handle form submission with countdown
+    deleteForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Show countdown modal
+        countdownModal.show();
+        
+        let timeLeft = 7;
+        const countdownElement = document.getElementById('countdown');
+        const countdownDisplay = document.getElementById('countdownDisplay');
+        const progressBar = document.getElementById('progressBar');
+        
+        // Update countdown
+        countdownInterval = setInterval(() => {
+            timeLeft--;
+            countdownElement.textContent = timeLeft;
+            countdownDisplay.textContent = timeLeft;
+            progressBar.style.width = (timeLeft / 7) * 100 + '%';
+            
+            if (timeLeft <= 0) {
+                clearInterval(countdownInterval);
+                
+                // Hide countdown modal
+                countdownModal.hide();
+                
+                // Show success modal
+                successModal.show();
+                
+                // Actually submit the form after showing success
+                setTimeout(() => {
+                    deleteForm.submit();
+                }, 2000);
+            }
+        }, 1000);
+    });
+    
+    // Cancel deletion function
+    window.cancelDeletion = function() {
+        clearInterval(countdownInterval);
+        countdownModal.hide();
+        
+        // Reset countdown
+        document.getElementById('countdown').textContent = '7';
+        document.getElementById('countdownDisplay').textContent = '7';
+        document.getElementById('progressBar').style.width = '100%';
+    };
+    
+    // Initial button state check
+    updateDeleteButton();
+    
+    // Add warning on page unload
+    window.addEventListener('beforeunload', function(e) {
+        const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked);
+        if (checkedBoxes.length > 0) {
+            e.preventDefault();
+            e.returnValue = 'You have started the resource deletion process. Are you sure you want to leave?';
+        }
+    });
+    
+    // Auto-scroll to form if coming from confirmation
+    if (window.location.hash === '#confirm') {
+        setTimeout(() => {
+            document.querySelector('.confirmation-checkbox').scrollIntoView({
+                behavior: 'smooth'
+            });
+        }, 500);
+    }
+});
+</script>
+{% endblock %}

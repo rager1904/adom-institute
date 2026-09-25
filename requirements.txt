@@ -1,0 +1,111 @@
+# ADOM Institute - Requirements
+# Core Django and REST Framework
+Django==4.2.7
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+django-filter==23.3
+channels==4.0.0
+channels-redis==4.1.0
+celery==5.3.4
+
+# Forms and UI
+django-crispy-forms==2.1
+crispy-bootstrap5==0.7
+django-widget-tweaks==1.5.0
+
+# Authentication and User Management
+django-allauth==0.57.0
+django-oauth-toolkit==2.3.0
+
+# API Documentation
+drf-yasg==1.21.7
+
+# File Handling and Media
+Pillow==10.0.1
+
+# Environment and Configuration
+python-decouple==3.8
+
+# QR Code Generation
+qrcode==7.4.2
+
+# Data Visualization and Charts
+matplotlib==3.8.2
+seaborn==0.13.0
+numpy==1.26.4
+pandas==2.3.2
+
+# PDF Generation
+reportlab==4.0.7
+
+# Excel and CSV Handling
+openpyxl==3.1.2
+xlsxwriter==3.1.9
+
+# Date and Time Utilities
+python-dateutil==2.9.0.post0
+pytz==2025.2
+
+# Development and Testing
+django-debug-toolbar==4.2.0
+django-extensions==3.2.3
+coverage==7.3.2
+
+# Production and Deployment
+gunicorn==21.2.0
+whitenoise==6.6.0
+psycopg2-binary==2.9.9
+django-storages==1.14.2
+boto3==1.34.0
+
+# HTTP Requests and Utilities
+requests==2.32.5
+urllib3==2.5.0
+certifi==2025.8.3
+charset-normalizer==3.4.3
+idna==3.10
+
+# Security and Cryptography
+cryptography==45.0.7
+cffi==1.17.1
+pycparser==2.22
+jwcrypto==1.5.6
+
+# OAuth and Authentication
+oauthlib==3.3.1
+PyJWT==2.10.1
+python3-openid==3.2.0
+requests-oauthlib==2.0.0
+defusedxml==0.7.1
+
+# YAML and Configuration
+PyYAML==6.0.2
+packaging==25.0
+inflection==0.5.1
+uritemplate==4.2.0
+
+# Image Processing
+Pillow==10.0.1
+colorama==0.4.6
+pypng==0.20220715.0
+
+# Mathematical and Scientific Computing
+numpy==1.26.4
+pandas==2.3.2
+matplotlib==3.8.2
+seaborn==0.13.0
+contourpy==1.3.2
+cycler==0.12.1
+fonttools==4.59.2
+kiwisolver==1.4.9
+pyparsing==3.2.3
+six==1.17.0
+
+# XML and File Processing
+et-xmlfile==2.0.0
+
+# ASGI server used by channels for `manage.py runserver`
+daphne==4.1.2
+
+# drf_yasg imports pkg_resources, which setuptools 81+ removed
+setuptools<81

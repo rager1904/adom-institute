@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}AI Consent - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div><div class="dashboard-kicker">ADOM Institute</div><h1 class="dashboard-title">Consent Preferences</h1></div>
+        <a class="btn btn-primary" href="{% url 'adom_institute:consent_create' %}">Add Preference</a>
+    </div>
+    <section class="panel"><div class="focus-list">
+        {% for consent in consents %}
+            <div class="focus-item">
+                <span class="focus-icon"><i class="fas fa-shield-halved"></i></span>
+                <div>
+                    <div class="focus-category">{{ consent.status }}</div>
+                    <div class="focus-title">{{ consent.institution.name|default:"Personal" }}</div>
+                    <div class="metric-detail">Policy {{ consent.policy_version }}</div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state"><p>No AI consent preferences saved.</p></div>
+        {% endfor %}
+    </div></section>
+</div>
+{% endblock %}

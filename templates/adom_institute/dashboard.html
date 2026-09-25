@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Open-source intelligence</div>
+            <h1 class="dashboard-title">ADOM Institute</h1>
+            <p class="dashboard-subtitle">Institution-scoped knowledge, agent tasks, and learning assistance.</p>
+        </div>
+        <div class="status-strip">
+            <a class="btn btn-primary" href="{% url 'adom_institute:knowledge_search' %}"><i class="fas fa-search"></i> Search Knowledge</a>
+            <a class="btn btn-outline-primary" href="{% url 'adom_institute:knowledge_document_list' %}"><i class="fas fa-file-lines"></i> Knowledge Library</a>
+            <a class="btn btn-outline-primary" href="{% url 'adom_institute:agent_catalog' %}"><i class="fas fa-robot"></i> Agents</a>
+        </div>
+    </div>
+
+    <section class="metric-grid">
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-file-lines"></i></span>
+            <div class="metric-value">{{ document_count }}</div>
+            <div class="metric-label">Knowledge Documents</div>
+            <div class="metric-detail">{{ ready_document_count }} ready for retrieval</div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-diagram-project"></i></span>
+            <div class="metric-value">{{ task_count }}</div>
+            <div class="metric-label">Agent Tasks</div>
+            <div class="metric-detail">Scoped to your role and institution</div>
+        </article>
+    </section>
+
+    <section class="panel mb-3">
+        <div class="panel-heading"><h2 class="panel-title">AI Workflows</h2></div>
+        <div class="status-strip">
+            <a class="btn btn-outline-primary" href="{% url 'adom_institute:agent_task_list' %}">Tasks</a>
+            <a class="btn btn-outline-primary" href="{% url 'adom_institute:conversation_list' %}">Conversations</a>
+            <a class="btn btn-outline-primary" href="{% url 'adom_institute:opportunity_hub' %}">Opportunities</a>
+            <a class="btn btn-outline-primary" href="{% url 'adom_institute:usage_ledger_list' %}">Usage</a>
+            <a class="btn btn-outline-primary" href="{% url 'adom_institute:consent_list' %}">Consent</a>
+        </div>
+    </section>
+
+    <div class="dashboard-layout">
+        <section class="panel">
+            <div class="panel-heading"><h2 class="panel-title">Recent Knowledge</h2></div>
+            <div class="focus-list">
+                {% for document in recent_documents %}
+                    <div class="focus-item">
+                        <span class="focus-icon"><i class="fas fa-file-lines"></i></span>
+                        <div>
+                            <div class="focus-category">{{ document.get_processing_status_display }}</div>
+                            <div class="focus-title">{{ document.title }}</div>
+                            <div class="metric-detail">{{ document.get_source_type_display }}</div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="empty-state"><p>No knowledge documents yet.</p></div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-heading"><h2 class="panel-title">Recent Agent Tasks</h2></div>
+            <div class="focus-list">
+                {% for task in recent_tasks %}
+                    <div class="focus-item">
+                        <span class="focus-icon"><i class="fas fa-robot"></i></span>
+                        <div>
+                            <div class="focus-category">{{ task.status }}</div>
+                            <div class="focus-title">{{ task.get_agent_key_display }}</div>
+                            <div class="metric-detail">{{ task.model_profile }}</div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="empty-state"><p>No agent tasks yet.</p></div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

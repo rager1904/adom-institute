@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Receipt {{ receipt.receipt_number }} - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Receipt</div>
+            <h1 class="dashboard-title">{{ receipt.receipt_number }}</h1>
+            <p class="dashboard-subtitle">{{ receipt.student_name }} - {{ receipt.class_name }}</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="{% url 'fees:receipt_list' %}">Back</a>
+    </div>
+    <section class="metric-grid">
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-money-bill"></i></span>
+            <div class="metric-value">K {{ receipt.amount_paid }}</div>
+            <div class="metric-label">Amount Paid</div>
+            <div class="metric-detail">{{ receipt.payment_method }}</div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-tag"></i></span>
+            <div class="metric-value">{{ receipt.fee_category }}</div>
+            <div class="metric-label">Fee Category</div>
+            <div class="metric-detail">{{ receipt.receipt_date|date:"M d, Y" }}</div>
+        </article>
+    </section>
+    <section class="panel">
+        <dl class="row mb-0">
+            <dt class="col-md-3">School</dt><dd class="col-md-9">{{ receipt.school_name }}</dd>
+            <dt class="col-md-3">Address</dt><dd class="col-md-9">{{ receipt.school_address }}</dd>
+            <dt class="col-md-3">Phone</dt><dd class="col-md-9">{{ receipt.school_phone }}</dd>
+            <dt class="col-md-3">Payment</dt><dd class="col-md-9"><a href="{% url 'fees:payment_detail' receipt.payment.pk %}">View payment</a></dd>
+        </dl>
+    </section>
+</div>
+{% endblock %}

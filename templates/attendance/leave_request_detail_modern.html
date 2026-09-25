@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}Leave Request{% endblock %}
+
+{% block content %}
+<section class="container-fluid py-3">
+    <div class="adom-card p-4">
+        <h1 class="h4 mb-1">Leave request</h1>
+        <p class="text-muted mb-4">{{ leave_request.get_leave_type_display }} from {{ leave_request.start_date|date:"M d, Y" }} to {{ leave_request.end_date|date:"M d, Y" }}</p>
+        <dl class="row mb-0">
+            <dt class="col-md-3">Requester</dt><dd class="col-md-9">{% if leave_request.student %}{{ leave_request.student.user.get_full_name }}{% else %}{{ leave_request.teacher.user.get_full_name }}{% endif %}</dd>
+            <dt class="col-md-3">Status</dt><dd class="col-md-9">{{ leave_request.get_status_display }}</dd>
+            <dt class="col-md-3">Duration</dt><dd class="col-md-9">{{ leave_request.duration_days }} day(s)</dd>
+            <dt class="col-md-3">Reason</dt><dd class="col-md-9">{{ leave_request.reason }}</dd>
+            <dt class="col-md-3">Remarks</dt><dd class="col-md-9">{{ leave_request.remarks|default:"No remarks." }}</dd>
+        </dl>
+    </div>
+</section>
+{% endblock %}

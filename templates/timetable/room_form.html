@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit Room{% else %}Add New Room{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-{% if form.instance.pk %}edit{% else %}plus{% endif %} text-primary"></i> 
+                    {% if form.instance.pk %}Edit Room{% else %}Add New Room{% endif %}
+                </h1>
+                <div>
+                    <a href="{% url 'timetable:room_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Room Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" novalidate>
+                                {% csrf_token %}
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                                {{ form.name.label }} <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.name }}
+                                            {% if form.name.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.name.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.room_type.id_for_label }}" class="form-label">
+                                                {{ form.room_type.label }} <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.room_type }}
+                                            {% if form.room_type.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.room_type.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.capacity.id_for_label }}" class="form-label">
+                                                {{ form.capacity.label }} <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.capacity }}
+                                            {% if form.capacity.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.capacity.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.building.id_for_label }}" class="form-label">
+                                                {{ form.building.label }}
+                                            </label>
+                                            {{ form.building }}
+                                            {% if form.building.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.building.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.floor.id_for_label }}" class="form-label">
+                                                {{ form.floor.label }}
+                                            </label>
+                                            {{ form.floor }}
+                                            {% if form.floor.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.floor.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.is_active }}
+                                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                                    {{ form.is_active.label }}
+                                                </label>
+                                            </div>
+                                            {% if form.is_active.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.is_active.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                                {{ form.description.label }}
+                                            </label>
+                                            {{ form.description }}
+                                            {% if form.description.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.description.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Form Errors -->
+                                {% if form.non_field_errors %}
+                                    <div class="alert alert-danger">
+                                        <h6><i class="fas fa-exclamation-triangle"></i> Please correct the following errors:</h6>
+                                        <ul class="mb-0">
+                                            {% for error in form.non_field_errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
+
+                                <!-- Submit Buttons -->
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'timetable:room_list' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> 
+                                        {% if form.instance.pk %}Update Room{% else %}Create Room{% endif %}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Help Information -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-question-circle"></i> Help
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-info"></i> Required Fields</h6>
+                            <p class="text-muted">Fields marked with <span class="text-danger">*</span> are required.</p>
+                            
+                            <h6><i class="fas fa-building"></i> Room Name</h6>
+                            <p class="text-muted">Enter a unique name for the room (e.g., Room 101, Science Lab A).</p>
+                            
+                            <h6><i class="fas fa-tag"></i> Room Type</h6>
+                            <p class="text-muted">Select the appropriate type for this room.</p>
+                            
+                            <h6><i class="fas fa-users"></i> Capacity</h6>
+                            <p class="text-muted">Maximum number of students that can be accommodated.</p>
+                            
+                            <h6><i class="fas fa-map-marker-alt"></i> Location</h6>
+                            <p class="text-muted">Building name and floor number for easy identification.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.invalid-feedback {
+    display: block;
+    font-size: 0.875rem;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}
+

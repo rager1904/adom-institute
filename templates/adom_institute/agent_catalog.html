@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}AI Agents - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">ADOM Institute</div>
+            <h1 class="dashboard-title">Agent Catalog</h1>
+            <p class="dashboard-subtitle">Open-source agent roles available in ADOM Institute.</p>
+        </div>
+        <a class="btn btn-primary" href="{% url 'adom_institute:agent_task_create' %}">Create Task</a>
+    </div>
+    <section class="panel"><div class="focus-list">
+        {% for agent in agents %}
+            <div class="focus-item">
+                <span class="focus-icon"><i class="fas fa-robot"></i></span>
+                <div>
+                    <div class="focus-category">{{ agent.key }} - {{ agent.model_profile }}</div>
+                    <div class="focus-title">{{ agent.name }}</div>
+                    <div class="metric-detail">{{ agent.purpose }}</div>
+                </div>
+            </div>
+        {% endfor %}
+    </div></section>
+</div>
+{% endblock %}

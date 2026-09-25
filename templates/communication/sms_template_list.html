@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}SMS Templates - Communication{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-sms text-primary"></i> SMS Templates
+                </h1>
+                <div>
+                    <a href="{% url 'communication:sms_template_create' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Create Template
+                    </a>
+                    <a href="{% url 'communication:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-search"></i> Search & Filter
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ request.GET.search }}" placeholder="Search by name or content...">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="template_type" class="form-label">Template Type</label>
+                            <select class="form-control" id="template_type" name="template_type">
+                                <option value="">All Types</option>
+                                {% for value, label in form.fields.template_type.choices %}
+                                    <option value="{{ value }}" {% if request.GET.template_type == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="is_active" class="form-label">Status</label>
+                            <select class="form-control" id="is_active" name="is_active">
+                                <option value="">All Status</option>
+                                <option value="true" {% if request.GET.is_active == 'true' %}selected{% endif %}>Active</option>
+                                <option value="false" {% if request.GET.is_active == 'false' %}selected{% endif %}>Inactive</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Templates List -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list"></i> SMS Templates ({{ page_obj.paginator.count }})
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Content</th>
+                                        <th>Length</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for template in page_obj %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-sms text-primary me-2"></i>
+                                                    <div>
+                                                        <strong>{{ template.name }}</strong>
+                                                        {% if template.is_active %}
+                                                            <span class="badge bg-success ms-2">Active</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary ms-2">Inactive</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{% if template.template_type == 'welcome' %}success{% elif template.template_type == 'attendance_alert' %}warning{% elif template.template_type == 'fee_reminder' %}danger{% elif template.template_type == 'exam_schedule' %}info{% elif template.template_type == 'announcement' %}primary{% else %}dark{% endif %}">
+                                                    {{ template.get_template_type_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ template.content }}">
+                                                    {{ template.content }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{% if template.content|length <= 160 %}success{% elif template.content|length <= 320 %}warning{% else %}danger{% endif %}">
+                                                    {{ template.content|length }} chars
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if template.is_active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ template.created_at|date:"M j, Y" }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'communication:sms_template_detail' template.pk %}" 
+                                                       class="btn btn-sm btn-outline-primary" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="{% url 'communication:sms_template_update' template.pk %}" 
+                                                       class="btn btn-sm btn-outline-warning" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                            onclick="deleteTemplate({{ template.pk }}, '{{ template.name }}')" title="Delete">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if page_obj.has_other_pages %}
+                            <div class="card-footer">
+                                <nav aria-label="SMS templates pagination">
+                                    <ul class="pagination justify-content-center mb-0">
+                                        {% if page_obj.has_previous %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.template_type %}&template_type={{ request.GET.template_type }}{% endif %}{% if request.GET.is_active %}&is_active={{ request.GET.is_active }}{% endif %}">
+                                                    <i class="fas fa-angle-double-left"></i>
+                                                </a>
+                                            </li>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.template_type %}&template_type={{ request.GET.template_type }}{% endif %}{% if request.GET.is_active %}&is_active={{ request.GET.is_active }}{% endif %}">
+                                                    <i class="fas fa-angle-left"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+
+                                        {% for num in page_obj.paginator.page_range %}
+                                            {% if page_obj.number == num %}
+                                                <li class="page-item active">
+                                                    <span class="page-link">{{ num }}</span>
+                                                </li>
+                                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.template_type %}&template_type={{ request.GET.template_type }}{% endif %}{% if request.GET.is_active %}&is_active={{ request.GET.is_active }}{% endif %}">{{ num }}</a>
+                                                </li>
+                                            {% endif %}
+                                        {% endfor %}
+
+                                        {% if page_obj.has_next %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.template_type %}&template_type={{ request.GET.template_type }}{% endif %}{% if request.GET.is_active %}&is_active={{ request.GET.is_active }}{% endif %}">
+                                                    <i class="fas fa-angle-right"></i>
+                                                </a>
+                                            </li>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.template_type %}&template_type={{ request.GET.template_type }}{% endif %}{% if request.GET.is_active %}&is_active={{ request.GET.is_active }}{% endif %}">
+                                                    <i class="fas fa-angle-double-right"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-sms fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No SMS templates found</h5>
+                            <p class="text-muted">Create your first SMS template to get started.</p>
+                            <a href="{% url 'communication:sms_template_create' %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Create Template
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteTemplate(templateId, templateName) {
+    if (confirm(`Are you sure you want to delete the SMS template "${templateName}"?`)) {
+        fetch(`/communication/sms-templates/${templateId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error deleting template: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting template');
+        });
+    }
+}
+
+// Auto-submit form on filter change
+document.addEventListener('DOMContentLoaded', function() {
+    const filterSelects = document.querySelectorAll('#template_type, #is_active');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            this.closest('form').submit();
+        });
+    });
+});
+</script>
+{% endblock %}

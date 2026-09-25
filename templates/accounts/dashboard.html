@@ -1,0 +1,486 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - {{ user.get_full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-shell {
+        max-width: 1440px;
+        margin: 0 auto;
+    }
+
+    .dashboard-header {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+    }
+
+    .dashboard-kicker {
+        color: #5f6b7a;
+        font-size: .82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .dashboard-title {
+        color: #172033;
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin: .15rem 0;
+    }
+
+    .dashboard-subtitle {
+        color: #5f6b7a;
+        margin: 0;
+    }
+
+    .status-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .6rem;
+        justify-content: flex-end;
+    }
+
+    .status-pill {
+        align-items: center;
+        background: #fff;
+        border: 1px solid #d8dee8;
+        border-radius: 8px;
+        color: #344054;
+        display: inline-flex;
+        font-size: .88rem;
+        gap: .45rem;
+        min-height: 38px;
+        padding: .45rem .7rem;
+    }
+
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: .9rem;
+        margin-bottom: 1rem;
+    }
+
+    .metric-card,
+    .panel,
+    .profile-panel {
+        background: #fff;
+        border: 1px solid #d8dee8;
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+    }
+
+    .metric-card {
+        min-height: 128px;
+        padding: 1rem;
+    }
+
+    .metric-icon {
+        align-items: center;
+        background: #e8f2ff;
+        border-radius: 8px;
+        color: #0f6cbd;
+        display: inline-flex;
+        height: 36px;
+        justify-content: center;
+        width: 36px;
+    }
+
+    .metric-value {
+        color: #101828;
+        font-size: 1.55rem;
+        font-weight: 800;
+        line-height: 1.15;
+        margin-top: .8rem;
+        overflow-wrap: anywhere;
+    }
+
+    .metric-label {
+        color: #344054;
+        font-weight: 700;
+        margin-top: .25rem;
+    }
+
+    .metric-detail {
+        color: #667085;
+        font-size: .86rem;
+        margin-top: .15rem;
+    }
+
+    .dashboard-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 1rem;
+    }
+
+    .panel {
+        margin-bottom: 1rem;
+        padding: 1rem;
+    }
+
+    .panel-heading {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: .85rem;
+    }
+
+    .panel-title {
+        color: #172033;
+        font-size: 1rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .focus-list {
+        display: grid;
+        gap: .65rem;
+    }
+
+    .focus-item {
+        align-items: center;
+        border: 1px solid #eef1f5;
+        border-radius: 8px;
+        display: grid;
+        gap: .75rem;
+        grid-template-columns: 34px minmax(0, 1fr) auto;
+        padding: .75rem;
+    }
+
+    .focus-icon {
+        align-items: center;
+        background: #eef6f2;
+        border-radius: 8px;
+        color: #087443;
+        display: inline-flex;
+        height: 34px;
+        justify-content: center;
+        width: 34px;
+    }
+
+    .focus-category {
+        color: #667085;
+        font-size: .78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .focus-title {
+        color: #101828;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+    }
+
+    .focus-date {
+        color: #5f6b7a;
+        font-size: .86rem;
+        white-space: nowrap;
+    }
+
+    .recommendation-list {
+        display: grid;
+        gap: .55rem;
+        margin: 0;
+        padding: 0;
+    }
+
+    .recommendation-list li {
+        align-items: flex-start;
+        color: #344054;
+        display: grid;
+        gap: .55rem;
+        grid-template-columns: 22px minmax(0, 1fr);
+        list-style: none;
+    }
+
+    .profile-panel {
+        margin-bottom: 1rem;
+        padding: 1rem;
+    }
+
+    .profile-row {
+        align-items: center;
+        display: grid;
+        gap: .75rem;
+        grid-template-columns: 52px minmax(0, 1fr);
+    }
+
+    .profile-avatar {
+        align-items: center;
+        background: #172033;
+        border-radius: 50%;
+        color: #fff;
+        display: inline-flex;
+        height: 52px;
+        justify-content: center;
+        object-fit: cover;
+        width: 52px;
+    }
+
+    .profile-name {
+        color: #101828;
+        font-weight: 800;
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+
+    .profile-meta {
+        color: #667085;
+        font-size: .88rem;
+    }
+
+    .quick-actions {
+        display: grid;
+        gap: .55rem;
+    }
+
+    .action-link {
+        align-items: center;
+        border: 1px solid #d8dee8;
+        border-radius: 8px;
+        color: #172033;
+        display: grid;
+        font-weight: 700;
+        gap: .7rem;
+        grid-template-columns: 28px minmax(0, 1fr);
+        min-height: 44px;
+        padding: .6rem .7rem;
+        text-decoration: none;
+    }
+
+    .action-link:hover {
+        background: #f3f7fb;
+        color: #0f6cbd;
+        text-decoration: none;
+    }
+
+    .ai-grid {
+        display: grid;
+        gap: .55rem;
+    }
+
+    .ai-row {
+        display: flex;
+        justify-content: space-between;
+        gap: .75rem;
+        color: #344054;
+        font-size: .9rem;
+    }
+
+    .ai-row strong {
+        color: #172033;
+        overflow-wrap: anywhere;
+        text-align: right;
+    }
+
+    .agent-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+        margin-top: .75rem;
+    }
+
+    .agent-chip {
+        background: #f3f7fb;
+        border: 1px solid #d8dee8;
+        border-radius: 999px;
+        color: #344054;
+        font-size: .78rem;
+        padding: .28rem .55rem;
+    }
+
+    @media (max-width: 992px) {
+        .dashboard-header,
+        .status-strip {
+            justify-content: flex-start;
+        }
+
+        .dashboard-header {
+            flex-direction: column;
+        }
+
+        .dashboard-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .focus-item {
+            grid-template-columns: 34px minmax(0, 1fr);
+        }
+
+        .focus-date {
+            grid-column: 2;
+            white-space: normal;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">{{ dashboard.role_label }} Dashboard</div>
+            <h1 class="dashboard-title">{{ dashboard.headline }}</h1>
+            <p class="dashboard-subtitle">{{ dashboard.subheadline }}</p>
+        </div>
+        <div class="status-strip" aria-label="Dashboard status">
+            <span class="status-pill">
+                <i class="fas fa-bell"></i>
+                {{ dashboard.notifications.unread }} unread
+            </span>
+            <span class="status-pill">
+                <i class="fas fa-triangle-exclamation"></i>
+                {{ dashboard.notifications.urgent }} urgent
+            </span>
+            <span class="status-pill">
+                <i class="fas fa-robot"></i>
+                AI {{ dashboard.ai.enabled|yesno:"enabled,planned" }}
+            </span>
+        </div>
+    </div>
+
+    <section class="metric-grid" aria-label="Key metrics">
+        {% for stat in dashboard.stats %}
+            <article class="metric-card">
+                <span class="metric-icon"><i class="fas {{ stat.icon }}"></i></span>
+                <div class="metric-value">{{ stat.value }}</div>
+                <div class="metric-label">{{ stat.label }}</div>
+                <div class="metric-detail">{{ stat.detail }}</div>
+            </article>
+        {% empty %}
+            <article class="metric-card">
+                <span class="metric-icon"><i class="fas fa-circle-info"></i></span>
+                <div class="metric-value">Setup</div>
+                <div class="metric-label">Profile Required</div>
+                <div class="metric-detail">Complete your account profile to unlock the dashboard.</div>
+            </article>
+        {% endfor %}
+    </section>
+
+    <div class="dashboard-layout">
+        <main>
+            <section class="panel" id="adom-ai">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Focus Queue</h2>
+                </div>
+                <div class="focus-list">
+                    {% for item in dashboard.focus_items %}
+                        <div class="focus-item">
+                            <span class="focus-icon"><i class="fas {{ item.icon }}"></i></span>
+                            <div>
+                                <div class="focus-category">{{ item.category }}</div>
+                                <div class="focus-title">{{ item.title }}</div>
+                            </div>
+                            <div class="focus-date">
+                                {% if item.due_at %}{{ item.due_at|date:"M d, Y" }}{% else %}Open{% endif %}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="focus-item">
+                            <span class="focus-icon"><i class="fas fa-check"></i></span>
+                            <div>
+                                <div class="focus-category">Current</div>
+                                <div class="focus-title">No urgent items in the queue</div>
+                            </div>
+                            <div class="focus-date">Now</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-heading">
+                    <h2 class="panel-title">AI Study And Operations Recommendations</h2>
+                </div>
+                <ul class="recommendation-list">
+                    {% for recommendation in dashboard.recommendations %}
+                        <li>
+                            <i class="fas fa-wand-magic-sparkles text-primary"></i>
+                            <span>{{ recommendation }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            {% if dashboard.secondary_items %}
+                <section class="panel">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Next Signals</h2>
+                    </div>
+                    <div class="focus-list">
+                        {% for item in dashboard.secondary_items %}
+                            <div class="focus-item">
+                                <span class="focus-icon"><i class="fas {{ item.icon }}"></i></span>
+                                <div>
+                                    <div class="focus-category">{{ item.category }}</div>
+                                    <div class="focus-title">{{ item.title }}</div>
+                                </div>
+                                <div class="focus-date">
+                                    {% if item.due_at %}{{ item.due_at|date:"M d, Y" }}{% else %}Open{% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+        </main>
+
+        <aside>
+            <section class="profile-panel">
+                <div class="profile-row">
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}" class="profile-avatar">
+                    {% else %}
+                        <span class="profile-avatar"><i class="fas fa-user"></i></span>
+                    {% endif %}
+                    <div>
+                        <div class="profile-name">{{ user.get_full_name|default:user.email }}</div>
+                        <div class="profile-meta">{{ dashboard.role_label }} · {{ user.email }}</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Quick Actions</h2>
+                </div>
+                <div class="quick-actions">
+                    {% for action in dashboard.quick_actions %}
+                        <a href="{{ action.url }}" class="action-link">
+                            <i class="fas {{ action.icon }}"></i>
+                            <span>{{ action.label }}</span>
+                        </a>
+                    {% endfor %}
+                    <a href="{% url 'accounts:profile' %}" class="action-link">
+                        <i class="fas fa-user-gear"></i>
+                        <span>Profile Settings</span>
+                    </a>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Open-Source ADOM Institute AI</h2>
+                </div>
+                <div class="ai-grid">
+                    <div class="ai-row"><span>Provider</span><strong>{{ dashboard.ai.provider }}</strong></div>
+                    <div class="ai-row"><span>Chat Model</span><strong>{{ dashboard.ai.chat_model }}</strong></div>
+                    <div class="ai-row"><span>Embeddings</span><strong>{{ dashboard.ai.embedding_model }}</strong></div>
+                    <div class="ai-row"><span>Vector Store</span><strong>{{ dashboard.ai.vector_store }}</strong></div>
+                    <div class="ai-row"><span>Agents</span><strong>{{ dashboard.ai.agent_count }}</strong></div>
+                </div>
+                <div class="agent-list">
+                    {% for agent in dashboard.ai.agents %}
+                        <span class="agent-chip">{{ agent }}</span>
+                    {% endfor %}
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+{% endblock %}

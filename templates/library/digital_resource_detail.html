@@ -1,0 +1,780 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ resource.title }} - Digital Resources{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .resource-hero {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        border-radius: 20px;
+        padding: 40px;
+        color: white;
+        margin-bottom: 30px;
+        position: relative;
+        overflow: hidden;
+    }
+    .resource-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="hero-pattern" x="0" y="0" width="15" height="15" patternUnits="userSpaceOnUse"><circle cx="7.5" cy="7.5" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23hero-pattern)"/></svg>');
+        opacity: 0.3;
+    }
+    .resource-preview {
+        width: 200px;
+        height: 280px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        margin-right: 30px;
+        position: relative;
+        z-index: 10;
+        overflow: hidden;
+    }
+    .info-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+        border: none;
+    }
+    .access-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 15px;
+        border-radius: 25px;
+        font-weight: 500;
+        margin-bottom: 15px;
+    }
+    .access-badge.public {
+        background: #d4edda;
+        color: #155724;
+    }
+    .access-badge.student {
+        background: #cce7ff;
+        color: #004085;
+    }
+    .access-badge.teacher {
+        background: #fff3cd;
+        color: #856404;
+    }
+    .access-badge.admin {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    .action-btn {
+        border-radius: 25px;
+        padding: 12px 25px;
+        font-weight: 500;
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .info-item {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        border-left: 4px solid #11998e;
+    }
+    .info-item h6 {
+        color: #6c757d;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    .info-item p {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #495057;
+    }
+    .viewer-container {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        min-height: 400px;
+        position: relative;
+    }
+    .pdf-viewer {
+        width: 100%;
+        height: 600px;
+        border: none;
+        border-radius: 10px;
+    }
+    .video-player {
+        width: 100%;
+        max-width: 800px;
+        border-radius: 10px;
+    }
+    .audio-player {
+        width: 100%;
+        border-radius: 25px;
+    }
+    .image-viewer {
+        max-width: 100%;
+        height: auto;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .access-history {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #dee2e6;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -22px;
+        top: 20px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #11998e;
+        border: 3px solid white;
+        box-shadow: 0 0 0 3px #dee2e6;
+    }
+    .download-btn {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        padding: 15px 30px;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    .download-btn:hover {
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40,167,69,0.3);
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .tag-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .tag {
+        background: #e9ecef;
+        color: #495057;
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.875rem;
+        text-decoration: none;
+    }
+    .tag:hover {
+        background: #007bff;
+        color: white;
+        text-decoration: none;
+    }
+    .qr-section {
+        text-align: center;
+        padding: 30px;
+        background: #f8f9fa;
+        border-radius: 15px;
+        margin-bottom: 25px;
+    }
+    .related-resources {
+        display: grid;
+        gap: 15px;
+    }
+    .related-item {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    .related-item:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .file-info-badge {
+        background: #6c757d;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-left: 8px;
+    }
+    .download-progress {
+        display: none;
+        margin-top: 15px;
+    }
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255,255,255,0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 15px;
+        z-index: 100;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'library:dashboard' %}">Library</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'library:digital_resource_list' %}">Digital Resources</a></li>
+            <li class="breadcrumb-item active">{{ resource.title|truncatechars:50 }}</li>
+        </ol>
+    </nav>
+
+    <!-- Resource Hero Section -->
+    <div class="resource-hero">
+        <div class="row align-items-center">
+            <div class="col-md-auto">
+                <div class="resource-preview">
+                    {% if resource.thumbnail %}
+                        <img src="{{ resource.thumbnail.url }}" alt="{{ resource.title }}" class="img-fluid h-100 w-100" style="object-fit: cover; border-radius: 15px;">
+                    {% else %}
+                        {% if resource.file_type == 'pdf' %}
+                            <i class="fas fa-file-pdf"></i>
+                        {% elif resource.file_type == 'video' %}
+                            <i class="fas fa-play-circle"></i>
+                        {% elif resource.file_type == 'audio' %}
+                            <i class="fas fa-music"></i>
+                        {% elif resource.file_type == 'image' %}
+                            <i class="fas fa-image"></i>
+                        {% else %}
+                            <i class="fas fa-file"></i>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md">
+                <div class="position-relative" style="z-index: 10;">
+                    <h1 class="display-5 fw-bold mb-3">{{ resource.title }}</h1>
+                    <p class="lead mb-3">by {{ resource.author|default:"Unknown Author" }}</p>
+                    
+                    <div class="access-badge {% if resource.access_level == 'public' %}public{% elif resource.access_level == 'student' %}student{% elif resource.access_level == 'teacher' %}teacher{% else %}admin{% endif %}">
+                        <i class="fas fa-{% if resource.access_level == 'public' %}globe{% elif resource.access_level == 'student' %}user-graduate{% elif resource.access_level == 'teacher' %}chalkboard-teacher{% else %}lock{% endif %} me-2"></i>
+                        {{ resource.get_access_level_display }} Access
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{% url 'library:download_resource' resource.pk %}" class="btn download-btn" id="downloadBtn">
+                            <i class="fas fa-download me-2"></i>Download ({{ resource.file_size_display }})
+                        </a>
+                        <button type="button" class="btn btn-info action-btn" onclick="openInViewer()">
+                            <i class="fas fa-eye me-2"></i>View Online
+                        </button>
+                        {% if role_ui.can_manage_library %}
+                            <a href="{% url 'library:digital_resource_update' resource.pk %}" class="btn btn-warning action-btn">
+                                <i class="fas fa-edit me-2"></i>Edit Resource
+                            </a>
+                        {% endif %}
+                        <button type="button" class="btn btn-primary action-btn" data-bs-toggle="modal" data-bs-target="#shareModal">
+                            <i class="fas fa-share-alt me-2"></i>Share
+                        </button>
+                    </div>
+                    
+                    <div class="download-progress">
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted mt-1">Preparing download...</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Resource Viewer -->
+            <div class="info-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-eye me-2"></i>Resource Viewer
+                    <span class="file-info-badge">{{ resource.file_type|upper }}</span>
+                </h4>
+                
+                <div class="viewer-container" id="viewerContainer">
+                    <div class="loading-overlay" id="loadingOverlay">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Loading resource...</p>
+                        </div>
+                    </div>
+                    
+                    <div id="viewerContent" style="display: none;">
+                        {% if resource.file_type == 'pdf' %}
+                            <iframe src="{{ resource.file.url }}" class="pdf-viewer" id="pdfViewer"></iframe>
+                        {% elif resource.file_type == 'video' %}
+                            <video controls class="video-player mx-auto d-block" id="videoPlayer">
+                                <source src="{{ resource.file.url }}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        {% elif resource.file_type == 'audio' %}
+                            <div class="text-center">
+                                <i class="fas fa-music fa-4x text-muted mb-3"></i>
+                                <audio controls class="audio-player" id="audioPlayer">
+                                    <source src="{{ resource.file.url }}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                        {% elif resource.file_type == 'image' %}
+                            <div class="text-center">
+                                <img src="{{ resource.file.url }}" alt="{{ resource.title }}" class="image-viewer" id="imageViewer">
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-file fa-4x text-muted mb-3"></i>
+                                <h5>Preview not available</h5>
+                                <p class="text-muted">This file type cannot be previewed online. Please download to view.</p>
+                                <a href="{% url 'library:download_resource' resource.pk %}" class="btn btn-primary">
+                                    <i class="fas fa-download me-2"></i>Download File
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resource Information -->
+            <div class="info-card">
+                <h4 class="mb-4"><i class="fas fa-info-circle me-2"></i>Resource Information</h4>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <h6>File Type</h6>
+                        <p>{{ resource.get_file_type_display }}</p>
+                    </div>
+                    <div class="info-item">
+                        <h6>File Size</h6>
+                        <p>{{ resource.file_size_display }}</p>
+                    </div>
+                    <div class="info-item">
+                        <h6>Upload Date</h6>
+                        <p>{{ resource.created_at|date:"M d, Y" }}</p>
+                    </div>
+                    <div class="info-item">
+                        <h6>Last Modified</h6>
+                        <p>{{ resource.updated_at|date:"M d, Y" }}</p>
+                    </div>
+                    {% if resource.subject %}
+                    <div class="info-item">
+                        <h6>Subject</h6>
+                        <p>{{ resource.subject.name }}</p>
+                    </div>
+                    {% endif %}
+                    {% if resource.grade %}
+                    <div class="info-item">
+                        <h6>Grade Level</h6>
+                        <p>{{ resource.grade }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if resource.description %}
+                <div class="mb-3">
+                    <h6>Description</h6>
+                    <p class="text-muted">{{ resource.description|linebreaks }}</p>
+                </div>
+                {% endif %}
+
+                {% if resource.tags %}
+                <div class="mb-3">
+                    <h6>Tags</h6>
+                    <div class="tag-cloud">
+                        {% for tag in resource.tags|split:"," %}
+                            <a href="{% url 'library:digital_resource_list' %}?search={{ tag.strip }}" class="tag">{{ tag.strip }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Access History -->
+            <div class="info-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-history me-2"></i>Access History
+                    <small class="text-muted">({{ access_history.count }} total accesses)</small>
+                </h4>
+                
+                {% if access_history %}
+                <div class="access-history">
+                    <div class="timeline">
+                        {% for access in access_history %}
+                        <div class="timeline-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ access.user.get_full_name }}</h6>
+                                    <p class="mb-1 text-muted">
+                                        {% if access.access_type == 'download' %}
+                                            <i class="fas fa-download text-success me-1"></i>Downloaded
+                                        {% elif access.access_type == 'view' %}
+                                            <i class="fas fa-eye text-info me-1"></i>Viewed online
+                                        {% elif access.access_type == 'stream' %}
+                                            <i class="fas fa-play text-primary me-1"></i>Streamed
+                                        {% endif %}
+                                        on {{ access.accessed_at|date:"M d, Y \a\t H:i" }}
+                                    </p>
+                                    {% if access.ip_address %}
+                                    <small class="text-muted">IP: {{ access.ip_address }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">{{ access.accessed_at|timesince }} ago</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No access history for this resource yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- QR Code Section -->
+            <div class="qr-section info-card">
+                <h5 class="mb-3"><i class="fas fa-qrcode me-2"></i>Quick Access</h5>
+                <div id="qrcode" class="mb-3"></div>
+                <p class="small text-muted">Scan this QR code for quick access to this resource</p>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="downloadQR()">
+                    <i class="fas fa-download me-1"></i>Download QR
+                </button>
+            </div>
+
+            <!-- Resource Statistics -->
+            <div class="info-card">
+                <h5 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Statistics</h5>
+                
+                <div class="stats-card">
+                    <i class="fas fa-download fa-2x mb-2"></i>
+                    <h4>{{ resource.download_count }}</h4>
+                    <p class="mb-0">Total Downloads</p>
+                </div>
+                
+                <div class="info-item mb-3">
+                    <h6>Views This Month</h6>
+                    <p>{{ resource.monthly_views|default:0 }}</p>
+                </div>
+                
+                <div class="info-item mb-3">
+                    <h6>Average Rating</h6>
+                    <div class="text-warning">
+                        {% for i in "12345" %}
+                            {% if i|add:0 <= resource.average_rating|default:0 %}
+                                <i class="fas fa-star"></i>
+                            {% else %}
+                                <i class="far fa-star"></i>
+                            {% endif %}
+                        {% endfor %}
+                        <span class="text-muted ms-2">({{ resource.average_rating|floatformat:1|default:"No ratings" }})</span>
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <h6>Popularity Rank</h6>
+                    <p>#{{ resource.popularity_rank|default:"Not ranked" }}</p>
+                </div>
+            </div>
+
+            <!-- Related Resources -->
+            {% if related_resources %}
+            <div class="info-card">
+                <h5 class="mb-3"><i class="fas fa-layer-group me-2"></i>Related Resources</h5>
+                <div class="related-resources">
+                    {% for related in related_resources %}
+                    <div class="related-item">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                {% if related.thumbnail %}
+                                    <img src="{{ related.thumbnail.url }}" alt="{{ related.title }}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 5px;">
+                                {% else %}
+                                    <div style="width: 40px; height: 40px; background: #dee2e6; border-radius: 5px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-file text-muted"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    <a href="{% url 'library:digital_resource_detail' related.pk %}" class="text-decoration-none">
+                                        {{ related.title|truncatechars:30 }}
+                                    </a>
+                                </h6>
+                                <small class="text-muted">{{ related.author|default:"Unknown" }}</small>
+                                <br><small class="text-muted">{{ related.file_size_display }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Course Resources -->
+            {% if course_resources %}
+            <div class="info-card">
+                <h5 class="mb-3"><i class="fas fa-graduation-cap me-2"></i>Used In Courses</h5>
+                {% for course_resource in course_resources %}
+                <div class="alert alert-info">
+                    <h6 class="mb-1">{{ course_resource.course.name }}</h6>
+                    <small class="text-muted">
+                        {{ course_resource.course.subject.name }} - {{ course_resource.course.grade }}
+                    </small>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Share Modal -->
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-share-alt me-2"></i>Share Resource</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Direct Link</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="shareLink" value="{{ request.build_absolute_uri }}" readonly>
+                        <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('shareLink')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Download Link</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="downloadLink" readonly>
+                        <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('downloadLink')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">QR Code for Sharing</label>
+                    <div class="text-center">
+                        <div id="shareQR"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Email Subject</label>
+                    <input type="text" class="form-control" id="emailSubject" value="Resource: {{ resource.title }}" readonly>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="openEmailClient()">
+                    <i class="fas fa-envelope me-2"></i>Share via Email
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Generate QR Code
+    const qrElement = document.getElementById('qrcode');
+    const currentUrl = window.location.href;
+    
+    QRCode.toCanvas(qrElement, currentUrl, {
+        width: 150,
+        height: 150,
+        margin: 2,
+        color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+        }
+    }, function(error) {
+        if (error) console.error(error);
+    });
+
+    // Download QR code function
+    window.downloadQR = function() {
+        const canvas = qrElement.querySelector('canvas');
+        const link = document.createElement('a');
+        link.download = `resource-${{{ resource.id }}}-qr.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    };
+
+    // Initialize viewer
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const viewerContent = document.getElementById('viewerContent');
+    
+    // Simulate loading (in real implementation, this would wait for actual content load)
+    setTimeout(() => {
+        loadingOverlay.style.display = 'none';
+        viewerContent.style.display = 'block';
+    }, 1500);
+
+    // Open in viewer function
+    window.openInViewer = function() {
+        const viewerContainer = document.getElementById('viewerContainer');
+        viewerContainer.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    // Download functionality with progress
+    const downloadBtn = document.getElementById('downloadBtn');
+    const downloadProgress = document.querySelector('.download-progress');
+    
+    downloadBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Show progress
+        downloadProgress.style.display = 'block';
+        const progressBar = downloadProgress.querySelector('.progress-bar');
+        const progressText = downloadProgress.querySelector('small');
+        
+        // Simulate download progress
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+                progressText.textContent = 'Download complete!';
+                
+                // Actually trigger download
+                window.location.href = this.href;
+                
+                // Hide progress after delay
+                setTimeout(() => {
+                    downloadProgress.style.display = 'none';
+                    progressBar.style.width = '0%';
+                    progressText.textContent = 'Preparing download...';
+                }, 2000);
+            }
+            progressBar.style.width = progress + '%';
+            progressText.textContent = `Downloading... ${Math.round(progress)}%`;
+        }, 200);
+    });
+
+    // Share modal functionality
+    const shareModal = document.getElementById('shareModal');
+    shareModal.addEventListener('show.bs.modal', function() {
+        const downloadLink = document.getElementById('downloadLink');
+        downloadLink.value = '{% url "library:download_resource" resource.pk %}';
+        
+        // Generate QR for sharing
+        const shareQR = document.getElementById('shareQR');
+        shareQR.innerHTML = '';
+        
+        QRCode.toCanvas(shareQR, currentUrl, {
+            width: 120,
+            height: 120
+        }, function(error) {
+            if (error) console.error(error);
+        });
+    });
+
+    // Copy to clipboard function
+    window.copyToClipboard = function(elementId) {
+        const element = document.getElementById(elementId);
+        element.select();
+        document.execCommand('copy');
+        
+        // Show feedback
+        const btn = element.nextElementSibling;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 2000);
+    };
+
+    // Email sharing function
+    window.openEmailClient = function() {
+        const subject = document.getElementById('emailSubject').value;
+        const body = `Check out this resource: {{ resource.title }}\n\nAccess it here: ${currentUrl}\n\nDirect download: {% url "library:download_resource" resource.pk %}`;
+        
+        const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoLink;
+    };
+
+    // Track resource access
+    fetch('{% url "library:download_resource" resource.pk %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            'action': 'track_view'
+        })
+    }).catch(error => {
+        console.log('Tracking failed:', error);
+    });
+});
+</script>
+{% endblock %}

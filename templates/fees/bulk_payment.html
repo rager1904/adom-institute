@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulk Payment{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-users me-3 text-primary"></i>Bulk Payment
+        </h2>
+        <p class="text-muted mb-0">Process payments for multiple student fees at once</p>
+    </div>
+    <div>
+        <a href="{% url 'fees:payment_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>Bulk Payment Processing
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Select Student Fees</label>
+                            {{ form.student_fees }}
+                            {% if form.student_fees.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.student_fees.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Hold Ctrl/Cmd to select multiple fees. Only pending and partial fees are shown.</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Payment Method</label>
+                            {{ form.payment_method }}
+                            {% if form.payment_method.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.payment_method.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Transaction ID</label>
+                            {{ form.transaction_id }}
+                            {% if form.transaction_id.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.transaction_id.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Optional - for tracking purposes</small>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Remarks</label>
+                            {{ form.remarks }}
+                            {% if form.remarks.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.remarks.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Optional - will be applied to all payments</small>
+                        </div>
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger mt-3">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-credit-card me-2"></i>Process Payments
+                        </button>
+                        <a href="{% url 'fees:payment_list' %}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>How it works:</h6>
+                    <ol class="small">
+                        <li>Select the student fees you want to process payments for</li>
+                        <li>Choose the payment method (cash, cheque, etc.)</li>
+                        <li>Optionally add a transaction ID for tracking</li>
+                        <li>The system will create payment records for each selected fee</li>
+                        <li>Student fee balances will be automatically updated</li>
+                    </ol>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Benefits:</h6>
+                    <ul class="list-unstyled small">
+                        <li><i class="fas fa-check text-success me-2"></i>Process multiple payments quickly</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Consistent payment method across fees</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Automatic balance updates</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Reduced manual data entry</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Quick Actions:</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'fees:payment_list' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-2"></i>View All Payments
+                        </a>
+                        <a href="{% url 'fees:student_fee_list' %}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-file-invoice-dollar me-2"></i>View All Fees
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Selected Fees Preview -->
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-eye me-2"></i>Selected Fees Preview
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="selectedFeesPreview">
+                    <p class="text-muted small">Select student fees to see their details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const studentFeesField = document.getElementById('id_student_fees');
+    const previewDiv = document.getElementById('selectedFeesPreview');
+    
+    if (studentFeesField) {
+        studentFeesField.addEventListener('change', function() {
+            const selectedOptions = Array.from(this.selectedOptions);
+            if (selectedOptions.length > 0) {
+                let html = '<h6>Selected Fees:</h6><ul class="list-unstyled small">';
+                let totalAmount = 0;
+                
+                selectedOptions.forEach(option => {
+                    const feeData = option.dataset;
+                    if (feeData.studentName && feeData.feeCategory && feeData.balanceAmount) {
+                        html += `<li><i class="fas fa-tag me-2"></i>${feeData.studentName} - ${feeData.feeCategory}: ₹${feeData.balanceAmount}</li>`;
+                        totalAmount += parseFloat(feeData.balanceAmount);
+                    }
+                });
+                
+                html += '</ul>';
+                html += `<div class="mt-2 p-2 bg-light rounded"><strong>Total Amount:</strong> ₹${totalAmount.toFixed(2)}</div>`;
+                previewDiv.innerHTML = html;
+            } else {
+                previewDiv.innerHTML = '<p class="text-muted small">Select student fees to see their details</p>';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

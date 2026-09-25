@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ subject.name }} - Subject Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-book text-primary"></i> {% if role_ui.can_manage_people %}Subject Details{% else %}Subject Profile{% endif %}
+                </h1>
+                <div>
+                    {% if role_ui.can_manage_people %}
+                    <a href="{% url 'teachers:subject_update' subject.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit Subject
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'teachers:subject_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Subject Information -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Subject Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-book"></i> Subject Name</h6>
+                                    <p class="mb-3">{{ subject.name }}</p>
+                                    
+                                    <h6><i class="fas fa-code"></i> Subject Code</h6>
+                                    <p class="mb-3"><code>{{ subject.code }}</code></p>
+                                    
+                                    <h6><i class="fas fa-toggle-on"></i> Status</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-{% if subject.is_active %}success{% else %}danger{% endif %}">
+                                            {% if subject.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-align-left"></i> Description</h6>
+                                    <p class="mb-3">
+                                        {% if subject.description %}
+                                            {{ subject.description }}
+                                        {% else %}
+                                            <span class="text-muted">No description available</span>
+                                        {% endif %}
+                                    </p>
+                                    
+                                    <h6><i class="fas fa-users"></i> Assigned Teachers</h6>
+                                    <p class="mb-3">
+                                        <span class="badge bg-info">{{ subject.teacher_subjects.count }} teachers</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assigned Teachers -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chalkboard-teacher"></i> Assigned Teachers ({{ subject.teacher_subjects.count }})
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if subject.teacher_subjects.all %}
+                                <div class="row">
+                                    {% for teacher_subject in subject.teacher_subjects.all %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card border">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">
+                                                        <a href="{% url 'teachers:teacher_detail' teacher_subject.teacher.pk %}">
+                                                            {{ teacher_subject.teacher.user.get_full_name }}
+                                                        </a>
+                                                    </h6>
+                                                    <p class="text-muted mb-2">{{ teacher_subject.teacher.employee_id }}</p>
+                                                    {% if teacher_subject.is_primary %}
+                                                        <span class="badge bg-primary">Primary Subject</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-chalkboard-teacher fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No teachers assigned</h5>
+                                    <p class="text-muted">This subject has no teachers assigned yet.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    {% if role_ui.can_manage_people %}
+                    <!-- Quick Actions -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-bolt"></i> Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'teachers:subject_update' subject.pk %}" class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Edit Subject
+                                </a>
+                                <a href="{% url 'teachers:subject_delete' subject.pk %}" class="btn btn-outline-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Delete Subject
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if role_ui.can_manage_people %}
+                    <!-- System Information -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-cog"></i> System Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-calendar-plus"></i> Created</h6>
+                            <p class="mb-3">{{ subject.created_at|date:"F j, Y g:i A" }}</p>
+                            
+                            <h6><i class="fas fa-calendar-edit"></i> Last Updated</h6>
+                            <p class="mb-3">{{ subject.updated_at|date:"F j, Y g:i A" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+</style>
+{% endblock %}

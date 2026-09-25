@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Announcement Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-bullhorn me-3 text-primary"></i>Announcement Details
+        </h2>
+        <p class="text-muted mb-0">View detailed information about this announcement</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'communication:announcement_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Announcement Information -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Announcement Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-semibold text-muted">Title</label>
+                        <div class="h4 mb-0">{{ announcement.title }}</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Type</label>
+                        <div>
+                            <span class="badge bg-light text-dark fs-6">{{ announcement.get_announcement_type_display }}</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Target Audience</label>
+                        <div>
+                            <span class="badge bg-light text-dark fs-6">{{ announcement.get_target_audience_display }}</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Status</label>
+                        <div>
+                            {% if announcement.is_published %}
+                                {% if announcement.is_expired %}
+                                    <span class="badge bg-secondary fs-6">Expired</span>
+                                {% else %}
+                                    <span class="badge bg-success fs-6">Published</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-warning fs-6">Draft</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Priority</label>
+                        <div>
+                            {% if announcement.is_urgent %}
+                                <span class="badge bg-danger fs-6">Urgent</span>
+                            {% endif %}
+                            {% if announcement.is_featured %}
+                                <span class="badge bg-warning fs-6">Featured</span>
+                            {% endif %}
+                            {% if not announcement.is_urgent and not announcement.is_featured %}
+                                <span class="badge bg-light text-dark fs-6">Normal</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Published By</label>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                {{ announcement.published_by.first_name|first|upper }}
+                            </div>
+                            <div>
+                                <h6 class="mb-0">{{ announcement.published_by.get_full_name }}</h6>
+                                <small class="text-muted">{{ announcement.published_by.email }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Published Date</label>
+                        {% if announcement.published_at %}
+                            <div class="h6 mb-0">
+                                {{ announcement.published_at|date:"F d, Y" }}
+                                <small class="text-muted">({{ announcement.published_at|date:"l" }})</small>
+                            </div>
+                            <small class="text-muted">{{ announcement.published_at|date:"H:i" }}</small>
+                        {% else %}
+                            <small class="text-muted">Not published yet</small>
+                        {% endif %}
+                    </div>
+
+                    {% if announcement.expires_at %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Expires At</label>
+                        <div class="h6 mb-0">
+                            {{ announcement.expires_at|date:"F d, Y" }}
+                            <small class="text-muted">({{ announcement.expires_at|date:"l" }})</small>
+                        </div>
+                        <small class="text-muted">{{ announcement.expires_at|date:"H:i" }}</small>
+                    </div>
+                    {% endif %}
+
+                    {% if announcement.attachment %}
+                    <div class="col-12">
+                        <label class="form-label fw-semibold text-muted">Attachment</label>
+                        <div>
+                            <a href="{{ announcement.attachment.url }}" class="btn btn-outline-primary" target="_blank">
+                                <i class="fas fa-paperclip me-2"></i>{{ announcement.attachment.name|split:'/'|last }}
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold text-muted">Content</label>
+                        <div class="p-3 bg-light rounded">
+                            {{ announcement.content|linebreaks }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Target Classes -->
+        {% if announcement.target_classes.all %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>Target Classes ({{ announcement.target_classes.count }})
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    {% for class in announcement.target_classes.all %}
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center p-2 border rounded">
+                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                <i class="fas fa-graduation-cap"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">{{ class.name }}</h6>
+                                <small class="text-muted">{{ class.section }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if role_ui.can_manage_academics %}
+                    <a href="{% url 'communication:announcement_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create New Announcement
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'communication:announcement_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-2"></i>View All Announcements
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Announcement Statistics -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Announcement Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <div class="h5 text-primary mb-1">{{ announcement.target_classes.count }}</div>
+                            <small class="text-muted">Target Classes</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="h5 text-success mb-1">
+                            {% if announcement.is_published %}Yes{% else %}No{% endif %}
+                        </div>
+                        <small class="text-muted">Published</small>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <div class="h5 {% if announcement.is_urgent %}text-danger{% else %}text-muted{% endif %} mb-1">
+                                {% if announcement.is_urgent %}Yes{% else %}No{% endif %}
+                            </div>
+                            <small class="text-muted">Urgent</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="h5 {% if announcement.is_featured %}text-warning{% else %}text-muted{% endif %} mb-1">
+                            {% if announcement.is_featured %}Yes{% else %}No{% endif %}
+                        </div>
+                        <small class="text-muted">Featured</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

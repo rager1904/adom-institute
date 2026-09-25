@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Message Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-envelope me-3 text-primary"></i>Message Details
+        </h2>
+        <p class="text-muted mb-0">View detailed information about this message</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'communication:message_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Message Information -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Message Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Subject</label>
+                        <div class="h5 mb-0">{{ message.subject }}</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Message Type</label>
+                        <div>
+                            <span class="badge bg-light text-dark fs-6">{{ message.get_message_type_display }}</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Sender</label>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                {{ message.sender.first_name|first|upper }}
+                            </div>
+                            <div>
+                                <h6 class="mb-0">{{ message.sender.get_full_name }}</h6>
+                                <small class="text-muted">{{ message.sender.email }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Status</label>
+                        <div>
+                            {% if message.status == 'sent' %}
+                                <span class="badge bg-info fs-6">Sent</span>
+                            {% elif message.status == 'delivered' %}
+                                <span class="badge bg-warning fs-6">Delivered</span>
+                            {% elif message.status == 'read' %}
+                                <span class="badge bg-success fs-6">Read</span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">Failed</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Sent Date</label>
+                        <div class="h6 mb-0">
+                            {{ message.sent_at|date:"F d, Y" }}
+                            <small class="text-muted">({{ message.sent_at|date:"l" }})</small>
+                        </div>
+                        <small class="text-muted">{{ message.sent_at|date:"H:i" }}</small>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-muted">Priority</label>
+                        <div>
+                            {% if message.is_urgent %}
+                                <span class="badge bg-danger fs-6">Urgent</span>
+                            {% endif %}
+                            {% if message.is_important %}
+                                <span class="badge bg-warning fs-6">Important</span>
+                            {% endif %}
+                            {% if not message.is_urgent and not message.is_important %}
+                                <span class="badge bg-light text-dark fs-6">Normal</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if message.attachment %}
+                    <div class="col-12">
+                        <label class="form-label fw-semibold text-muted">Attachment</label>
+                        <div>
+                            <a href="{{ message.attachment.url }}" class="btn btn-outline-primary" target="_blank">
+                                <i class="fas fa-paperclip me-2"></i>{{ message.attachment.name|split:'/'|last }}
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold text-muted">Content</label>
+                        <div class="p-3 bg-light rounded">
+                            {{ message.content|linebreaks }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recipients -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>Recipients ({{ message.recipients.count }})
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if message.recipients.all %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Read At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for recipient in message.recipients.all %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                            {{ recipient.first_name|first|upper }}
+                                        </div>
+                                        <span>{{ recipient.get_full_name }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ recipient.email }}</small>
+                                </td>
+                                <td>
+                                    {% for message_recipient in message.message_recipients.all %}
+                                        {% if message_recipient.recipient == recipient %}
+                                            {% if message_recipient.is_read %}
+                                                <span class="badge bg-success">Read</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Unread</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% for message_recipient in message.message_recipients.all %}
+                                        {% if message_recipient.recipient == recipient and message_recipient.read_at %}
+                                            <small class="text-muted">{{ message_recipient.read_at|date:"M d, Y H:i" }}</small>
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users fa-2x text-muted mb-3"></i>
+                    <h6>No Recipients</h6>
+                    <p class="text-muted mb-0">No recipients found for this message.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if user == message.sender %}
+                    <a href="#" class="btn btn-warning">
+                        <i class="fas fa-edit me-2"></i>Edit Message
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'communication:message_create' %}" class="btn btn-primary">
+                        <i class="fas fa-reply me-2"></i>Reply
+                    </a>
+                    <a href="{% url 'communication:message_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-inbox me-2"></i>View All Messages
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Statistics -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Message Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <div class="h5 text-primary mb-1">{{ message.recipients.count }}</div>
+                            <small class="text-muted">Total Recipients</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        {% with read_count=message.message_recipients.all|length %}
+                        <div class="h5 text-success mb-1">{{ read_count }}</div>
+                        <small class="text-muted">Read</small>
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

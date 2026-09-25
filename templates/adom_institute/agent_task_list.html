@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Agent Tasks - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div><div class="dashboard-kicker">ADOM Institute</div><h1 class="dashboard-title">Agent Tasks</h1></div>
+        <a class="btn btn-primary" href="{% url 'adom_institute:agent_task_create' %}">Create Task</a>
+    </div>
+    <section class="panel"><div class="focus-list">
+        {% for task in tasks %}
+            <div class="focus-item">
+                <span class="focus-icon"><i class="fas fa-diagram-project"></i></span>
+                <div>
+                    <div class="focus-category">{{ task.status }}</div>
+                    <div class="focus-title"><a href="{% url 'adom_institute:agent_task_detail' task.pk %}">{{ task.get_agent_key_display }}</a></div>
+                    <div class="metric-detail">{{ task.institution.name|default:"Personal" }} - {{ task.model_profile }}</div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state"><p>No agent tasks yet.</p></div>
+        {% endfor %}
+    </div></section>
+</div>
+{% endblock %}
