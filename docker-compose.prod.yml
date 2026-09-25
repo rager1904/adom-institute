@@ -1,0 +1,201 @@
+name: adom
+
+# ---------------------------------------------------------------------------
+# ADOM Institute - production stack for OCI Free Tier / PAYG
+#
+# Single-node by default (everything on one ARM VM). Scale-ready:
+#   * web   = gunicorn (HTTP)
+#   * ws    = daphne (WebSockets)
+#   * worker/beat = Celery
+#   * db    = PostgreSQL 16 (tuned) behind PgBouncer (transaction pooling)
+#   * redis = channels layer + cache + broker
+#   * nginx + certbot = TLS/HTTPS
+#
+# To scale horizontally later, run the web/ws/worker/beat services on more
+# nodes (see deploy/oci/SCALING.md) and front them with the OCI Load Balancer.
+# ---------------------------------------------------------------------------
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/oci/postgres/postgresql.conf:/etc/postgresql.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [backend]
+
+  # Connection pooler: prevents connection storms from gunicorn/daphne/workers.
+  pgbouncer:
+    image: edoburu/pgbouncer:1.21.0-p1
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 300
+      DEFAULT_POOL_SIZE: 25
+      MIN_POOL_SIZE: 5
+      PORT: 5432
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [backend]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "${REDIS_MAXMEMORY:-512mb}", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [backend]
+
+  # One-shot database migrations.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python manage.py migrate --noinput
+    env_file: .env
+    environment:
+      REDIS_HOSTS: redis:6379
+    depends_on:
+      pgbouncer:
+        condition: service_started
+    restart: "no"
+    networks: [backend]
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: gunicorn adom.wsgi:application --bind 0.0.0.0:8001 --workers ${WEB_WORKERS:-2} --threads ${WEB_THREADS:-4} --max-requests ${WEB_MAX_REQUESTS:-1000} --max-requests-jitter 100 --timeout 120 --access-logfile - --error-logfile -
+    env_file: .env
+    environment:
+      REDIS_HOSTS: redis:6379
+    volumes:
+      - staticfiles:/app/staticfiles
+      - mediafiles:/app/media
+      - logsdata:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+    networks: [backend]
+
+  # WebSockets (channels): Django receives HTTP on 8001, WS here on 8002.
+  ws:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: daphne -b 0.0.0.0 -p 8002 adom.asgi:application
+    env_file: .env
+    environment:
+      REDIS_HOSTS: redis:6379
+    volumes:
+      - staticfiles:/app/staticfiles
+      - mediafiles:/app/media
+      - logsdata:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+    networks: [backend]
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A adom worker -l info --concurrency ${CELERY_CONCURRENCY:-2} --max-tasks-per-child 1000
+    env_file: .env
+    environment:
+      REDIS_HOSTS: redis:6379
+    volumes:
+      - staticfiles:/app/staticfiles
+      - mediafiles:/app/media
+      - logsdata:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+    networks: [backend]
+
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A adom beat -l info --schedule /app/beat-schedule/celerybeat-schedule
+    env_file: .env
+    environment:
+      REDIS_HOSTS: redis:6379
+    volumes:
+      - beatschedule:/app/beat-schedule
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [backend]
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/oci/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/oci/nginx/adom.conf:/etc/nginx/conf.d/adom.conf:ro
+      - staticfiles:/app/staticfiles:ro
+      - mediafiles:/app/media:ro
+      - certs:/etc/letsencrypt
+      - certdata:/var/www/certbot
+    depends_on:
+      - web
+      - ws
+    networks: [backend]
+
+  # One-shot TLS certificate issuance/renewal - NOT started by `up -d`.
+  # Issue:  docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d DOMAIN --email YOU --agree-tos --no-eff-email
+  # Renew:  scripts/renew-cert.sh (also installed as a host cron job)
+  certbot:
+    image: certbot/certbot
+    profiles: ["tools"]
+    volumes:
+      - certs:/etc/letsencrypt
+      - certdata:/var/www/certbot
+
+volumes:
+  pgdata:
+  redisdata:
+  staticfiles:
+  mediafiles:
+  logsdata:
+  beatschedule:
+  certs:
+  certdata:
+
+networks:
+  backend:
+    driver: bridge

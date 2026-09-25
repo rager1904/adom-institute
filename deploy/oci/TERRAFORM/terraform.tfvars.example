@@ -1,0 +1,20 @@
+# Copy to terraform.tfvars and fill in.
+# Get credentials from the OCI console: Identity & Security -> Users -> your user
+#   -> API Keys -> Add API Key (download the PEM).
+# NOTE: the tenancy must be in your HOME region for Always Free eligibility.
+
+tenancy_ocid  = "ocid1.tenancy.oc1..aaaa...REPLACE"
+user_ocid     = "ocid1.user.oc1..aaaa...REPLACE"
+fingerprint   = "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99"
+private_key_path = "C:/Users/YOU/.oci/oci_api_key.pem"
+region        = "us-ashburn-1"
+compartment_ocid = ""   # empty = root/tenancy compartment
+
+ssh_public_key = "ssh-ed25519 AAAA... you@computer"
+ssh_ingress_cidr = "0.0.0.0/0"   # restrict to your IP (e.g. 203.0.113.7/32) after bootstrap
+
+instance_ocpus      = 2
+instance_memory_gbs = 12
+block_volume_size_gb = 100
+
+bucket_prefix = "adom"

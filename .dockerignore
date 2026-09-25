@@ -1,0 +1,20 @@
+# Keep the Docker build context small and avoid leaking local secrets/files.
+.git
+venv
+__pycache__
+*.pyc
+.env
+.env.*
+!env.example
+*.sqlite3
+media
+staticfiles
+logs
+deploy/oci/TERRAFORM/.terraform
+deploy/oci/TERRAFORM/*.tfstate*
+deploy/oci/TERRAFORM/terraform.tfvars
+.terraform
+docker-compose*.yml
+.idea
+.vscode
+*.log

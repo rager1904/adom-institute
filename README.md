@@ -248,17 +248,30 @@ coverage report
 
 ## Deployment
 
-### Production Setup
-1. Set `DEBUG=False` in settings
-2. Configure production database
-3. Set up static file serving
-4. Configure email settings
-5. Set up SSL certificate
-6. Configure backup system
+### Production setup (OCI - Oracle Cloud Infrastructure)
 
-### Docker Deployment
+A complete, production-tested deployment kit for OCI (Always Free / PAYG) lives
+in [`deploy/oci/`](deploy/oci/README.md). It includes:
+
+- Terraform stack: VCN, ARM (`VM.Standard.A1.Flex`) compute, PostgreSQL block
+  volume, and Object Storage buckets.
+- `docker-compose.prod.yml`: PostgreSQL 16 + PgBouncer + Redis + gunicorn +
+  daphne (WebSockets) + Celery worker/beat + nginx + certbot.
+- Multi-tenant ready: the `Institution` model scales the platform to 4+ big
+  schools on one deployment.
+- Performance: Redis cache + `cached_db` sessions, connection pooling, tuned
+  Postgres, gzip/TLS termination, optional OCI Object Storage for media.
+- One-command deploys for Windows (`deploy.ps1`) and bash (`deploy.sh`),
+  daily DB backups to Object Storage, and a phased scale-out guide.
+
+Quick start after provisioning the VM:
+
+```powershell
+.\deploy\oci\scripts\deploy.ps1 -PublicIp <ip> -Domain app.yourdomain.com -Email you@example.com
+```
+
+### Docker Deployment (dev / single machine)
 ```bash
-# Build and run with Docker Compose
 docker-compose up -d
 ```
 

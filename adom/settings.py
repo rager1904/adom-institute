@@ -235,11 +235,13 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@adominstitute.com'
 
 # Channels Configuration (WebSockets)
+# Uses a dedicated Redis DB (2) so the channel layer never collides with the
+# cache or the Celery broker/result backend.
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
+            "hosts": [config('REDIS_CHANNEL_URL', default='redis://127.0.0.1:6379/2')],
         },
     },
 }
@@ -251,6 +253,33 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+
+# Redis-backed caching + sessions.
+# Enabled only when REDIS_URL is explicitly set (production/compose).
+# Falls back to local-memory/db sessions so local development keeps working
+# with zero configuration.
+_redis_url = os.environ.get('REDIS_URL', config('REDIS_URL', default=''))
+if _redis_url:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': _redis_url,
+        },
+        'session': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': _redis_url,
+            'TIMEOUT': 60 * 60 * 24,
+        },
+    }
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'adom-default-cache',
+        }
+    }
+    SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 # ADOM Institute AI Configuration
 # Open-source-first runtime defaults. Production can point these to Ollama,
@@ -264,25 +293,55 @@ ADOM_INSTITUTE_AI_RERANKER_MODEL = config('ADOM_INSTITUTE_AI_RERANKER_MODEL', de
 ADOM_INSTITUTE_AI_VECTOR_STORE = config('ADOM_INSTITUTE_AI_VECTOR_STORE', default='pgvector')
 OLLAMA_BASE_URL = config('OLLAMA_BASE_URL', default='http://localhost:11434')
 
-# File Storage (AWS S3 or Local)
+# File Storage (S3-compatible object storage, e.g. OCI Object Storage or AWS S3)
 if config('USE_S3', default=False, cast=bool):
     AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
-    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+    AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-ashburn-1')
+    # OCI Object Storage exposes an S3-compatible endpoint. Leave unset for AWS S3.
+    AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL', default=None)
+    AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN', default=None)
+    AWS_S3_ADDRESSING_STYLE = config('AWS_S3_ADDRESSING_STYLE', default='virtual')
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',
     }
-    AWS_LOCATION = 'static'
-    STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    AWS_QUERYSTRING_AUTH = config('AWS_QUERYSTRING_AUTH', default=True, cast=bool)
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_EXPIRE = 3600
+    # Static and media live in separate prefixes inside the same bucket.
+    STORAGES = {
+        'default': {
+            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+            'OPTIONS': {'location': 'media'},
+        },
+        'staticfiles': {
+            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+            'OPTIONS': {'location': 'static'},
+        },
+    }
 else:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
+
+# WhiteNoise cache headers for local static serving (falls back when not on object storage).
+WHITENOISE_MAX_AGE = 31536000 if not DEBUG else 0
+WHITENOISE_USE_FINDERS = DEBUG
 
 # Security Settings
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+if not DEBUG:
+    # Trust the X-Forwarded-Proto header set by nginx (single node) or the
+    # OCI Load Balancer (scaled) when terminating TLS.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=not DEBUG, cast=bool)
 SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=not DEBUG, cast=bool)
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=not DEBUG, cast=bool)
