@@ -565,6 +565,7 @@ async def amain(args) -> int:
     print_summary(steps, manifest.get("scale", {}))
 
     out = Path(args.out) if args.out else Path.cwd() / "loadtest_results.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         json.dumps(
             {

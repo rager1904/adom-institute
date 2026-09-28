@@ -477,8 +477,10 @@ def main() -> int:
             for k, v in redis_report.items():
                 print(f"  {k:<26} {v}")
 
-    Path(args.out).write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
-    print(f"\n  full report: {args.out}")
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
+    print(f"\n  full report: {out}")
     return 0
 
 

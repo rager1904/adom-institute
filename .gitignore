@@ -167,6 +167,11 @@ temp/
 cache/
 backups/
 
+# Colab load-test artefacts: the seed manifest and the JSON results. Both are
+# regenerated on every run and the results are specific to one runtime.
+colab_loadtest/
+.colab_loadtest/
+
 # Terraform state & real credentials (never commit!)
 .terraform/
 *.tfstate

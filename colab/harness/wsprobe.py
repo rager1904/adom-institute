@@ -366,8 +366,10 @@ def main() -> int:
         )
         for e in s["errors"]:
             print(f"      ! {e}")
-    Path(args.out).write_text(json.dumps(summaries, indent=2), encoding="utf-8")
-    print(f"\n  raw results: {args.out}")
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(summaries, indent=2), encoding="utf-8")
+    print(f"\n  raw results: {out}")
     return 0
 
 
