@@ -40,6 +40,24 @@ it calls and for running them by hand.
 Tokens are handed to git through `GIT_ASKPASS`, so they never appear in the
 command line, in a traceback, or in `ps` output.
 
+### Interpreter: Python 3.12, not the Colab default
+
+Colab now ships Python 3.13, but `requirements.txt` pins `numpy==1.26.4` and
+`Django==4.2.7`, which support **Python 3.9-3.12** and publish no 3.13 wheels.
+The `Dockerfile` targets 3.11. Installing those pins on 3.13 falls back to a
+source build of NumPy that cannot succeed.
+
+The notebook therefore installs a real 3.12 with
+[`uv`](https://github.com/astral-sh/uv) when the default interpreter is too new,
+and creates the venv with `uv venv`. That second part is not cosmetic: Colab's
+CPython ships **without `ensurepip`**, so `python3 -m venv` fails with
+`returned non-zero exit status 1`. Installing Debian's `python3-venv` does not
+help, because that package only provides `ensurepip` for *Debian's* interpreter,
+not the one in `/usr/local` that `python3` resolves to.
+
+Requirements are installed with `--only-binary=:all:`, so an unsatisfiable pin
+fails in seconds with a clear message instead of minutes of doomed compilation.
+
 ## Running the scripts by hand
 
 All five scripts take `--help`. They are plain scripts, not Django management
