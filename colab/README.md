@@ -49,11 +49,19 @@ source build of NumPy that cannot succeed.
 
 The notebook therefore installs a real 3.12 with
 [`uv`](https://github.com/astral-sh/uv) when the default interpreter is too new,
-and creates the venv with `uv venv`. That second part is not cosmetic: Colab's
-CPython ships **without `ensurepip`**, so `python3 -m venv` fails with
-`returned non-zero exit status 1`. Installing Debian's `python3-venv` does not
-help, because that package only provides `ensurepip` for *Debian's* interpreter,
-not the one in `/usr/local` that `python3` resolves to.
+  and creates the venv with `uv venv`. That second part is not cosmetic: Colab's
+  CPython ships **without `ensurepip`**, so `python3 -m venv` fails with
+  `returned non-zero exit status 1`. Installing Debian's `python3-venv` does not
+  help, because that package only provides `ensurepip` for *Debian's* interpreter,
+  not the one in `/usr/local` that `python3` resolves to.
+
+  `uv venv` deliberately seeds **no pip at all**, so the venv it creates has
+  `bin/python` but no `bin/pip`. Every install therefore runs as
+  `<venv>/bin/python -m pip ...` rather than calling `bin/pip` directly, and pip
+  is bootstrapped into the venv first (`ensurepip`, falling back to
+  `uv pip install --python <venv>/bin/python`). A side benefit is that a re-run
+  repairs a venv left behind by a failed run instead of dying on a missing
+  `bin/pip`.
 
 Requirements are installed with `--only-binary=:all:`, so an unsatisfiable pin
 fails in seconds with a clear message instead of minutes of doomed compilation.
