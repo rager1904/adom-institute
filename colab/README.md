@@ -59,9 +59,14 @@ The notebook therefore installs a real 3.12 with
   `bin/python` but no `bin/pip`. Every install therefore runs as
   `<venv>/bin/python -m pip ...` rather than calling `bin/pip` directly, and pip
   is bootstrapped into the venv first (`ensurepip`, falling back to
-  `uv pip install --python <venv>/bin/python`). A side benefit is that a re-run
-  repairs a venv left behind by a failed run instead of dying on a missing
-  `bin/pip`.
+  `uv pip install --python <venv>/bin/python`).
+
+An existing `.venv` is judged by **the version of the interpreter inside it**,
+not by whether the directory exists. A venv left behind by an earlier failed run
+on the 3.13 default looks perfectly valid to an existence check, and then fails
+several minutes later with pip's `No matching distribution found for
+numpy==1.26.4` — which reads like a bad pin but is really a version mismatch.
+Such a venv is discarded and rebuilt; a healthy one is reused.
 
 Requirements are installed with `--only-binary=:all:`, so an unsatisfiable pin
 fails in seconds with a clear message instead of minutes of doomed compilation.
