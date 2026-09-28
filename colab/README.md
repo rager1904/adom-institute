@@ -22,10 +22,23 @@ it calls and for running them by hand.
 
 ## Quick start
 
-1. Upload or clone the repository into Colab.
-2. Set `REPO_URL` in the notebook's config cell, or leave it blank and unzip an
-   uploaded copy to `/content/adom-institute-main`.
-3. Run every cell in order. The tunnel cell **must** come before the server cell.
+1. Open `adom_loadtest.ipynb` in Colab and run the cells in order. The tunnel
+   cell **must** come before the server cell.
+2. The repository is **private**, and a fresh Colab runtime has no GitHub
+   credentials, so step 1 needs the source. Pick one:
+
+   | Option | What to do |
+   |---|---|
+   | Zip (easiest) | Zip the project, upload it with the Colab sidebar (Files -> Upload). Leave `GITHUB_TOKEN` empty; the notebook finds and extracts it automatically. |
+   | Colab secret | Colab -> Secrets -> `GITHUB_TOKEN` = a fine-grained PAT with **Contents: read-only**. Picked up automatically, never printed. |
+   | Paste a token | Put one in `GITHUB_TOKEN` in the config cell. Revoke it after the run; it appears in the notebook output. |
+   | Public repo | Make the repository public and no token is needed. |
+
+   If a zip is present the notebook prefers it, so a failed private-remote
+   clone is not fatal.
+
+Tokens are handed to git through `GIT_ASKPASS`, so they never appear in the
+command line, in a traceback, or in `ps` output.
 
 ## Running the scripts by hand
 
