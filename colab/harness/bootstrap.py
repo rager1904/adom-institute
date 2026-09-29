@@ -246,13 +246,15 @@ def install_requirements(repo: Path, py: str, sh, sh_ok) -> None:
             + "\n    ".join((out + err).strip().splitlines()[-6:]))
 
     print("installing project requirements ...", flush=True)
-    rc, out, err = vpip(py, "install", "--only-binary=:all:", str(req),
+    # -r, not a bare path: pip treats a path without it as a requirement
+    # specifier and fails with "Invalid requirement: .../requirements.txt".
+    rc, out, err = vpip(py, "install", "--only-binary=:all:", "-r", str(req),
                         sh_ok=sh_ok, check=False)
     if rc != 0:
         raise BootstrapError(
-            "could not install requirements.txt as wheels.\n  "
-            + "\n  ".join((out + err).strip().splitlines()[-15:])
-            + "\n\nA pin in requirements.txt has no prebuilt wheel for this Python.")
+            "could not install requirements.txt as wheels.\n"
+            f"  command : {py} -m pip install --only-binary=:all: -r {req}\n"
+            "  output  :\n    " + "\n    ".join((out + err).strip().splitlines()[-15:]))
     vpip(py, "install", "--only-binary=:all:", *EXTRA_PACKAGES, sh_ok=sh_ok)
 
 
