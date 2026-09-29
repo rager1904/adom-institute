@@ -58,7 +58,7 @@ from pathlib import Path
 
 # Bump whenever the provisioning logic changes. The notebook prints it, so a
 # run using a stale bootstrap is identifiable from the log alone.
-BOOTSTRAP_VERSION = 2
+BOOTSTRAP_VERSION = 3
 
 # The interpreter range the pins in requirements.txt support. 1.26.x of NumPy
 # and Django 4.2 both stop at 3.12; NumPy 2.x is the first line with 3.13.
@@ -71,6 +71,19 @@ RANGE = f"{MIN_PY[0]}.{MIN_PY[1]}-{DOT}"
 CANARY = "numpy==1.26.4"
 EXTRA_PACKAGES = ("aiohttp", "websockets", "psutil", "redis")
 VERIFY_IMPORTS = ("django", "numpy", "channels", "celery")
+
+# Pins that requirements.txt holds at a version which never published a wheel,
+# so `--only-binary=:all:` alone makes the install unsatisfiable. Each is
+# pure-Python, so allowing its sdist needs no compiler.
+#
+# django-allauth 0.57.0: the whole 0.5x-0.6x line is sdist-only. The
+# wheel-shipping 65.x line requires Django>=4.2.16, and this project pins
+# Django==4.2.7, so there is no wheel-compatible upgrade available.
+#
+# Adding a name here is a claim about that specific release. test_sdistok.py
+# re-checks each against PyPI, so an entry that later gains a wheel (or a pin
+# that gets bumped) is caught rather than silently kept.
+SDIST_OK = ("django-allauth",)
 
 
 class BootstrapError(SystemExit):
@@ -221,11 +234,30 @@ def install_requirements(repo: Path, py: str, sh, sh_ok) -> None:
     """Install the pins, wheel-only, with the canary first.
 
     `--only-binary=:all:` means an unsatisfiable pin fails in seconds with pip's
-    own message instead of minutes of doomed source compilation.
+    own message instead of minutes of doomed source compilation -- the whole
+    reason for pinning Python 3.12 is that NumPy 1.26.4 has no 3.13 wheel.
+
+    A blanket wheel-only rule is still too strong for a couple of pins that
+    never published a wheel at all. django-allauth 0.57.0, for one, ships an
+    sdist only: every release in the 0.5x-0.6x line is sdist-only, and the
+    wheel-shipping 65.x line requires Django>=4.2.16 while this project pins
+    Django==4.2.7. Under `--only-binary=:all:` pip filtered 0.57.0 out
+    entirely and reported "No matching distribution found" while listing only
+    the 65.x releases it *could* see -- a message that reads like the version
+    does not exist. It does; it just has no wheel.
+
+    SDIST_OK lists pins allowed to build from source. Every entry must be
+    pure-Python, so no compiler toolchain is needed, and each one is verified
+    against PyPI by the test suite rather than trusted.
     """
     req = Path(repo) / "requirements.txt"
     if not req.is_file():
         raise BootstrapError(f"requirements.txt not found at {req}")
+
+    sdist_flags = [f"--no-binary={name}" for name in SDIST_OK]
+    if sdist_flags:
+        print("  sdist-allowed pins: " + ", ".join(SDIST_OK)
+              + "  (pure-python, no compiler needed)", flush=True)
 
     # Canary: decisive about the interpreter, and cheap.
     rc, out, err = vpip(py, "install", "-q", "--only-binary=:all:", CANARY,
@@ -248,12 +280,13 @@ def install_requirements(repo: Path, py: str, sh, sh_ok) -> None:
     print("installing project requirements ...", flush=True)
     # -r, not a bare path: pip treats a path without it as a requirement
     # specifier and fails with "Invalid requirement: .../requirements.txt".
-    rc, out, err = vpip(py, "install", "--only-binary=:all:", "-r", str(req),
-                        sh_ok=sh_ok, check=False)
+    # The --no-binary flags re-admit the pure-python pins that have no wheel.
+    args = ["install", "--only-binary=:all:", *sdist_flags, "-r", str(req)]
+    rc, out, err = vpip(py, *args, sh_ok=sh_ok, check=False)
     if rc != 0:
         raise BootstrapError(
-            "could not install requirements.txt as wheels.\n"
-            f"  command : {py} -m pip install --only-binary=:all: -r {req}\n"
+            "could not install requirements.txt.\n"
+            f"  command : {py} -m pip {' '.join(args)}\n"
             "  output  :\n    " + "\n    ".join((out + err).strip().splitlines()[-15:]))
     vpip(py, "install", "--only-binary=:all:", *EXTRA_PACKAGES, sh_ok=sh_ok)
 
