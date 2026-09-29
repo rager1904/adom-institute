@@ -11,6 +11,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from accounts.permissions import AdminRequiredMixin, is_platform_admin, user_institution_ids
 from .models import Teacher, Subject, TeacherSubject, Department, TeacherDepartment
+from .serializers import (
+    TeacherSerializer,
+    SubjectSerializer,
+    TeacherSubjectSerializer,
+    DepartmentSerializer,
+)
 from .forms import (
     TeacherForm, SubjectForm, DepartmentForm, TeacherSubjectForm, TeacherDepartmentForm,
     TeacherSearchForm, SubjectSearchForm, DepartmentSearchForm, TeacherClassSubjectAssignmentForm
@@ -20,7 +26,7 @@ from .forms import (
 # API Viewsets
 class TeacherViewSet(viewsets.ModelViewSet):
     queryset = Teacher.objects.select_related('user').prefetch_related('teacher_subjects__subject', 'teacher_departments__department')
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = TeacherSerializer
     
     def get_queryset(self):
         queryset = Teacher.objects.select_related('user').prefetch_related('teacher_subjects__subject', 'teacher_departments__department')
@@ -75,7 +81,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
 
 class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.prefetch_related('teacher_subjects__teacher__user')
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = SubjectSerializer
     
     def get_queryset(self):
         queryset = Subject.objects.prefetch_related('teacher_subjects__teacher__user')
@@ -97,7 +103,7 @@ class SubjectViewSet(viewsets.ModelViewSet):
 
 class DepartmentViewSet(viewsets.ModelViewSet):
     queryset = Department.objects.select_related('head_of_department__user').prefetch_related('teacher_departments__teacher__user')
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = DepartmentSerializer
     
     def get_queryset(self):
         queryset = Department.objects.select_related('head_of_department__user').prefetch_related('teacher_departments__teacher__user')

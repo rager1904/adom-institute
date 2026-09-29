@@ -9,6 +9,7 @@ from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Room, TimeSlot, ClassSchedule, TeacherSchedule, RoomSchedule, AcademicCalendar
+from .serializers import RoomSerializer, TimeSlotSerializer, ClassScheduleSerializer
 from .forms import (
     RoomForm, TimeSlotForm, ClassScheduleForm, TeacherScheduleForm, 
     RoomScheduleForm, AcademicCalendarForm, RoomSearchForm, ClassScheduleSearchForm
@@ -33,19 +34,19 @@ def scope_schedules_for_user(user, queryset):
 # API Viewsets
 class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.all()
-    serializer_class = None  # Will be defined when DRF is properly set up
+    serializer_class = RoomSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
 class TimeSlotViewSet(viewsets.ModelViewSet):
     queryset = TimeSlot.objects.all()
-    serializer_class = None
+    serializer_class = TimeSlotSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
 class ClassScheduleViewSet(viewsets.ModelViewSet):
     queryset = ClassSchedule.objects.all()
-    serializer_class = None
+    serializer_class = ClassScheduleSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
