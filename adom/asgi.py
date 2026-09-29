@@ -16,11 +16,24 @@ from channels.security.websocket import AllowedHostsOriginValidator
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'adom.settings')
 
-# Import routing after Django is set up
+# get_asgi_application() is what calls django.setup(). It has to run before the
+# routing import below, because communication.routing imports consumers, and
+# the consumers import model classes. Importing models before the app registry
+# is populated raises:
+#
+#   File "communication/consumers.py", line 4, in <module>
+#     from django.contrib.auth.models import AnonymousUser
+#   django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
+#
+# which kills daphne on startup. Calling get_asgi_application() inline as the
+# "http" value below happened too late -- the module-level import on the
+# preceding line had already run. Setup first, then import, then route.
+django_asgi_app = get_asgi_application()
+
 from communication.routing import websocket_urlpatterns
 
 application = ProtocolTypeRouter({
-    "http": get_asgi_application(),
+    "http": django_asgi_app,
     "websocket": AllowedHostsOriginValidator(
         AuthMiddlewareStack(
             URLRouter(
