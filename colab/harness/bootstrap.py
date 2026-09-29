@@ -52,6 +52,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -230,6 +231,104 @@ def vpip(py: str, *args, sh_ok=None, check: bool = True):
     return r
 
 
+def _local_app_names(repo: Path) -> set:
+    """Top-level package names of the project's own apps in the checkout."""
+    names = set()
+    root = Path(repo)
+    for child in root.iterdir() if root.is_dir() else []:
+        if child.is_dir() and (child / "__init__.py").is_file():
+            names.add(child.name)
+    return names
+
+
+def verify_installed_apps(py: str, repo: Path, sh_ok) -> None:
+    """Import every app in INSTALLED_APPS, so a bad build is caught here.
+
+    pip reporting success only means files were written. A wheel built from
+    an sdist can be structurally valid and functionally empty -- the cached
+    django-allauth 0.57.0 wheel held seven files and no allauth subpackages at
+    all, and installed without a warning. Django then failed at
+    django.setup() several cells later with "No module named
+    'allauth.account'", which read as a seeding failure and hid the install
+    that actually broke.
+
+    Read the app list out of settings.py by text rather than importing the
+    settings module: importing needs a configured database and is exactly
+    what we are trying to run before trusting the venv.
+    """
+    settings_py = Path(repo) / "adom" / "settings.py"
+    if not settings_py.is_file():
+        return
+    text = settings_py.read_text(encoding="utf-8")
+    m = re.search(r"INSTALLED_APPS\s*=\s*\[(.*?)\n\]", text, re.S)
+    if not m:
+        return
+    apps = re.findall(r"['\"]([\w.]+)['\"]", m.group(1))
+    apps = [a for a in apps if not a.startswith("django.")]
+    # The project's own apps (accounts, students, ...) live in the checkout and
+    # are importable because manage.py puts the repo root on sys.path. They are
+    # not installed into site-packages, so probing them from a temp file
+    # reports them all as missing. Only pip-installed distributions matter here.
+    local = _local_app_names(repo)
+    apps = [a for a in apps
+            if a.split(".")[0] not in local]
+    if not apps:
+        return
+    # Run the check from a file rather than python -c. The snippet is
+    # multi-line, and passing embedded newlines through a shell-quoted
+    # argument is not portable; a file is also readable when it fails.
+    import tempfile
+    # find_spec on a dotted name imports the parent packages, and some app
+    # __init__ modules (allauth.socialaccount.providers.google) read Django
+    # settings while doing so. Configure throwaway settings first so those
+    # imports succeed; we are checking file presence, not behaviour.
+    snippet = (
+        "import sys\n"
+        "import django.conf\n"
+        "if not django.conf.settings.configured:\n"
+        "    from django.conf import settings as _s\n"
+        "    _s.configure(INSTALLED_APPS=[], DATABASES={}, SECRET_KEY='probe',"
+        " USE_TZ=True)\n"
+        "import importlib.util\n"
+        "bad = []\n"
+        "for name in " + repr(apps) + ":\n"
+        "    try:\n"
+        "        spec = importlib.util.find_spec(name)\n"
+        "        if spec is None:\n"
+        "            bad.append('%s: not found' % name)\n"
+        "    except ModuleNotFoundError as exc:\n"
+        "        bad.append('%s: %s' % (name, exc))\n"
+        "    except Exception as exc:\n"
+        "        bad.append('%s: %s: %s' % (name, type(exc).__name__, exc))\n"
+        "print('\\n'.join(bad))\n"
+        "sys.exit(1 if bad else 0)\n"
+    )
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False,
+                                     encoding="utf-8") as fh:
+        fh.write(snippet)
+        probe_path = fh.name
+    try:
+        rc, out, err = sh_ok(f"{py} {probe_path}")
+    finally:
+        try:
+            os.unlink(probe_path)
+        except OSError:
+            pass
+    if rc != 0:
+        detail = "\n    ".join((out or err).strip().splitlines()[-10:])
+        raise BootstrapError(
+            "the venv installed cleanly but some INSTALLED_APPS entry cannot be "
+            "imported.\n"
+            "  A package built from source produced a truncated wheel; pip "
+            "reports success for those.\n"
+            f"  broken imports:\n    {detail}\n"
+            f"  venv path : {Path(py).parent.parent}\n"
+            f"  fix       : {Path(py).parent.parent} -m pip cache purge"
+            "\n               then re-run this cell. A truncated wheel built "
+            "from\n"
+            "               an sdist is cached and reused until it is purged.")
+
+
 def install_requirements(repo: Path, py: str, sh, sh_ok) -> None:
     """Install the pins, wheel-only, with the canary first.
 
@@ -281,14 +380,31 @@ def install_requirements(repo: Path, py: str, sh, sh_ok) -> None:
     # -r, not a bare path: pip treats a path without it as a requirement
     # specifier and fails with "Invalid requirement: .../requirements.txt".
     # The --no-binary flags re-admit the pure-python pins that have no wheel.
-    args = ["install", "--only-binary=:all:", *sdist_flags, "-r", str(req)]
+    #
+    # --no-cache-dir is essential for those. pip caches wheels it builds from
+    # sdists, and a build that was interrupted or that ran while the source
+    # tree was incomplete caches a TRUNCATED wheel. The cached artifact is
+    # then reused forever: django-allauth 0.57.0 produced a 7 KB wheel with
+    # only allauth/__init__.py, which pip happily installed, and the failure
+    # surfaced much later as "No module named 'allauth.account'" during
+    # django.setup() -- reported as a seeding failure with no connection to
+    # the install that caused it. Building uncached makes a rerun build again.
+    args = ["install", "--only-binary=:all:", "--no-cache-dir",
+            *sdist_flags, "-r", str(req)]
     rc, out, err = vpip(py, *args, sh_ok=sh_ok, check=False)
     if rc != 0:
         raise BootstrapError(
             "could not install requirements.txt.\n"
             f"  command : {py} -m pip {' '.join(args)}\n"
             "  output  :\n    " + "\n    ".join((out + err).strip().splitlines()[-15:]))
-    vpip(py, "install", "--only-binary=:all:", *EXTRA_PACKAGES, sh_ok=sh_ok)
+    vpip(py, "install", "--only-binary=:all:", "--no-cache-dir", *EXTRA_PACKAGES,
+         sh_ok=sh_ok)
+
+    # A successful install is not proof of a usable one: a truncated sdist
+    # build installs cleanly and only fails when something imports it. Check
+    # that every module adom/settings.py lists in INSTALLED_APPS is importable
+    # now, so a bad build is named here rather than as a seeding error later.
+    verify_installed_apps(py, repo, sh_ok)
 
 
 def verify(py: str, sh, sh_ok) -> str:

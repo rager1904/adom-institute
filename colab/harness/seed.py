@@ -503,9 +503,19 @@ def seed_teaching_load(rng, scale):
     insert(
         TeacherSubject,
         [
-            TeacherSubject(teacher=t, subject=subjects[i % len(subjects)], is_primary=i % 2 == 0)
+            # Each teacher gets TWO DIFFERENT subjects. The old form indexed
+            # subjects by the teacher index only, so the inner loop produced
+            # two rows with an identical (teacher, subject) pair, which
+            # violates the unique constraint on that pair and aborted the
+            # whole seed with an IntegrityError. Offsetting by the inner index
+            # keeps the pairs distinct.
+            TeacherSubject(
+                teacher=t,
+                subject=subjects[(i + k) % len(subjects)],
+                is_primary=k == 0,
+            )
             for i, t in enumerate(teachers)
-            for _ in range(2)
+            for k in range(2)
         ],
         label="TeacherSubject",
     )
@@ -1174,13 +1184,30 @@ def seed_library(rng, scale):
 
     borrowers = list(User.objects.filter(user_type__in=["student", "teacher"]).order_by("id"))
     borrowings = []
+    # BookBorrowing.borrowed_date is auto_now_add, so Django stamps it with the
+    # time of the INSERT and ignores any value passed here. Both check
+    # constraints compare against that stamp:
+    #   lib_borrow_due_ck     due_date    >= borrowed_date
+    #   lib_borrow_return_ck  return_date >= borrowed_date   (when not null)
+    # borrowed_date is therefore always >= the moment this loop runs, and a
+    # bulk_create issues the INSERT slightly later still, so every date has to
+    # be comfortably in the future. Deriving them from a past borrow instant --
+    # as this used to -- violated lib_borrow_due_ck on every row and aborted
+    # the seed. The library phase is not what the benchmark measures, so loan
+    # history is expressed relative to now: a returned loan was returned
+    # shortly after the load starts.
+    now = datetime.now(dt_timezone.utc) + timedelta(minutes=5)
     for i in range(min(4000, scale.students // 2)):
-        borrowed = datetime.now(dt_timezone.utc) - timedelta(days=rng.randint(1, 200))
-        returned = borrowed + timedelta(days=rng.randint(1, 20)) if i % 3 else None
+        if i % 3:
+            returned = now + timedelta(minutes=rng.randint(1, 240))
+            due_date = now + timedelta(days=14)
+        else:
+            returned = None
+            due_date = now + timedelta(days=rng.randint(1, 30))
         borrowings.append(
             BookBorrowing(
                 book=books[i % len(books)], borrower=borrowers[i % len(borrowers)],
-                due_date=(returned or borrowed) + timedelta(days=14),
+                due_date=due_date,
                 return_date=returned,
                 late_fee=Decimal("0.00") if not returned or i % 4 else Decimal("5.00"),
                 notes="", is_active=True,
@@ -1232,72 +1259,99 @@ def seed_analytics(rng, scale):
     users = list(User.objects.order_by("id"))
     super_admin = next((u for u in users if u.user_type == "super_admin"), users[0])
 
-    insert(
-        StudentPerformance,
-        [
+    # The analytics models carry CHECK constraints comparing a "part" against
+    # its "whole": obtained_marks <= total_marks, present_days <= total_days,
+    # submitted_assignments <= total_assignments, paid_fees <= total_fees,
+    # lowest_percentage <= highest_percentage,
+    # total_fees_collected <= total_fees_expected, and
+    # assignments_graded <= assignments_created.
+    #
+    # Drawing both sides independently makes the pair inconsistent often enough
+    # to abort the seed, so each part is drawn as a bounded fraction of its
+    # whole instead. Without this the analytics phase raised IntegrityError on
+    # whichever row happened to draw the unlucky pair.
+    def part(rng, whole, lo_frac=0.0, hi_frac=1.0):
+        """An integer in [lo_frac*whole, hi_frac*whole]."""
+        lo = int(whole * lo_frac)
+        hi = int(whole * hi_frac)
+        return rng.randint(lo, max(lo, min(hi, whole)))
+
+    def money(rng, whole):
+        """A Decimal in [0, whole], rounded like the other seeded money."""
+        return Decimal(str(round(rng.uniform(0, float(whole)), 2)))
+
+    student_rows = []
+    for s in students:
+        if not s.current_class_id:
+            continue
+        present = part(rng, 20, 0.7, 1.0)
+        student_rows.append(
             StudentPerformance(
                 student=s, academic_year=s.current_class.academic_year, class_obj=s.current_class,
                 total_subjects=5, total_marks=Decimal("500.00"),
-                obtained_marks=Decimal(str(round(rng.uniform(150, 480), 2))),
+                obtained_marks=money(rng, Decimal("500.00")),
                 percentage=Decimal(str(round(rng.uniform(30, 96), 2))),
                 grade=weighted_pick(rng, ["A1", "B2", "B3", "C4", "C5", "D6"], [12, 24, 30, 18, 11, 5]),
-                total_days=20, present_days=rng.randint(14, 20),
-                absent_days=20 - rng.randint(14, 20),
+                total_days=20, present_days=present, absent_days=20 - present,
                 attendance_percentage=Decimal(str(round(rng.uniform(70, 100), 2))),
-                total_assignments=10, submitted_assignments=rng.randint(5, 10),
+                total_assignments=10, submitted_assignments=part(rng, 10, 0.5, 1.0),
                 assignment_completion_rate=Decimal(str(round(rng.uniform(50, 100), 2))),
-                total_fees=Decimal("3000.00"), paid_fees=Decimal(str(round(rng.uniform(0, 3000), 2))),
+                total_fees=Decimal("3000.00"), paid_fees=money(rng, Decimal("3000.00")),
                 fee_payment_rate=Decimal(str(round(rng.uniform(0, 100), 2))),
                 rank_in_class=rng.randint(1, 60), class_average=Decimal(str(round(rng.uniform(35, 75), 2))),
             )
-            for s in students
-            if s.current_class_id
-        ],
-        label="StudentPerformance",
-    )
+        )
+    insert(StudentPerformance, student_rows, label="StudentPerformance")
 
-    insert(
-        ClassPerformance,
-        [
+    class_rows = []
+    for c in classes:
+        highest = Decimal(str(round(rng.uniform(75, 100), 2)))
+        # lowest <= highest is a CHECK constraint.
+        lowest = Decimal(str(round(rng.uniform(10, 45), 2)))
+        if lowest > highest:
+            lowest, highest = highest, lowest
+        class_rows.append(
             ClassPerformance(
                 class_obj=c, academic_year=c.academic_year,
                 total_students=sum(1 for s in students if s.current_class_id == c.id),
                 average_percentage=Decimal(str(round(rng.uniform(40, 80), 2))),
-                highest_percentage=Decimal(str(round(rng.uniform(75, 100), 2))),
-                lowest_percentage=Decimal(str(round(rng.uniform(10, 45), 2))),
+                highest_percentage=highest,
+                lowest_percentage=lowest,
                 grade_a_count=rng.randint(0, 15), grade_b_count=rng.randint(0, 20),
                 grade_c_count=rng.randint(0, 15), grade_d_count=rng.randint(0, 10),
                 grade_f_count=rng.randint(0, 5),
                 average_attendance=Decimal(str(round(rng.uniform(75, 98), 2))),
                 total_attendance_days=20,
                 total_fees_expected=Decimal("150000.00"),
-                total_fees_collected=Decimal(str(round(rng.uniform(0, 150000), 2))),
+                total_fees_collected=money(rng, Decimal("150000.00")),
                 fee_collection_rate=Decimal(str(round(rng.uniform(30, 100), 2))),
             )
-            for c in classes
-        ],
-        label="ClassPerformance",
-    )
+        )
+    insert(ClassPerformance, class_rows, label="ClassPerformance")
 
-    insert(
-        TeacherPerformance,
-        [
+    teacher_rows = []
+    for t in teachers:
+        if not years:
+            break
+        created = part(rng, 20, 0.1, 1.0)
+        teaching_days = 20
+        teacher_rows.append(
             TeacherPerformance(
                 teacher=t, academic_year=years[0],
                 total_classes=rng.randint(1, 6), total_students=rng.randint(20, 300),
-                total_subjects=rng.randint(1, 3), total_teaching_days=20,
-                present_days=rng.randint(15, 20), attendance_percentage=Decimal(str(round(rng.uniform(75, 100), 2))),
-                assignments_created=rng.randint(2, 20), assignments_graded=rng.randint(2, 20),
+                total_subjects=rng.randint(1, 3), total_teaching_days=teaching_days,
+                present_days=part(rng, teaching_days, 0.75, 1.0),
+                attendance_percentage=Decimal(str(round(rng.uniform(75, 100), 2))),
+                assignments_created=created,
+                # graded <= created is a CHECK constraint.
+                assignments_graded=part(rng, created, 0.0, 1.0),
                 grading_completion_rate=Decimal(str(round(rng.uniform(50, 100), 2))),
                 average_student_performance=Decimal(str(round(rng.uniform(40, 80), 2))),
                 student_satisfaction_score=Decimal(str(round(rng.uniform(3, 5), 2))),
                 messages_sent=scale.messages_per_teacher, announcements_published=rng.randint(0, 5),
             )
-            for t in teachers
-            if years
-        ],
-        label="TeacherPerformance",
-    )
+        )
+    insert(TeacherPerformance, teacher_rows, label="TeacherPerformance")
 
     insert(
         SchoolAnalytics,
@@ -1583,4 +1637,25 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except SystemExit:
+        raise
+    except Exception:
+        # Print a real traceback to stderr and exit 1. Without this, an
+        # exception escaping main() produces a traceback on stderr *and* a
+        # nonzero exit, which the notebook reported as a bare
+        # "seeding failed - see the output above" while the cause scrolled
+        # past in a cell the user was not watching. Keeping the traceback
+        # here means the notebook cell can echo it deliberately.
+        import traceback
+
+        traceback.print_exc()
+        print(
+            "\nseeding aborted. The traceback above is the cause; the most "
+            "common failures are a database that is not accepting connections "
+            "(the seeding cell starts Postgres and waits for it), or a missing "
+            "migration (the previous cell runs makemigrations --check).",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
