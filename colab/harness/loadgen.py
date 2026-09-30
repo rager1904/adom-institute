@@ -276,7 +276,7 @@ class LoadDriver:
             now = time.perf_counter() - self._started
             self.timeline.append((round(now, 2), total - last_count))
             last_count = total
-            if self.verbose:
+            if self.cfg.verbose:
                 self._print_live(total, now)
 
     def _print_live(self, total: int, elapsed: float):
@@ -350,7 +350,7 @@ class LoadDriver:
         timeout = aiohttp.ClientTimeout(total=self.cfg.timeout)
         async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
             # Warmup
-            if self.cfg.warmup > 0 and self.verbose:
+            if self.cfg.warmup > 0 and self.cfg.verbose:
                 print(f"    warmup {self.cfg.warmup:.0f}s ...", flush=True)
             self._stop.clear()
             sampler = asyncio.create_task(self._sample_sampler())
@@ -367,7 +367,7 @@ class LoadDriver:
             await asyncio.gather(sampler, return_exceptions=True)
 
             # Measured run
-            if self.verbose:
+            if self.cfg.verbose:
                 print(
                     f"    measuring {self.cfg.duration:.0f}s at concurrency {concurrency} ...",
                     flush=True,
@@ -410,6 +410,62 @@ class LoadDriver:
 # --------------------------------------------------------------------------- #
 # Reporting
 # --------------------------------------------------------------------------- #
+
+def describe_failures(steps: list[dict]) -> tuple[bool, bool]:
+    """Name every endpoint that did not return 2xx, with a sample response.
+
+    The summary table reports latency and throughput, which is what a healthy
+    run is judged on, but a run in which every request returned 500 still
+    looks like a fast, high-throughput run. The per-status counts and error
+    samples were already being collected; nothing printed them, so a failing
+    load test surfaced only as an exit code and "load test failed" in the
+    notebook.
+
+    Returns (saw_server_error, saw_any_bad_status). A 5xx or a transport
+    failure means the stack is broken and the numbers are meaningless; a 4xx
+    is usually a role or token problem worth reporting but not fatal.
+    """
+    server_error = False
+    any_bad = False
+    print()
+    print("=" * 100)
+    print("RESPONSE FAILURES")
+    print("=" * 100)
+    for step in steps:
+        rows = []
+        for s in step["scenarios"]:
+            bad = {c: n for c, n in s["status_counts"].items()
+                   if not (c == "0" or 200 <= int(c) < 400)}
+            if not bad and not s["errors"]:
+                continue
+            rows.append(s)
+            any_bad = True
+            if s["errors"]:
+                server_error = True
+            for code in bad:
+                if code == "0" or int(code) >= 500:
+                    server_error = True
+        if not rows:
+            continue
+        print(f"\n  concurrency {step['concurrency']}  "
+              f"({len(rows)} scenario(s) with a non-2xx response)")
+        for s in rows:
+            print(f"    {s['name']:<30} role={s['role']:<12} "
+                  f"count={s['count']:<6} errors={s['errors']:<5} "
+                  f"statuses={s['status_counts']}")
+            for sample in s.get("error_samples", [])[:2]:
+                print(f"        {sample}")
+    print()
+    if not any_bad:
+        print("  every measured request returned 2xx or 3xx.")
+    elif server_error:
+        print("  !! at least one request returned 5xx or failed at the transport level.")
+        print("     The latency and throughput figures above are not meaningful.")
+    else:
+        print("  4xx responses only -- usually a role or token problem rather than")
+        print("  a broken endpoint, but they are excluded from the success counts.")
+    return server_error, any_bad
+
 
 def print_step(step: dict) -> None:
     print()
@@ -563,6 +619,7 @@ async def amain(args) -> int:
         print_step(step)
 
     print_summary(steps, manifest.get("scale", {}))
+    server_error, any_bad = describe_failures(steps)
 
     out = Path(args.out) if args.out else Path.cwd() / "loadtest_results.json"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -573,6 +630,8 @@ async def amain(args) -> int:
                 "host_header": cfg.host_header,
                 "duration": cfg.duration,
                 "scale": manifest.get("scale", {}),
+                "server_error": server_error,
+                "any_bad_status": any_bad,
                 "steps": steps,
             },
             indent=2,
@@ -580,6 +639,10 @@ async def amain(args) -> int:
         encoding="utf-8",
     )
     print(f"\n  raw results: {out}")
+    if server_error:
+        # The notebook turns a non-zero exit into "load test failed"; give it
+        # something to say beyond that.
+        return 1
     return 0
 
 
