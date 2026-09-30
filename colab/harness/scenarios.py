@@ -19,6 +19,15 @@ Two things are deliberate here:
 * Write scenarios. Reads are cheap; attendance marking and fee payment are the
   operations a school actually hammers during term. Writes mutate the seeded
   data, which is fine and intended.
+* The router root is not a list endpoint. ``adom/urls.py`` mounts each app's
+  ``DefaultRouter`` at ``/api/v1/<app>/``, so ``/api/v1/students/`` resolves to
+  ``APIRootView``: it answers 200 with the *route list* and never touches a
+  table. The rows live one level deeper, at the basename the router registered
+  (``/api/v1/students/students/``). Pointing a scenario at the router root
+  looks like a healthy 200 while measuring nothing, and because
+  ``APIRootView`` only defines ``get``, a POST aimed at one returns 405 --
+  so the write scenarios silently never run. ``loadgen.py`` asserts every
+  path here resolves to a real route before it measures anything.
 """
 
 from __future__ import annotations
@@ -42,6 +51,16 @@ class Scenario:
         who = self.role or "anon"
         return f"{self.name} [{who}]"
 
+    @property
+    def key(self) -> str:
+        """Identity used for per-scenario results and for the learned page count."""
+        return f"{self.name}|{self.role}"
+
+    @property
+    def uses_page(self) -> bool:
+        """Whether the path interpolates a ``{page}`` token."""
+        return "{page}" in self.path
+
 
 # --------------------------------------------------------------------------- #
 # Read scenarios: the list endpoints a dashboard hits constantly
@@ -49,33 +68,33 @@ class Scenario:
 
 READ_SCENARIOS: list[Scenario] = [
     Scenario(
-        "students_list", "GET", "/api/v1/students/?page={page}", "super_admin", 6,
+        "students_list", "GET", "/api/v1/students/students/?page={page}", "super_admin", 6,
         note="Default paginated list. Platform admin bypasses tenant scoping.",
     ),
     Scenario(
         "students_filtered", "GET",
-        "/api/v1/students/?admission_status=approved&ordering=-id&page={page}",
+        "/api/v1/students/students/?admission_status=approved&ordering=-id&page={page}",
         "administrator", 4,
         note="Filtered + ordered list; exercises the (admission_status, is_active) index.",
     ),
     Scenario(
         "students_search", "GET",
-        "/api/v1/students/?search={search}&page={page}", "super_admin", 3,
+        "/api/v1/students/students/?search={search}&page={page}", "super_admin", 3,
         note="SearchFilter -> icontains across the table. Expect a seq scan at scale.",
     ),
     Scenario(
-        "students_detail", "GET", "/api/v1/students/{student_id}/", "super_admin", 4,
+        "students_detail", "GET", "/api/v1/students/students/{student_id}/", "super_admin", 4,
     ),
     Scenario(
-        "attendance_list", "GET", "/api/v1/attendance/?page={page}", "super_admin", 5,
+        "attendance_list", "GET", "/api/v1/attendance/attendance/?page={page}", "super_admin", 5,
     ),
     Scenario(
         "attendance_filtered", "GET",
-        "/api/v1/attendance/?status=absent&date={date}&page={page}", "super_admin", 3,
+        "/api/v1/attendance/attendance/?status=absent&date={date}&page={page}", "super_admin", 3,
     ),
     Scenario(
         "attendance_summary", "GET",
-        "/api/v1/attendance/summary/?date_from={date_from}&date_to={date}",
+        "/api/v1/attendance/attendance/summary/?date_from={date_from}&date_to={date}",
         "super_admin", 2,
         note="Conditional aggregate over every attendance row. The heaviest read.",
     ),
@@ -137,23 +156,23 @@ READ_SCENARIOS: list[Scenario] = [
 
 SCOPED_SCENARIOS: list[Scenario] = [
     Scenario(
-        "scoped_students_teacher", "GET", "/api/v1/students/?page={page}", "teacher", 6,
+        "scoped_students_teacher", "GET", "/api/v1/students/students/?page={page}", "teacher", 6,
         category="scoped",
         note="students JOIN classes JOIN schedules JOIN teachers + DISTINCT.",
     ),
     Scenario(
-        "scoped_attendance_teacher", "GET", "/api/v1/attendance/?page={page}", "teacher", 6,
+        "scoped_attendance_teacher", "GET", "/api/v1/attendance/attendance/?page={page}", "teacher", 6,
         category="scoped",
         note="Same join shape over the largest table in the schema.",
     ),
     Scenario(
         "scoped_attendance_summary_teacher", "GET",
-        "/api/v1/attendance/summary/?date_from={date_from}&date_to={date}", "teacher", 3,
+        "/api/v1/attendance/attendance/summary/?date_from={date_from}&date_to={date}", "teacher", 3,
         category="scoped",
         note="Aggregate on top of the scoped join. Usually the worst endpoint here.",
     ),
     Scenario(
-        "scoped_students_parent", "GET", "/api/v1/students/", "parent", 3,
+        "scoped_students_parent", "GET", "/api/v1/students/students/", "parent", 3,
         category="scoped",
         note="students JOIN parents, filtered to the logged-in guardian's children.",
     ),
@@ -169,7 +188,7 @@ SCOPED_SCENARIOS: list[Scenario] = [
 
 WRITE_SCENARIOS: list[Scenario] = [
     Scenario(
-        "attendance_create", "POST", "/api/v1/attendance/", "teacher", 5,
+        "attendance_create", "POST", "/api/v1/attendance/attendance/", "teacher", 5,
         category="write",
         note=(
             "One attendance row, using a pre-seeded unique (student, date) pair so "
@@ -178,7 +197,7 @@ WRITE_SCENARIOS: list[Scenario] = [
         body='{"student": {student_pk}, "date": "{write_date}", "status": "present", "remarks": "lt"}',
     ),
     Scenario(
-        "attendance_bulk_create", "POST", "/api/v1/attendance/bulk_create/", "teacher", 2,
+        "attendance_bulk_create", "POST", "/api/v1/attendance/attendance/bulk_create/", "teacher", 2,
         category="write",
         note=(
             "25 students in one call. The view does Student.objects.get() per row "

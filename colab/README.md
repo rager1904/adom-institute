@@ -179,6 +179,74 @@ Four databases, matching the intent documented at `settings.py:237-247`:
 This matters: leaving the defaults would put the channel layer and the Celery
 result backend both on DB 2, which pollutes both under load.
 
+### A router root is not a list endpoint
+
+`adom/urls.py` mounts each app's `DefaultRouter` at `/api/v1/<app>/`. That
+path resolves to DRF's `APIRootView`, which returns **200 with the route list
+and never touches a table**. The rows live one level deeper, at the basename the
+router registered.
+
+This is the quietest failure a load test can have, because nothing looks wrong:
+
+* A GET aimed at a router root returns a healthy 200, so it is counted as a
+  success while measuring an empty response.
+* `APIRootView` only defines `get`, so a **POST** aimed at one returns **405**.
+  The write scenarios looked like they were running and never ran at all.
+
+Nine of the thirty-two scenarios were aimed at a router root in an earlier
+version — 41 of 86 total weight, 48% of the benchmark — and `POST
+/api/v1/attendance/` meant `attendance_create` never once wrote a row.
+
+`loadgen.py` now resolves every scenario path against the URLconf before it
+measures anything and refuses to start if any of them is a router root or
+missing. All 32 scenarios currently resolve to real endpoints. Use
+`--no-check-routes` to bypass, or `--only`/`--exclude` to narrow a run.
+
+### `?page=` is learned, not guessed
+
+Page numbers used to be drawn uniformly from `1..40` against a `PAGE_SIZE` of
+20. Any endpoint with fewer than 40 pages therefore returned
+`404 {"detail": "Invalid page."}` — correct DRF behaviour, caused entirely by
+the driver, and recorded as an application failure.
+
+The driver now reads the `count` field of the first paginated response per
+scenario and derives the real page total, sending page 1 until it knows better.
+If a learned count goes stale (rows inserted, scope changed) the resulting 404
+shrinks the stored limit, so it self-corrects. The JSON parse is paid once per
+scenario per run, never per request. `--page-span N` restores the old fixed
+range if you want it.
+
+### 5xx, 4xx and transport failures are reported separately
+
+`describe_failures` used to raise one flag for *any* non-2xx, so a run whose
+only failures were 404s printed *"at least one request returned 5xx or failed
+at the transport level"* and exited non-zero. That sends you hunting a server
+bug that does not exist.
+
+Now only `5xx` and missing responses count as `broken`, and only `broken`
+changes the exit code. 4xx is reported as a request problem (role, token,
+parameter) and explicitly does not invalidate the latency numbers. 429 is
+counted separately, since the throttle working is not a failure. The summary
+table has a `5xx` / `4xx` / `tran` column split.
+
+### One Daphne process serves one request at a time
+
+Every view in this project is synchronous, including every DRF viewset. Django
+runs sync views under ASGI through
+`sync_to_async(thread_sensitive=True)` (`django/core/handlers/base.py:248`),
+which asgiref backs with a **single shared thread**
+(`asgiref/sync.py:409`, `ThreadPoolExecutor(max_workers=1)`).
+
+So one Daphne process serves exactly one request at a time. Raising the
+concurrency ladder past 1 does not add parallelism — it deepens a queue, and
+any "knee" you see is a property of the server, not of the app. Production
+avoids this by putting HTTP on Gunicorn (2 workers × 4 threads in
+`docker-compose.prod.yml`).
+
+This is why the notebook defaults to `PROFILE = "prod"`. Keep `"asgi"` only
+for checking routing or WebSockets, and do not read a concurrency curve from
+it.
+
 ## Sizing
 
 `scale.py` reads the runtime's RAM and CPU and picks one of three tiers.
@@ -237,6 +305,9 @@ the bulk-attendance loop, which is an N+1 — one query per submitted student.
 
 ## Caveats
 
+* **The concurrency ladder is bounded by the server, not the app.** Read
+  "One Daphne process serves one request at a time" above before trusting any
+  knee. With `PROFILE = "prod"` the ceiling is Gunicorn's 2 × 4 threads.
 * **The tunnel is for looking, not measuring.** Cloudflare quick tunnels are
   rate-limited and add latency. They exist so you can open the app from a phone.
 * **Cold caches dominate the first minutes.** The warmup phase exists for this.
