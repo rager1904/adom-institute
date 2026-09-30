@@ -27,6 +27,7 @@ class Room(models.Model):
     
     class Meta:
         db_table = 'timetable_room'
+        ordering = ['name']
         constraints = [
             models.CheckConstraint(
                 check=models.Q(capacity__gt=0),

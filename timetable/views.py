@@ -49,6 +49,15 @@ class ClassScheduleViewSet(viewsets.ModelViewSet):
     serializer_class = ClassScheduleSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        # The API previously returned every schedule in the system to any
+        # authenticated user. Scope it to what the caller may see, matching the
+        # web ClassScheduleListView.
+        queryset = ClassSchedule.objects.select_related(
+            'class_obj__academic_year__institution', 'subject', 'teacher', 'room', 'time_slot'
+        )
+        return scope_schedules_for_user(self.request.user, queryset).distinct()
+
 
 # Web Views
 class DashboardView(LoginRequiredMixin, TemplateView):

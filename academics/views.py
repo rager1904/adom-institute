@@ -34,6 +34,7 @@ from .serializers import (
     ExamResultSummarySerializer, AssignmentSummarySerializer
 )
 from .forms import ExamForm, AssignmentForm, StudentExamResultForm
+from .filters import StudentAssignmentFilter
 from students.models import Class, Student
 from attendance.models import Attendance
 from library.models import DigitalResource
@@ -466,7 +467,7 @@ class StudentAssignmentViewSet(viewsets.ModelViewSet):
     serializer_class = StudentAssignmentSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['assignment', 'is_late', 'is_graded']
+    filterset_class = StudentAssignmentFilter
     search_fields = ['student__user__first_name', 'student__user__last_name', 'assignment__title']
     ordering_fields = ['submitted_at', 'marks_obtained', 'graded_at']
     parser_classes = [MultiPartParser, FormParser]
