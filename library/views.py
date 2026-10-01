@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse, HttpResponse
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
@@ -19,7 +20,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from datetime import timedelta
 import csv
 import io
-from accounts.permissions import AdminRequiredMixin, is_admin_user, is_teacher_user
+from adom.protected_media import material_downloads_allowed, protected_file_response
+from accounts.permissions import (
+    AdminRequiredMixin, AcademicStaffRequiredMixin, IsMaterialMaintainer,
+    is_admin_user, is_teacher_user,
+)
 
 from .models import (
     Book, BookCategory, DigitalResource, BookBorrowing, BookReservation,
@@ -42,6 +47,34 @@ from .serializers import (
 )
 
 User = get_user_model()
+
+
+def can_view_resource(user, resource):
+    """Whether ``user`` may read the stored file of ``resource``."""
+    if not user or not user.is_authenticated:
+        return False
+    if not resource.is_active:
+        return False
+    if is_admin_user(user):
+        return True
+    user_type = getattr(user, 'user_type', '')
+    if resource.access_level == 'public':
+        return True
+    if resource.access_level == 'restricted':
+        return is_teacher_user(user)
+    if resource.access_level == 'teachers':
+        return is_teacher_user(user)
+    if resource.access_level == 'students':
+        return user_type in ('student', 'parent', 'teacher')
+    return is_teacher_user(user)
+
+
+def can_manage_resources(user):
+    """Only admins and teachers may upload, edit or delete material."""
+    if not user or not user.is_authenticated:
+        return False
+    return is_admin_user(user) or is_teacher_user(user)
+
 
 # API Viewsets
 class BookViewSet(viewsets.ModelViewSet):
@@ -134,7 +167,12 @@ class BookCategoryViewSet(viewsets.ModelViewSet):
     ordering = ['name']
 
 class DigitalResourceViewSet(viewsets.ModelViewSet):
-    """API viewset for DigitalResource model"""
+    """API viewset for DigitalResource model.
+
+    Reads are open to any authenticated user; writes are limited to admins and
+    teachers. The raw file URL is never exposed - clients get the inline
+    viewer URL instead.
+    """
     queryset = DigitalResource.objects.all()
     serializer_class = DigitalResourceSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -143,39 +181,89 @@ class DigitalResourceViewSet(viewsets.ModelViewSet):
     ordering_fields = ['title', 'created_at', 'current_downloads']
     ordering = ['-created_at']
 
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsMaterialMaintainer()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request.user.is_authenticated and not is_admin_user(self.request.user):
+            queryset = queryset.filter(is_active=True)
+        return queryset
+
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return DigitalResourceDetailSerializer
         return DigitalResourceSerializer
 
+    def perform_create(self, serializer):
+        serializer.save(uploaded_by=self.request.user)
+
+    @action(detail=True, methods=['get'])
+    def file(self, request, pk=None):
+        """Stream the resource file inline. Never returns an attachment."""
+        resource = self.get_object()
+        if not can_view_resource(request.user, resource):
+            return Response(
+                {'detail': 'You do not have permission to access this material.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        DigitalResourceAccess.objects.create(
+            resource=resource,
+            user=request.user,
+            action='view',
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        )
+        return protected_file_response(
+            resource.file, request=request, filename=resource.title,
+        )
+
     @action(detail=True, methods=['post'])
     def download(self, request, pk=None):
-        """Download or view a digital resource"""
+        """Record an access intent for a digital resource.
+
+        Downloads are disabled by default. When they are enabled this returns
+        the file URL; otherwise it refuses and points clients at the viewer.
+        """
         resource = self.get_object()
-        serializer = DigitalResourceDownloadSerializer(data=request.data)
-        
-        if serializer.is_valid():
-            action = serializer.validated_data['action']
-            
-            # Log access
-            DigitalResourceAccess.objects.create(
-                resource=resource,
-                user=request.user,
-                action=action,
-                ip_address=request.META.get('REMOTE_ADDR'),
-                user_agent=request.META.get('HTTP_USER_AGENT', '')
+        if not can_view_resource(request.user, resource):
+            return Response(
+                {'detail': 'You do not have permission to access this material.'},
+                status=status.HTTP_403_FORBIDDEN,
             )
-            
-            # Increment download count if downloading
-            if action == 'download':
-                resource.increment_download_count()
-            
-            return Response({
-                'message': f'Resource {action} logged successfully',
-                'file_url': resource.file.url if resource.file else None
-            })
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = DigitalResourceDownloadSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        requested_action = serializer.validated_data['action']
+        if requested_action == 'download' and not material_downloads_allowed():
+            return Response(
+                {
+                    'detail': 'Downloading is disabled on this platform.',
+                    'file_url': resource.file_view_url,
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        DigitalResourceAccess.objects.create(
+            resource=resource,
+            user=request.user,
+            action=requested_action,
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        )
+
+        if requested_action == 'download':
+            resource.increment_download_count()
+
+        return Response({
+            'message': f'Resource {requested_action} logged successfully',
+            'file_url': resource.file_view_url,
+        })
 
 class BookBorrowingViewSet(viewsets.ModelViewSet):
     """API viewset for BookBorrowing model"""
@@ -544,11 +632,8 @@ class ResourceDiscoveryView(LoginRequiredMixin, ListView):
         return queryset.order_by('-created_at')
 
 
-class TeacherResourceWorkspaceView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+class TeacherResourceWorkspaceView(LoginRequiredMixin, AcademicStaffRequiredMixin, TemplateView):
     template_name = 'library/teacher_resource_workspace.html'
-
-    def test_func(self):
-        return is_teacher_user(self.request.user) or is_admin_user(self.request.user)
 
     def get_queryset(self):
         queryset = DigitalResource.objects.filter(is_active=True).select_related('uploaded_by')
@@ -571,14 +656,11 @@ class TeacherResourceWorkspaceView(LoginRequiredMixin, UserPassesTestMixin, Temp
         return context
 
 
-class TeacherResourceUploadView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+class TeacherResourceUploadView(LoginRequiredMixin, AcademicStaffRequiredMixin, CreateView):
     model = DigitalResource
     form_class = DigitalResourceUploadForm
     template_name = 'library/teacher_resource_upload.html'
     success_url = reverse_lazy('library:teacher_resource_workspace')
-
-    def test_func(self):
-        return is_teacher_user(self.request.user) or is_admin_user(self.request.user)
 
     def form_valid(self, form):
         form.instance.uploaded_by = self.request.user
@@ -592,14 +674,35 @@ class DigitalResourceDetailView(LoginRequiredMixin, DetailView):
     template_name = 'library/digital_resource_detail_modern.html'
     context_object_name = 'resource'
     
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if is_admin_user(self.request.user):
+            return queryset
+        return queryset.filter(
+            is_active=True,
+            access_level__in=self._visible_access_levels(),
+        )
+    
+    def _visible_access_levels(self):
+        user_type = getattr(self.request.user, 'user_type', '')
+        if user_type == 'student':
+            return ['public', 'students']
+        if user_type == 'teacher':
+            return ['public', 'students', 'teachers']
+        return ['public']
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['access_logs'] = self.object.access_logs.select_related('user').order_by('-access_date')[:10]
+        access_logs = self.object.access_logs.select_related('user')
+        context['access_logs'] = access_logs.order_by('-access_date')[:10]
         context['course_links'] = self.object.course_links.select_related('recommended_by')
+        context['can_view_file'] = can_view_resource(self.request.user, self.object)
+        context['can_manage'] = can_manage_resources(self.request.user)
+        context['view_count'] = access_logs.filter(action='view').count()
         return context
 
-class DigitalResourceCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
-    """Digital resource create view"""
+class DigitalResourceCreateView(LoginRequiredMixin, AcademicStaffRequiredMixin, CreateView):
+    """Digital resource create view (admins and teachers only)"""
     model = DigitalResource
     form_class = DigitalResourceForm
     template_name = 'library/digital_resource_form.html'
@@ -611,11 +714,18 @@ class DigitalResourceCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateVi
         messages.success(self.request, 'Digital resource uploaded successfully.')
         return response
 
-class DigitalResourceUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
-    """Digital resource update view"""
+class DigitalResourceUpdateView(LoginRequiredMixin, AcademicStaffRequiredMixin, UpdateView):
+    """Digital resource update view (admins and teachers only)"""
     model = DigitalResource
     form_class = DigitalResourceForm
     template_name = 'library/digital_resource_form.html'
+    
+    def get_queryset(self):
+        # Teachers may only edit material they uploaded.
+        queryset = super().get_queryset().filter(is_active=True)
+        if not is_admin_user(self.request.user):
+            queryset = queryset.filter(uploaded_by=self.request.user)
+        return queryset
     
     def get_success_url(self):
         return reverse('library:digital_resource_detail', kwargs={'pk': self.object.pk})
@@ -625,12 +735,18 @@ class DigitalResourceUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateVi
         messages.success(self.request, 'Digital resource updated successfully.')
         return response
 
-class DigitalResourceDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
-    """Digital resource delete view"""
+class DigitalResourceDeleteView(LoginRequiredMixin, AcademicStaffRequiredMixin, DeleteView):
+    """Digital resource delete view (admins and teachers only)"""
     model = DigitalResource
     template_name = 'library/digital_resource_confirm_delete.html'
     success_url = reverse_lazy('library:digital_resource_list')
     context_object_name = 'resource'
+    
+    def get_queryset(self):
+        queryset = super().get_queryset().filter(is_active=True)
+        if not is_admin_user(self.request.user):
+            queryset = queryset.filter(uploaded_by=self.request.user)
+        return queryset
     
     def delete(self, request, *args, **kwargs):
         response = super().delete(request, *args, **kwargs)
@@ -747,30 +863,58 @@ def cancel_reservation(request, reservation_id):
 
 @login_required
 def download_resource(request, resource_id):
-    """Download a digital resource"""
+    """Download a digital resource.
+
+    Downloads are disabled by default (ALLOW_MATERIAL_DOWNLOADS=False). The
+    route is kept so stale links fail loudly instead of 404ing, and so an
+    operator can re-enable downloads with a single setting.
+    """
     resource = get_object_or_404(DigitalResource, id=resource_id, is_active=True)
-    
-    # Check access level
-    if resource.access_level == 'teachers' and not (is_teacher_user(request.user) or is_admin_user(request.user)):
+
+    if not can_view_resource(request.user, resource):
         messages.error(request, 'You do not have permission to access this resource.')
         return redirect('library:digital_resource_list')
-    
-    # Log access
+
+    if not material_downloads_allowed():
+        messages.error(
+            request,
+            'Downloading is disabled on this platform. Use "View" to read this material instead.',
+        )
+        return redirect('library:digital_resource_detail', pk=resource.pk)
+
     DigitalResourceAccess.objects.create(
         resource=resource,
         user=request.user,
         action='download',
         ip_address=request.META.get('REMOTE_ADDR'),
-        user_agent=request.META.get('HTTP_USER_AGENT', '')
+        user_agent=request.META.get('HTTP_USER_AGENT', ''),
     )
-    
-    # Increment download count
     resource.increment_download_count()
-    
-    # Return file response
-    response = HttpResponse(resource.file, content_type='application/octet-stream')
-    response['Content-Disposition'] = f'attachment; filename="{resource.file.name}"'
-    return response
+
+    return protected_file_response(
+        resource.file, request=request, filename=resource.title, attachment=True,
+    )
+
+
+@login_required
+def view_resource_file(request, resource_id):
+    """Stream a digital resource inline to an authorised, signed-in user."""
+    resource = get_object_or_404(DigitalResource, id=resource_id, is_active=True)
+
+    if not can_view_resource(request.user, resource):
+        raise PermissionDenied('You do not have permission to access this material.')
+
+    DigitalResourceAccess.objects.create(
+        resource=resource,
+        user=request.user,
+        action='view',
+        ip_address=request.META.get('REMOTE_ADDR'),
+        user_agent=request.META.get('HTTP_USER_AGENT', ''),
+    )
+
+    return protected_file_response(
+        resource.file, request=request, filename=resource.title,
+    )
 
 @login_required
 @user_passes_test(is_admin_user)

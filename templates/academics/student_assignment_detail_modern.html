@@ -19,7 +19,7 @@
             <dt class="col-md-3">Marks</dt><dd class="col-md-9">{{ student_assignment.marks_obtained|default:"Pending" }}</dd>
             <dt class="col-md-3">Feedback</dt><dd class="col-md-9">{{ student_assignment.feedback|default:"No feedback yet." }}</dd>
             {% if student_assignment.submission_file %}
-            <dt class="col-md-3">File</dt><dd class="col-md-9"><a href="{{ student_assignment.submission_file.url }}" target="_blank" rel="noopener">View submission file</a></dd>
+            <dt class="col-md-3">File</dt><dd class="col-md-9"><a href="{{ student_assignment.submission_view_url }}" target="_blank" rel="noopener">View submission file</a></dd>
             {% endif %}
         </dl>
     </div>

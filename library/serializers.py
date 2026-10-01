@@ -60,21 +60,37 @@ class BookSerializer(serializers.ModelSerializer):
         return None
 
 class DigitalResourceSerializer(serializers.ModelSerializer):
-    """Serializer for DigitalResource model"""
+    """Serializer for DigitalResource model.
+
+    ``file`` is replaced by ``file_url``, which points at the authenticated
+    inline viewer. The raw MEDIA_URL is never serialised, so no client can
+    download the file directly.
+    """
     uploaded_by = UserSerializer(read_only=True)
     file_size_mb = serializers.ReadOnlyField()
     download_available = serializers.ReadOnlyField()
-    
+    file_url = serializers.SerializerMethodField()
+    # Write-only: uploads still work through the API, but the stored path is
+    # never handed back to a client.
+    file = serializers.FileField(write_only=True, required=True)
+
     class Meta:
         model = DigitalResource
         fields = [
-            'id', 'title', 'description', 'resource_type', 'file',
+            'id', 'title', 'description', 'resource_type', 'file_url',
             'file_size', 'file_size_mb', 'author', 'subject', 'grade_level',
             'tags', 'access_level', 'is_downloadable', 'download_limit',
             'current_downloads', 'download_available', 'uploaded_by',
             'is_active', 'created_at', 'updated_at'
         ]
+        extra_kwargs = {
+            'is_downloadable': {'read_only': True},
+            'download_limit': {'read_only': True},
+        }
         read_only_fields = ['file_size', 'current_downloads', 'uploaded_by', 'created_at', 'updated_at']
+
+    def get_file_url(self, obj):
+        return obj.file_view_url
 
 class BookBorrowingSerializer(serializers.ModelSerializer):
     """Serializer for BookBorrowing model"""
@@ -241,6 +257,9 @@ class BookReserveActionSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True)
 
 class DigitalResourceDownloadSerializer(serializers.Serializer):
-    """Serializer for digital resource download"""
-    resource_id = serializers.IntegerField()
+    """Serializer for a digital resource access request.
+
+    ``resource_id`` is implied by the URL, so it is optional here.
+    """
+    resource_id = serializers.IntegerField(required=False)
     action = serializers.ChoiceField(choices=['view', 'download', 'stream'])

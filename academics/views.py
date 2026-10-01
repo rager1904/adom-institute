@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
 from django.utils.decorators import method_decorator
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.contrib import messages
@@ -17,11 +18,12 @@ from rest_framework.exceptions import PermissionDenied
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
+from adom.protected_media import protected_file_response
 from accounts.permissions import (
     InstitutionAccessMixin,
-    IsInstitutionTeacherOrAdmin, IsPlatformOrInstitutionAdmin, is_platform_admin,
-    user_can_access_institution, user_institution_ids, AcademicStaffRequiredMixin,
-    is_admin_user
+    IsInstitutionTeacherOrAdmin, IsPlatformOrInstitutionAdmin, IsSubmissionOwnerOrAdmin,
+    is_platform_admin, user_can_access_institution, user_institution_ids,
+    AcademicStaffRequiredMixin, is_admin_user, is_teacher_user
 )
 from .models import (
     ExamType, Exam, ExamSubject, Grade, StudentExamResult,
@@ -33,7 +35,10 @@ from .serializers import (
     BulkGradeEntrySerializer, AssignmentSubmissionSerializer, AssignmentGradingSerializer,
     ExamResultSummarySerializer, AssignmentSummarySerializer
 )
-from .forms import ExamForm, AssignmentForm, StudentExamResultForm
+from .forms import (
+    ExamForm, AssignmentForm, StudentExamResultForm,
+    StudentSubmissionCreateForm, StudentSubmissionEditForm,
+)
 from .filters import StudentAssignmentFilter
 from students.models import Class, Student
 from attendance.models import Attendance
@@ -459,6 +464,16 @@ class AssignmentViewSet(viewsets.ModelViewSet):
         serializer = AssignmentSummarySerializer(summary)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'])
+    def file(self, request, pk=None):
+        """Stream the assignment attachment inline. Never returns an attachment."""
+        assignment = self.get_object()
+        if not assignment.attachment:
+            return Response({'detail': 'This assignment has no attachment.'}, status=status.HTTP_404_NOT_FOUND)
+        return protected_file_response(
+            assignment.attachment, request=request, filename=assignment.title,
+        )
+
 
 class StudentAssignmentViewSet(viewsets.ModelViewSet):
     queryset = StudentAssignment.objects.select_related(
@@ -475,6 +490,10 @@ class StudentAssignmentViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['grade_submission']:
             return [IsInstitutionTeacherOrAdmin()]
+        if self.action in ['update', 'partial_update', 'destroy']:
+            # A submission is the student's own work: only they (or an admin)
+            # may change it. Teachers grade through grade_submission instead.
+            return [IsSubmissionOwnerOrAdmin()]
         return super().get_permissions()
 
     def get_queryset(self):
@@ -505,13 +524,23 @@ class StudentAssignmentViewSet(viewsets.ModelViewSet):
         serializer.save()
 
     def perform_update(self, serializer):
-        student = serializer.validated_data.get('student', serializer.instance.student)
-        institution_id = getattr(getattr(getattr(student, 'current_class', None), 'academic_year', None), 'institution_id', None)
-        ensure_user_can_access_institution(
-            self.request.user,
-            institution_id,
-            'You cannot move submissions to this institution.',
-        )
+        instance = serializer.instance
+        student = serializer.validated_data.get('student', instance.student)
+
+        if student.user_id != self.request.user.id:
+            # Reassigning a submission to another student is a staff action, so
+            # it does need institution access. A student revising their own
+            # work is not, and must not be blocked by the membership check.
+            institution_id = getattr(
+                getattr(getattr(student, 'current_class', None), 'academic_year', None),
+                'institution_id',
+                None,
+            )
+            ensure_user_can_access_institution(
+                self.request.user,
+                institution_id,
+                'You cannot move submissions to this institution.',
+            )
         serializer.save()
     
     @action(detail=True, methods=['post'])
@@ -527,6 +556,15 @@ class StudentAssignmentViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'])
+    def file(self, request, pk=None):
+        """Stream the submitted file inline. Never returns an attachment."""
+        submission = self.get_object()
+        return protected_file_response(
+            submission.submission_file, request=request,
+            filename=f"{submission.assignment.title} - {submission.student.user.get_full_name()}",
+        )
 
 
 # Web Views
@@ -882,6 +920,78 @@ def grade_entry(request, exam_subject_id):
     return render(request, 'academics/grade_entry.html', context)
 
 
+def _scoped_assignments_for_user(user):
+    """Assignments the user is allowed to see."""
+    queryset = Assignment.objects.select_related(
+        'subject', 'class_obj__academic_year__institution', 'teacher__user'
+    )
+    if is_platform_admin(user) or is_admin_user(user):
+        return queryset
+    if user.user_type == 'student':
+        return queryset.filter(class_obj__students__user=user).distinct()
+    if user.user_type == 'parent':
+        return queryset.filter(class_obj__students__parents__user=user).distinct()
+    if user.user_type == 'teacher':
+        return queryset.filter(
+            Q(teacher__user=user) | Q(class_obj__schedules__teacher__user=user)
+        ).distinct()
+    institution_ids = user_institution_ids(user)
+    if institution_ids:
+        return queryset.filter(class_obj__academic_year__institution_id__in=institution_ids)
+    return queryset.none()
+
+
+@login_required
+def assignment_file(request, pk):
+    """Stream an assignment attachment inline to an authorised, signed-in user."""
+    assignment = get_object_or_404(_scoped_assignments_for_user(request.user), pk=pk)
+
+    return protected_file_response(
+        assignment.attachment, request=request, filename=assignment.title,
+    )
+
+
+@login_required
+def submission_file(request, pk):
+    """Stream a student submission inline to an authorised, signed-in user."""
+    submission = get_object_or_404(
+        StudentAssignment.objects.select_related(
+            'student__user', 'student__current_class__academic_year__institution',
+            'assignment__class_obj', 'assignment__subject',
+        ),
+        pk=pk,
+    )
+
+    user = request.user
+    allowed = is_platform_admin(user) or is_admin_user(user)
+    if not allowed:
+        if user.user_type == 'student':
+            allowed = submission.student.user_id == user.id
+        elif user.user_type == 'parent':
+            allowed = submission.student.parents.filter(user=user).exists()
+        elif user.user_type == 'teacher':
+            allowed = submission.assignment.teacher.user_id == user.id or (
+                user.id in submission.assignment.class_obj.schedules.values_list(
+                    'teacher__user_id', flat=True
+                )
+            )
+        else:
+            institution_ids = user_institution_ids(user)
+            allowed = bool(institution_ids) and (
+                submission.student.current_class.academic_year.institution_id in institution_ids
+            )
+
+    if not allowed:
+        # Django's PermissionDenied (403), not DRF's, which would render as a
+        # 500 outside the API.
+        raise DjangoPermissionDenied('You do not have permission to access this submission.')
+
+    return protected_file_response(
+        submission.submission_file, request=request,
+        filename=f"{submission.assignment.title} - {submission.student.user.get_full_name()}",
+    )
+
+
 @login_required
 def assignment_submission(request, assignment_id):
     assignment = get_object_or_404(Assignment, id=assignment_id)
@@ -1020,8 +1130,19 @@ class StudentAssignmentDetailView(DetailView):
 class StudentAssignmentCreateView(CreateView):
     model = StudentAssignment
     template_name = 'academics/student_assignment_form_modern.html'
-    fields = ['assignment', 'submission_text', 'submission_file']
+    # A dedicated form so the file input cannot render the raw /media/ URL.
+    form_class = StudentSubmissionCreateForm
     success_url = reverse_lazy('academics:student_assignment_list')
+    
+    def get_queryset(self):
+        # A student may only submit against assignments in their own class.
+        queryset = StudentAssignment.objects.select_related('assignment__class_obj')
+        if is_platform_admin(self.request.user) or is_admin_user(self.request.user):
+            return queryset
+        student = get_student_profile(self.request.user)
+        if student is None:
+            return queryset.none()
+        return queryset.filter(assignment__class_obj=student.current_class)
     
     def form_valid(self, form):
         student = get_student_profile(self.request.user)
@@ -1037,8 +1158,22 @@ class StudentAssignmentCreateView(CreateView):
 class StudentAssignmentUpdateView(UpdateView):
     model = StudentAssignment
     template_name = 'academics/student_assignment_form_modern.html'
-    fields = ['submission_text', 'submission_file']
+    # A dedicated form so the file input cannot render the raw /media/ URL.
+    form_class = StudentSubmissionEditForm
     success_url = reverse_lazy('academics:student_assignment_list')
+    
+    def get_queryset(self):
+        # A submission is the student's own work. Teachers grade it through
+        # grade_submission; nobody else may rewrite the file or text.
+        queryset = StudentAssignment.objects.select_related(
+            'student__user', 'assignment__subject', 'assignment__class_obj',
+        )
+        user = self.request.user
+        if is_platform_admin(user) or is_admin_user(user):
+            return queryset
+        if user.user_type == 'student':
+            return queryset.filter(student__user=user)
+        return queryset.none()
     
     def form_valid(self, form):
         messages.success(self.request, 'Assignment updated successfully!')

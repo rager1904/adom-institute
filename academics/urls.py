@@ -35,7 +35,10 @@ urlpatterns = [
     path('assignments/<int:pk>/', views.AssignmentDetailView.as_view(), name='assignment_detail'),
     path('assignments/<int:pk>/update/', views.AssignmentUpdateView.as_view(), name='assignment_update'),
     path('assignments/<int:pk>/delete/', views.AssignmentDeleteView.as_view(), name='assignment_delete'),
+    # Inline, authenticated viewer. The only route that reads a material file.
+    path('assignments/<int:pk>/file/', views.assignment_file, name='assignment_file'),
     path('submissions/<int:submission_id>/grade/', views.grade_submission, name='grade_submission'),
+    path('submissions/<int:pk>/file/', views.submission_file, name='submission_file'),
     
     # Web URLs - Student Assignments
     path('student-assignments/', views.StudentAssignmentListView.as_view(), name='student_assignment_list'),

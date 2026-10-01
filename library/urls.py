@@ -39,6 +39,11 @@ urlpatterns = [
     path('digital-resources/<int:pk>/', views.DigitalResourceDetailView.as_view(), name='digital_resource_detail'),
     path('digital-resources/<int:pk>/edit/', views.DigitalResourceUpdateView.as_view(), name='digital_resource_update'),
     path('digital-resources/<int:pk>/delete/', views.DigitalResourceDeleteView.as_view(), name='digital_resource_delete'),
+    # Inline, authenticated viewer. This is the only route that reads a
+    # material file; the raw /media/ path is blocked for material.
+    path('digital-resources/<int:resource_id>/file/', views.view_resource_file, name='resource_file'),
+    # Kept for stale links. Refuses with a message unless
+    # ALLOW_MATERIAL_DOWNLOADS is turned on.
     path('digital-resources/<int:resource_id>/download/', views.download_resource, name='download_resource'),
     
     # Borrowings

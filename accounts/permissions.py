@@ -180,6 +180,36 @@ class IsInstitutionAccountantOrAdmin(permissions.BasePermission):
         return has_membership_role(request.user, FINANCE_WRITE_ROLES)
 
 
+class IsMaterialMaintainer(permissions.BasePermission):
+    """Read for any signed-in user; write only for admins and teachers.
+
+    Learning material is read-only for everyone else.
+    """
+
+    message = 'Only administrators and teachers can change learning material.'
+
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return bool(request.user and request.user.is_authenticated)
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return is_admin_user(request.user) or is_teacher_user(request.user)
+
+
+class IsSubmissionOwnerOrAdmin(permissions.BasePermission):
+    """Only the submitting student (or an admin) may change a submission."""
+
+    message = 'You can only change your own submission.'
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if is_platform_admin(user) or is_admin_user(user):
+            return True
+        return getattr(getattr(obj, 'student', None), 'user_id', None) == user.id
+
+
 class IsSelfServiceOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:

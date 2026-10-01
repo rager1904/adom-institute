@@ -1,5 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
+
+from adom.widgets import AttachmentFileInput, SubmissionFileInput
 from .models import (
     ExamType, Exam, ExamSubject, Grade, StudentExamResult,
     Assignment, StudentAssignment
@@ -134,6 +136,9 @@ class AssignmentForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Assignment description'}),
             'due_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'max_marks': forms.NumberInput(attrs={'min': 1}),
+            # Never renders attachment.url: the brief is served inline by the
+            # protected viewer, not from /media/.
+            'attachment': AttachmentFileInput(),
         }
     
     def clean_due_date(self):
@@ -151,6 +156,9 @@ class StudentAssignmentForm(forms.ModelForm):
         fields = ['assignment', 'submission_file', 'submission_text']
         widgets = {
             'submission_text': forms.Textarea(attrs={'rows': 6, 'placeholder': 'Enter your submission text here...'}),
+            # Never renders submission_file.url: the submission is served inline
+            # by the protected viewer, not from /media/.
+            'submission_file': SubmissionFileInput(),
         }
     
     def clean(self):
@@ -162,6 +170,33 @@ class StudentAssignmentForm(forms.ModelForm):
             raise ValidationError('Either submission file or text is required')
         
         return cleaned_data
+
+
+class StudentSubmissionCreateForm(forms.ModelForm):
+    """Form behind the student submission upload view."""
+
+    class Meta:
+        model = StudentAssignment
+        fields = ['assignment', 'submission_text', 'submission_file']
+        widgets = {
+            'submission_file': SubmissionFileInput(),
+        }
+
+
+class StudentSubmissionEditForm(forms.ModelForm):
+    """Form behind the "replace my own submission" view.
+
+    ``submission_file`` is required on the model, so a submission cannot be
+    text-only; the widget therefore offers no clear checkbox, which would leave
+    an unsaveable state.
+    """
+
+    class Meta:
+        model = StudentAssignment
+        fields = ['submission_text', 'submission_file']
+        widgets = {
+            'submission_file': SubmissionFileInput(),
+        }
 
 
 class AssignmentGradingForm(forms.ModelForm):

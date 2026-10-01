@@ -59,12 +59,19 @@ class AssignmentSerializer(serializers.ModelSerializer):
     class_name = serializers.CharField(source='class_obj.name', read_only=True)
     teacher_name = serializers.CharField(source='teacher.user.get_full_name', read_only=True)
     submission_count = serializers.SerializerMethodField()
-    
+    # Replaces ``attachment``: the raw MEDIA_URL is never serialised, so the
+    # attachment can only be reached through the authenticated inline viewer.
+    attachment_url = serializers.SerializerMethodField()
+    attachment = serializers.FileField(write_only=True, required=False)
+
     class Meta:
         model = Assignment
         fields = '__all__'
         read_only_fields = ('id', 'created_at', 'updated_at')
-    
+
+    def get_attachment_url(self, obj):
+        return obj.attachment_view_url
+
     def get_submission_count(self, obj):
         return obj.student_submissions.count()
 
@@ -74,11 +81,20 @@ class StudentAssignmentSerializer(serializers.ModelSerializer):
     assignment_title = serializers.CharField(source='assignment.title', read_only=True)
     subject_name = serializers.CharField(source='assignment.subject.name', read_only=True)
     graded_by_name = serializers.CharField(source='graded_by.user.get_full_name', read_only=True)
-    
+    # Same treatment as AssignmentSerializer: the submitted file is only
+    # reachable through the authenticated inline viewer.
+    submission_file_url = serializers.SerializerMethodField()
+    # Required on create, optional on update so a student can revise their text
+    # without re-uploading the file.
+    submission_file = serializers.FileField(write_only=True, required=False)
+
     class Meta:
         model = StudentAssignment
         fields = '__all__'
         read_only_fields = ('id', 'submitted_at', 'is_late', 'is_graded')
+
+    def get_submission_file_url(self, obj):
+        return obj.submission_view_url
 
 
 class BulkGradeEntrySerializer(serializers.Serializer):

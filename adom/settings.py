@@ -178,6 +178,14 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Learning-material policy.
+# MATERIALS_READ_ONLY: only administrators and teachers may upload, edit or
+# delete learning material; everyone else gets view-only access.
+# ALLOW_MATERIAL_DOWNLOADS: when false, material is streamed inline to
+# authenticated users and no endpoint will send it as an attachment.
+MATERIALS_READ_ONLY = config('MATERIALS_READ_ONLY', default=True, cast=bool)
+ALLOW_MATERIAL_DOWNLOADS = config('ALLOW_MATERIAL_DOWNLOADS', default=False, cast=bool)
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -304,11 +312,21 @@ if config('USE_S3', default=False, cast=bool):
     AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN', default=None)
     AWS_S3_ADDRESSING_STYLE = config('AWS_S3_ADDRESSING_STYLE', default='virtual')
     AWS_S3_OBJECT_PARAMETERS = {
-        'CacheControl': 'max-age=86400',
+        # Material is streamed through Django with its own no-store headers, so
+        # the objects themselves must never sit in a shared/intermediary cache.
+        'CacheControl': 'no-store',
     }
     AWS_QUERYSTRING_AUTH = config('AWS_QUERYSTRING_AUTH', default=True, cast=bool)
     AWS_DEFAULT_ACL = None
     AWS_QUERYSTRING_EXPIRE = 3600
+    if not AWS_QUERYSTRING_AUTH:
+        # A public bucket would make every material file fetchable by URL,
+        # bypassing the authenticated inline viewer entirely.
+        raise ImproperlyConfigured(
+            'AWS_QUERYSTRING_AUTH must be True: learning material is only served '
+            'through the authenticated read-only viewer, so public object URLs '
+            'would defeat that control.'
+        )
     # Static and media live in separate prefixes inside the same bucket.
     STORAGES = {
         'default': {

@@ -171,6 +171,18 @@ class Assignment(models.Model):
     def __str__(self):
         return f"{self.title} - {self.subject.name}"
 
+    @property
+    def attachment_view_url(self):
+        """Authenticated, inline-only URL for the attachment.
+
+        Never expose ``attachment.url``: material must not be reachable through
+        the public /media/ route.
+        """
+        if not self.attachment:
+            return ''
+        from django.urls import reverse
+        return reverse('academics:assignment_file', kwargs={'pk': self.pk})
+
 
 class StudentAssignment(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='submitted_assignments')
@@ -211,3 +223,11 @@ class StudentAssignment(models.Model):
     @property
     def is_graded(self):
         return self.marks_obtained is not None
+
+    @property
+    def submission_view_url(self):
+        """Authenticated, inline-only URL for the submitted file."""
+        if not self.submission_file:
+            return ''
+        from django.urls import reverse
+        return reverse('academics:submission_file', kwargs={'pk': self.pk})

@@ -11,18 +11,30 @@
                 <p class="text-muted mb-0">{{ resource.get_resource_type_display }} · {{ resource.get_access_level_display }}</p>
             </div>
             <div class="d-flex gap-2">
-                {% if resource.download_available %}
-                    <a href="{% url 'library:download_resource' resource.pk %}" class="btn btn-primary">Download</a>
+                {% if can_view_file %}
+                    <a href="{% url 'library:resource_file' resource.pk %}" class="btn btn-primary" target="_blank" rel="noopener">
+                        <i class="fas fa-eye me-1"></i>View
+                    </a>
+                {% endif %}
+                {% if can_manage %}
+                    <a href="{% url 'library:digital_resource_update' resource.pk %}" class="btn btn-outline-primary">Edit</a>
+                    <a href="{% url 'library:digital_resource_delete' resource.pk %}" class="btn btn-outline-danger">Delete</a>
                 {% endif %}
                 <a href="{% url 'library:digital_resource_list' %}" class="btn btn-outline-secondary">Back</a>
             </div>
         </div>
         <hr>
+        <div class="alert alert-light border d-flex align-items-center gap-2">
+            <i class="fas fa-lock text-secondary"></i>
+            <span class="small mb-0">
+                This material is read-only. It opens in your browser and cannot be downloaded or saved.
+            </span>
+        </div>
         <dl class="row mb-0">
             <dt class="col-md-3">Author</dt><dd class="col-md-9">{{ resource.author|default:"Not provided" }}</dd>
             <dt class="col-md-3">Subject</dt><dd class="col-md-9">{{ resource.subject|default:"General" }}</dd>
             <dt class="col-md-3">Grade level</dt><dd class="col-md-9">{{ resource.grade_level|default:"All levels" }}</dd>
-            <dt class="col-md-3">Downloads</dt><dd class="col-md-9">{{ resource.current_downloads }}</dd>
+            <dt class="col-md-3">Views</dt><dd class="col-md-9">{{ view_count|default:0 }}</dd>
             <dt class="col-md-3">Description</dt><dd class="col-md-9">{{ resource.description|default:"No description." }}</dd>
         </dl>
     </div>

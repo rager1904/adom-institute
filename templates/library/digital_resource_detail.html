@@ -305,13 +305,13 @@
                     </div>
 
                     <div class="mt-4">
-                        <a href="{% url 'library:download_resource' resource.pk %}" class="btn download-btn" id="downloadBtn">
-                            <i class="fas fa-download me-2"></i>Download ({{ resource.file_size_display }})
+                        <a href="{% url 'library:resource_file' resource.pk %}" class="btn download-btn" target="_blank" rel="noopener" id="viewBtn">
+                            <i class="fas fa-eye me-2"></i>View ({{ resource.file_size_mb }} MB)
                         </a>
                         <button type="button" class="btn btn-info action-btn" onclick="openInViewer()">
                             <i class="fas fa-eye me-2"></i>View Online
                         </button>
-                        {% if role_ui.can_manage_library %}
+                        {% if material_policy.can_manage_material %}
                             <a href="{% url 'library:digital_resource_update' resource.pk %}" class="btn btn-warning action-btn">
                                 <i class="fas fa-edit me-2"></i>Edit Resource
                             </a>
@@ -353,32 +353,32 @@
                     
                     <div id="viewerContent" style="display: none;">
                         {% if resource.file_type == 'pdf' %}
-                            <iframe src="{{ resource.file.url }}" class="pdf-viewer" id="pdfViewer"></iframe>
+                            <iframe src="{{ resource.file_view_url }}" class="pdf-viewer" id="pdfViewer"></iframe>
                         {% elif resource.file_type == 'video' %}
-                            <video controls class="video-player mx-auto d-block" id="videoPlayer">
-                                <source src="{{ resource.file.url }}" type="video/mp4">
+                            <video controls class="video-player mx-auto d-block" id="videoPlayer" oncontextmenu="return false;">
+                                <source src="{{ resource.file_view_url }}" type="video/mp4">
                                 Your browser does not support the video tag.
                             </video>
                         {% elif resource.file_type == 'audio' %}
                             <div class="text-center">
                                 <i class="fas fa-music fa-4x text-muted mb-3"></i>
-                                <audio controls class="audio-player" id="audioPlayer">
-                                    <source src="{{ resource.file.url }}" type="audio/mpeg">
+                                <audio controls class="audio-player" id="audioPlayer" oncontextmenu="return false;">
+                                    <source src="{{ resource.file_view_url }}" type="audio/mpeg">
                                     Your browser does not support the audio element.
                                 </audio>
                             </div>
                         {% elif resource.file_type == 'image' %}
                             <div class="text-center">
-                                <img src="{{ resource.file.url }}" alt="{{ resource.title }}" class="image-viewer" id="imageViewer">
+                                <img src="{{ resource.file_view_url }}" alt="{{ resource.title }}" class="image-viewer" id="imageViewer" draggable="false" oncontextmenu="return false;">
                             </div>
                         {% else %}
                             <div class="text-center py-5">
                                 <i class="fas fa-file fa-4x text-muted mb-3"></i>
                                 <h5>Preview not available</h5>
-                                <p class="text-muted">This file type cannot be previewed online. Please download to view.</p>
-                                <a href="{% url 'library:download_resource' resource.pk %}" class="btn btn-primary">
-                                    <i class="fas fa-download me-2"></i>Download File
-                                </a>
+                                <p class="text-muted">
+                                    This file type cannot be previewed in the browser, and downloading is disabled on this platform.
+                                    Please contact your teacher if you need access to this material.
+                                </p>
                             </div>
                         {% endif %}
                     </div>
@@ -602,13 +602,16 @@
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label">Download Link</label>
+                    <label class="form-label">Read-only Link</label>
                     <div class="input-group">
-                        <input type="text" class="form-control" id="downloadLink" readonly>
-                        <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('downloadLink')">
+                        <input type="text" class="form-control" id="viewLink" readonly>
+                        <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('viewLink')">
                             <i class="fas fa-copy"></i>
                         </button>
                     </div>
+                    <small class="form-text text-muted">
+                        Recipients must sign in and are only authorised for this material's access level.
+                    </small>
                 </div>
 
                 <div class="mb-3">
@@ -679,48 +682,28 @@ document.addEventListener('DOMContentLoaded', function() {
         viewerContainer.scrollIntoView({ behavior: 'smooth' });
     };
 
-    // Download functionality with progress
-    const downloadBtn = document.getElementById('downloadBtn');
-    const downloadProgress = document.querySelector('.download-progress');
-    
-    downloadBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        
-        // Show progress
-        downloadProgress.style.display = 'block';
-        const progressBar = downloadProgress.querySelector('.progress-bar');
-        const progressText = downloadProgress.querySelector('small');
-        
-        // Simulate download progress
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += Math.random() * 15;
-            if (progress >= 100) {
-                progress = 100;
-                clearInterval(interval);
-                progressText.textContent = 'Download complete!';
-                
-                // Actually trigger download
-                window.location.href = this.href;
-                
-                // Hide progress after delay
-                setTimeout(() => {
-                    downloadProgress.style.display = 'none';
-                    progressBar.style.width = '0%';
-                    progressText.textContent = 'Preparing download...';
-                }, 2000);
+    // Block the browser's own save/print affordances on the rendered material.
+    // The server already refuses to send an attachment; this stops the easy
+    // right-click paths.
+    ['contextmenu', 'keydown', 'dragstart'].forEach(function(eventName) {
+        document.addEventListener(eventName, function(event) {
+            if (event.ctrlKey || event.metaKey || event.shiftKey) {
+                if ((event.ctrlKey || event.metaKey) && ['s', 'p', 'u'].includes(event.key)) {
+                    event.preventDefault();
+                }
             }
-            progressBar.style.width = progress + '%';
-            progressText.textContent = `Downloading... ${Math.round(progress)}%`;
-        }, 200);
+            if (event.target.closest('#viewerContainer')) {
+                event.preventDefault();
+            }
+        });
     });
 
     // Share modal functionality
     const shareModal = document.getElementById('shareModal');
     shareModal.addEventListener('show.bs.modal', function() {
-        const downloadLink = document.getElementById('downloadLink');
-        downloadLink.value = '{% url "library:download_resource" resource.pk %}';
-        
+        const viewLink = document.getElementById('viewLink');
+        viewLink.value = currentUrl;
+
         // Generate QR for sharing
         const shareQR = document.getElementById('shareQR');
         shareQR.innerHTML = '';
@@ -756,25 +739,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Email sharing function
     window.openEmailClient = function() {
         const subject = document.getElementById('emailSubject').value;
-        const body = `Check out this resource: {{ resource.title }}\n\nAccess it here: ${currentUrl}\n\nDirect download: {% url "library:download_resource" resource.pk %}`;
+        const body = `Check out this resource: {{ resource.title }}\n\nView it here (sign-in required): ${currentUrl}`;
         
         const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         window.location.href = mailtoLink;
     };
 
-    // Track resource access
-    fetch('{% url "library:download_resource" resource.pk %}', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            'action': 'track_view'
-        })
-    }).catch(error => {
-        console.log('Tracking failed:', error);
-    });
 });
 </script>
 {% endblock %}

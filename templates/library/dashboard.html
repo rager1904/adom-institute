@@ -12,19 +12,21 @@
                 <h1 class="h3 mb-0">
                     <i class="fas fa-book-open text-primary"></i> {% if role_ui.can_manage_library %}Library Management Dashboard{% else %}Library Catalog{% endif %}
                 </h1>
-                {% if role_ui.can_manage_library %}
                 <div class="btn-group" role="group">
-                    <a href="{% url 'library:book_create' %}" class="btn btn-success">
-                        <i class="fas fa-plus"></i> Add Book
-                    </a>
+                    {% if material_policy.can_manage_material %}
                     <a href="{% url 'library:digital_resource_create' %}" class="btn btn-info">
                         <i class="fas fa-upload"></i> Upload Resource
+                    </a>
+                    {% endif %}
+                    {% if role_ui.can_manage_library %}
+                    <a href="{% url 'library:book_create' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Add Book
                     </a>
                     <a href="{% url 'library:barcode_scan' %}" class="btn btn-warning">
                         <i class="fas fa-barcode"></i> Scan Barcode
                     </a>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -341,7 +343,7 @@
         </div>
     </div>
 
-    {% if role_ui.can_manage_library %}
+    {% if material_policy.can_manage_material %}
     <!-- Digital Resources Activity -->
     <div class="row mt-4">
         <div class="col-12">

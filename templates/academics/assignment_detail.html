@@ -159,8 +159,8 @@
                     <div class="mt-3">
                         <strong>Attachment:</strong>
                         <div class="mt-2">
-                            <a href="{{ assignment.attachment.url }}" class="btn btn-outline-primary" target="_blank">
-                                <i class="fas fa-download me-2"></i>Download Assignment File
+                            <a href="{{ assignment.attachment_view_url }}" class="btn btn-outline-primary" target="_blank" rel="noopener">
+                                <i class="fas fa-eye me-2"></i>View Assignment File
                             </a>
                         </div>
                     </div>
@@ -312,8 +312,8 @@
                                         <div class="mt-3">
                                             <strong>Submission File:</strong>
                                             <div class="mt-2">
-                                                <a href="{{ submission.submission_file.url }}" class="btn btn-outline-primary" target="_blank">
-                                                    <i class="fas fa-download me-2"></i>Download Submission
+                                                <a href="{{ submission.submission_view_url }}" class="btn btn-outline-primary" target="_blank" rel="noopener">
+                                                    <i class="fas fa-eye me-2"></i>View Submission
                                                 </a>
                                             </div>
                                         </div>

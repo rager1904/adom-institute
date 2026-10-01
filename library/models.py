@@ -6,6 +6,7 @@ from datetime import timedelta
 import uuid
 import os
 from accounts.validators import image_upload_validators, resource_upload_validators
+from adom.protected_media import material_downloads_allowed
 
 User = get_user_model()
 
@@ -191,8 +192,22 @@ class DigitalResource(models.Model):
         return 0
 
     @property
+    def file_view_url(self):
+        """Authenticated, inline-only viewer URL for the stored file.
+
+        Never expose ``file.url``: material must not be reachable through the
+        public /media/ route.
+        """
+        if not self.file:
+            return ''
+        from django.urls import reverse
+        return reverse('library:resource_file', kwargs={'resource_id': self.pk})
+
+    @property
     def download_available(self):
         """Check if downloads are still available"""
+        if not material_downloads_allowed():
+            return False
         if not self.is_downloadable:
             return False
         if self.download_limit and self.current_downloads >= self.download_limit:

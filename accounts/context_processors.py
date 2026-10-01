@@ -20,7 +20,17 @@ def role_ui(request):
         'accountant': 'Accountant',
     }
 
+    from adom.protected_media import material_downloads_allowed
+
+    is_academic_staff = is_admin or is_teacher
+
     return {
+        'material_policy': {
+            # Templates must never offer a download affordance for material.
+            'downloads_allowed': material_downloads_allowed(),
+            'read_only': not is_academic_staff,
+            'can_manage_material': is_academic_staff,
+        },
         'role_ui': {
             'user_type': user_type,
             'label': role_labels.get(user_type, 'User'),
@@ -30,9 +40,12 @@ def role_ui(request):
             'is_parent': is_parent,
             'is_accountant': is_accountant,
             'can_manage_people': is_admin,
-            'can_manage_academics': is_admin or is_teacher,
-            'can_manage_attendance': is_admin or is_teacher,
+            'can_manage_academics': is_academic_staff,
+            'can_manage_attendance': is_academic_staff,
             'can_manage_finance': is_admin or is_accountant,
+            # Physical catalogue entries stay admin-only (BookCreate/Update/Delete
+            # are AdminRequiredMixin). Digital material is admin+teacher and is
+            # gated by material_policy.can_manage_material instead.
             'can_manage_library': is_admin,
             'can_manage_timetable': is_admin,
             'student_scope_label': (
