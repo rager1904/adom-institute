@@ -280,14 +280,32 @@
                         <a href="{% url 'library:digital_resource_list' %}" class="btn btn-outline-info btn-sm">
                             <i class="fas fa-file-alt"></i> Digital Resources
                         </a>
+                        <a href="{% url 'library:request_create' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-bookmark"></i> Request a Book
+                        </a>
+                        <a href="{% url 'library:return_request_list' %}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-reply"></i> Return a Book
+                        </a>
+                        <a href="{% url 'library:reservation_list' %}" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-list"></i> My Requests
+                        </a>
                         {% if role_ui.can_manage_library %}
                             <a href="{% url 'library:borrowing_create' %}" class="btn btn-outline-success btn-sm">
                                 <i class="fas fa-hand-holding-usd"></i> Borrow Book
                             </a>
+                            <a href="{% url 'library:reservation_review' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-inbox"></i> Review Book Requests
+                                {% if pending_request_count %}
+                                    <span class="badge bg-light text-dark ms-1">{{ pending_request_count }}</span>
+                                {% endif %}
+                            </a>
+                            <a href="{% url 'library:return_request_review' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-inbox"></i> Review Return Requests
+                                {% if open_return_request_count %}
+                                    <span class="badge bg-light text-dark ms-1">{{ open_return_request_count }}</span>
+                                {% endif %}
+                            </a>
                         {% endif %}
-                        <a href="{% url 'library:reservation_list' %}" class="btn btn-outline-warning btn-sm">
-                            <i class="fas fa-bookmark"></i> Reservations
-                        </a>
                         {% if role_ui.can_manage_library %}
                             <a href="{% url 'library:reports' %}" class="btn btn-outline-secondary btn-sm">
                                 <i class="fas fa-chart-bar"></i> Reports

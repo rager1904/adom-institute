@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Return a Book - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Library</div>
+            <h1 class="dashboard-title">Return a Book</h1>
+            <p class="dashboard-subtitle">Tell the library how you want to hand the book back.</p>
+        </div>
+    </div>
+
+    {% if borrowing %}
+        <section class="metric-grid">
+            <article class="metric-card">
+                <span class="metric-icon"><i class="fas fa-book"></i></span>
+                <div class="metric-value">{{ borrowing.book.title }}</div>
+                <div class="metric-label">Due</div>
+                <div class="metric-detail">
+                    {{ borrowing.due_date|date:"d M Y" }}{% if borrowing.is_overdue %} - overdue by {{ borrowing.days_overdue }} day{{ borrowing.days_overdue|pluralize }}{% endif %}
+                </div>
+            </article>
+        </section>
+    {% else %}
+        <div class="alert alert-warning">
+            Choose a book from <a href="{% url 'library:borrowing_list' %}">the books you are holding</a> first.
+        </div>
+    {% endif %}
+
+    {% if borrowing %}
+    <section class="panel mb-3">
+        <div class="panel-heading">
+            <h2 class="panel-title">How should we get it back?</h2>
+        </div>
+
+        <form method="post" action="{% if borrowing %}{% url 'library:return_request_create_for' borrowing.pk %}{% else %}{% url 'library:return_request_create' %}{% endif %}" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="mb-3">
+                <span class="form-label d-block">{{ form.return_method.label }}</span>
+                {% for radio in form.return_method %}
+                    <div class="form-check">
+                        {{ radio.tag }}
+                        <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                    </div>
+                {% endfor %}
+                {% for error in form.return_method.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.delivery_address.id_for_label }}">Collection address</label>
+                {{ form.delivery_address }}
+                <div class="form-text">Only needed if the school courier collects the book from you.</div>
+                {% for error in form.delivery_address.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.delivery_phone.id_for_label }}">Contact number</label>
+                {{ form.delivery_phone }}
+                {% for error in form.delivery_phone.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.notes.id_for_label }}">Notes</label>
+                {{ form.notes }}
+                {% for error in form.notes.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Send return request</button>
+                <a href="{% url 'library:borrowing_list' %}" class="btn btn-outline-primary">Cancel</a>
+            </div>
+        </form>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

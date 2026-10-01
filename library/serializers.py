@@ -2,7 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import (
     Book, BookCategory, DigitalResource, BookBorrowing, BookReservation,
-    DigitalResourceAccess, CourseResource, LibrarySettings, LibraryReport
+    DigitalResourceAccess, CourseResource, LibrarySettings, LibraryReport,
+    ReturnRequest
 )
 
 User = get_user_model()
@@ -108,26 +109,78 @@ class BookBorrowingSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'book', 'book_id', 'borrower', 'borrower_id',
             'borrowed_date', 'due_date', 'return_date', 'returned_by',
-            'late_fee', 'notes', 'is_active', 'is_overdue',
+            'late_fee', 'fulfillment_method', 'delivery_address',
+            'notes', 'is_active', 'is_overdue',
             'days_overdue', 'calculated_late_fee'
         ]
         read_only_fields = ['borrowed_date', 'return_date', 'returned_by', 'late_fee']
 
 class BookReservationSerializer(serializers.ModelSerializer):
-    """Serializer for BookReservation model"""
+    """Serializer for BookReservation model (a book request)"""
     book = BookSerializer(read_only=True)
     book_id = serializers.IntegerField(write_only=True)
     user = UserSerializer(read_only=True)
     user_id = serializers.IntegerField(write_only=True)
     is_expired = serializers.ReadOnlyField()
-    
+    is_open = serializers.ReadOnlyField()
+    reviewed_by = UserSerializer(read_only=True)
+    fulfilled_by = UserSerializer(read_only=True)
+    borrowing = BookBorrowingSerializer(read_only=True)
+
     class Meta:
         model = BookReservation
         fields = [
             'id', 'book', 'book_id', 'user', 'user_id',
-            'reservation_date', 'expiry_date', 'status', 'notes', 'is_expired'
+            'reservation_date', 'expiry_date', 'status',
+            'fulfillment_method', 'delivery_address', 'delivery_phone',
+            'notes', 'staff_notes', 'reviewed_by', 'reviewed_at',
+            'method_overridden', 'fulfilled_at', 'fulfilled_by',
+            'borrowing', 'is_expired', 'is_open'
         ]
-        read_only_fields = ['reservation_date', 'expiry_date']
+        read_only_fields = [
+            'reservation_date', 'expiry_date', 'status', 'staff_notes',
+            'reviewed_by', 'reviewed_at', 'method_overridden',
+            'fulfilled_at', 'fulfilled_by', 'borrowing',
+        ]
+        extra_kwargs = {
+            'fulfillment_method': {'required': False},
+            'delivery_address': {'required': False, 'allow_blank': True},
+            'delivery_phone': {'required': False, 'allow_blank': True},
+        }
+
+class ReturnRequestSerializer(serializers.ModelSerializer):
+    """Serializer for a student-initiated return request"""
+    book = serializers.SerializerMethodField()
+    borrowing_id = serializers.IntegerField(write_only=True)
+    user = UserSerializer(read_only=True)
+    is_open = serializers.ReadOnlyField()
+    requires_collection = serializers.ReadOnlyField()
+    reviewed_by = UserSerializer(read_only=True)
+    received_by = UserSerializer(read_only=True)
+
+    class Meta:
+        model = ReturnRequest
+        fields = [
+            'id', 'borrowing_id', 'book', 'user', 'return_method',
+            'delivery_address', 'delivery_phone', 'notes', 'staff_notes',
+            'status', 'requested_at', 'reviewed_by', 'reviewed_at',
+            'method_overridden', 'received_by', 'received_at',
+            'condition_on_receipt', 'is_open', 'requires_collection'
+        ]
+        read_only_fields = [
+            'status', 'requested_at', 'reviewed_by', 'reviewed_at',
+            'method_overridden', 'received_by', 'received_at',
+            'condition_on_receipt', 'staff_notes',
+        ]
+        extra_kwargs = {
+            'delivery_address': {'required': False, 'allow_blank': True},
+            'delivery_phone': {'required': False, 'allow_blank': True},
+            'notes': {'required': False, 'allow_blank': True},
+        }
+
+    def get_book(self, obj):
+        return {'id': obj.book.id, 'title': obj.book.title}
+
 
 class DigitalResourceAccessSerializer(serializers.ModelSerializer):
     """Serializer for DigitalResourceAccess model"""

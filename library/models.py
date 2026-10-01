@@ -219,8 +219,16 @@ class DigitalResource(models.Model):
         self.current_downloads += 1
         self.save()
 
+FULFILLMENT_METHOD_CHOICES = [
+    ('pickup', 'Collect from the School Library'),
+    ('delivery', 'Delivered to Me by the School'),
+]
+
+
 class BookBorrowing(models.Model):
     """Track book borrowing and returns"""
+    FULFILLMENT_METHOD_CHOICES = FULFILLMENT_METHOD_CHOICES
+
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='borrowings')
     borrower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='book_borrowings')
     borrowed_date = models.DateTimeField(auto_now_add=True)
@@ -228,6 +236,11 @@ class BookBorrowing(models.Model):
     return_date = models.DateTimeField(blank=True, null=True)
     returned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='returned_books')
     late_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    fulfillment_method = models.CharField(
+        max_length=20, choices=FULFILLMENT_METHOD_CHOICES, default='pickup',
+        help_text="How the book reached the borrower",
+    )
+    delivery_address = models.TextField(blank=True)
     notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 
@@ -263,6 +276,13 @@ class BookBorrowing(models.Model):
         return timezone.now() > self.due_date
 
     @property
+    def days_until_due(self):
+        """Whole days until the due date. Negative once overdue."""
+        if self.return_date:
+            return 0
+        return (self.due_date - timezone.now()).days
+
+    @property
     def days_overdue(self):
         """Calculate days overdue"""
         if self.return_date:
@@ -296,20 +316,58 @@ class BookBorrowing(models.Model):
         self.save()
 
 class BookReservation(models.Model):
-    """Book reservation system"""
+    """Student book request: request -> staff approval -> handover.
+
+    A reservation is the student's *request* for a book. It becomes a real
+    ``BookBorrowing`` only once staff hand the book over (``fulfill``), which
+    is why ``borrowed_date`` is never set here.
+    """
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('available', 'Available for Pickup'),
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved - Awaiting Handover'),
+        ('available', 'Ready for Pickup / Dispatched'),
+        ('fulfilled', 'Handed Over'),
+        ('rejected', 'Rejected'),
         ('expired', 'Expired'),
         ('cancelled', 'Cancelled'),
     ]
+    FULFILLMENT_METHOD_CHOICES = FULFILLMENT_METHOD_CHOICES
+
+    OPEN_STATUSES = ('pending', 'approved', 'available')
 
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='reservations')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='book_reservations')
     reservation_date = models.DateTimeField(auto_now_add=True)
     expiry_date = models.DateTimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    # How the student wants to receive the book. Staff may override this on
+    # approval, which is recorded in ``method_overridden``.
+    fulfillment_method = models.CharField(
+        max_length=20, choices=FULFILLMENT_METHOD_CHOICES, default='pickup',
+    )
+    delivery_address = models.TextField(blank=True)
+    delivery_phone = models.CharField(max_length=40, blank=True)
+
     notes = models.TextField(blank=True)
+    staff_notes = models.TextField(blank=True)
+
+    reviewed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='reviewed_book_reservations',
+    )
+    reviewed_at = models.DateTimeField(blank=True, null=True)
+    method_overridden = models.BooleanField(default=False)
+
+    fulfilled_at = models.DateTimeField(blank=True, null=True)
+    fulfilled_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='fulfilled_book_reservations',
+    )
+    borrowing = models.OneToOneField(
+        BookBorrowing, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='reservation',
+    )
 
     class Meta:
         ordering = ['-reservation_date']
@@ -328,19 +386,238 @@ class BookReservation(models.Model):
         return f"{self.book.title} - {self.user.get_full_name()}"
 
     @property
+    def is_open(self):
+        """Whether this request is still live (pending, approved or ready)."""
+        return self.status in self.OPEN_STATUSES
+
+    @property
     def is_expired(self):
         """Check if reservation is expired"""
+        if self.status in ('fulfilled', 'rejected', 'cancelled'):
+            return False
         return timezone.now() > self.expiry_date
 
+    @property
+    def requires_delivery(self):
+        return self.fulfillment_method == 'delivery'
+
+    def _restore_book_availability(self):
+        """Free the book again unless another live request holds it."""
+        if self.book.availability != 'reserved':
+            return
+        if self.book.reservations.filter(status__in=self.OPEN_STATUSES).exclude(pk=self.pk).exists():
+            return
+        if self.book.borrowings.filter(return_date__isnull=True).exists():
+            self.book.availability = 'borrowed'
+        else:
+            self.book.availability = 'available'
+        self.book.save(update_fields=['availability'])
+
+    def approve(self, reviewed_by=None, fulfillment_method=None):
+        """Approve the request, optionally overriding the fulfilment method."""
+        self.status = 'approved'
+        self.reviewed_by = reviewed_by
+        self.reviewed_at = timezone.now()
+        if fulfillment_method and fulfillment_method != self.fulfillment_method:
+            self.fulfillment_method = fulfillment_method
+            self.method_overridden = True
+        if self.book.availability == 'available':
+            self.book.availability = 'reserved'
+            self.book.save(update_fields=['availability'])
+        self.save()
+        return self
+
+    def reject(self, reviewed_by=None, staff_notes=''):
+        """Decline the request."""
+        self.status = 'rejected'
+        self.reviewed_by = reviewed_by
+        self.reviewed_at = timezone.now()
+        self.staff_notes = staff_notes
+        self.save()
+        self._restore_book_availability()
+        return self
+
     def mark_available(self):
-        """Mark reservation as available for pickup"""
+        """Mark reservation as ready - shelf copy staged or courier dispatched."""
         self.status = 'available'
         self.save()
+        return self
+
+    def mark_expired(self):
+        """Give up on a request whose pickup window has lapsed."""
+        if not self.is_open:
+            return self
+        self.status = 'expired'
+        self.save()
+        self._restore_book_availability()
+        return self
 
     def cancel_reservation(self):
         """Cancel the reservation"""
+        if not self.is_open:
+            return self
         self.status = 'cancelled'
         self.save()
+        self._restore_book_availability()
+        return self
+
+    def fulfil(self, fulfilled_by=None):
+        """Hand the book over, creating the real loan.
+
+        Returns the created ``BookBorrowing``, or ``None`` when the request is
+        not in a hand-over-able state.
+        """
+        if self.status not in ('approved', 'available'):
+            return None
+        if self.book.availability not in ('available', 'reserved'):
+            return None
+
+        settings = LibrarySettings.get_settings()
+        borrowing = BookBorrowing.objects.create(
+            book=self.book,
+            borrower=self.user,
+            due_date=timezone.now() + timedelta(days=settings.borrowing_duration_days),
+            fulfillment_method=self.fulfillment_method,
+            delivery_address=self.delivery_address,
+            notes=f"Request #{self.pk} - {self.get_fulfillment_method_display()}",
+        )
+        self.book.availability = 'borrowed'
+        self.book.save(update_fields=['availability'])
+
+        self.status = 'fulfilled'
+        self.borrowing = borrowing
+        self.fulfilled_at = timezone.now()
+        self.fulfilled_by = fulfilled_by
+        self.save()
+        return borrowing
+
+
+class ReturnRequest(models.Model):
+    """Student-initiated return of a borrowed book.
+
+    A student asks to hand a book back and states how: they drop it off at the
+    school library, or the school courier collects it from them. Staff approve,
+    then record receipt, which closes the underlying ``BookBorrowing``.
+    """
+    RETURN_METHOD_CHOICES = [
+        ('dropoff', 'Drop Off at the School Library'),
+        ('collection', 'Collected by the School Courier'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved - Awaiting Book'),
+        ('in_transit', 'In Transit'),
+        ('received', 'Received at Library'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+    ]
+    OPEN_STATUSES = ('pending', 'approved', 'in_transit')
+
+    borrowing = models.ForeignKey(
+        BookBorrowing, on_delete=models.CASCADE, related_name='return_requests',
+    )
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='book_return_requests',
+    )
+    return_method = models.CharField(max_length=20, choices=RETURN_METHOD_CHOICES)
+    delivery_address = models.TextField(
+        blank=True, help_text="Where the courier should collect the book",
+    )
+    delivery_phone = models.CharField(max_length=40, blank=True)
+    notes = models.TextField(blank=True)
+    staff_notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    requested_at = models.DateTimeField(auto_now_add=True)
+
+    reviewed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='reviewed_book_return_requests',
+    )
+    reviewed_at = models.DateTimeField(blank=True, null=True)
+    method_overridden = models.BooleanField(default=False)
+
+    received_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='received_book_return_requests',
+    )
+    received_at = models.DateTimeField(blank=True, null=True)
+    condition_on_receipt = models.CharField(
+        max_length=20, blank=True, choices=Book.CONDITION_CHOICES,
+    )
+
+    class Meta:
+        ordering = ['-requested_at']
+        indexes = [
+            models.Index(fields=['user', 'status'], name='lib_return_user_idx'),
+            models.Index(fields=['status', 'requested_at'], name='lib_return_status_idx'),
+        ]
+
+    def __str__(self):
+        return f"Return: {self.book.title} - {self.user.get_full_name()}"
+
+    @property
+    def book(self):
+        return self.borrowing.book
+
+    @property
+    def is_open(self):
+        return self.status in self.OPEN_STATUSES
+
+    @property
+    def requires_collection(self):
+        """True when the school has to travel to the student."""
+        return self.return_method == 'collection'
+
+    def cancel(self):
+        if not self.is_open:
+            return self
+        self.status = 'cancelled'
+        self.save()
+        return self
+
+    def approve(self, reviewed_by=None, return_method=None):
+        self.status = 'approved'
+        self.reviewed_by = reviewed_by
+        self.reviewed_at = timezone.now()
+        if return_method and return_method != self.return_method:
+            self.return_method = return_method
+            self.method_overridden = True
+        self.save()
+        return self
+
+    def reject(self, reviewed_by=None, staff_notes=''):
+        self.status = 'rejected'
+        self.reviewed_by = reviewed_by
+        self.reviewed_at = timezone.now()
+        self.staff_notes = staff_notes
+        self.save()
+        return self
+
+    def mark_in_transit(self):
+        if self.status != 'approved':
+            return self
+        self.status = 'in_transit'
+        self.save()
+        return self
+
+    def receive(self, received_by=None, condition='', notes=''):
+        """Record the book as back in the library and close the loan."""
+        if self.status not in ('approved', 'in_transit'):
+            return None
+        self.status = 'received'
+        self.received_by = received_by
+        self.received_at = timezone.now()
+        self.condition_on_receipt = condition or ''
+        if notes:
+            self.staff_notes = f"{self.staff_notes}\n{notes}".strip()
+        self.save()
+
+        self.borrowing.return_book(received_by)
+        if condition:
+            self.borrowing.book.condition = condition
+            self.borrowing.book.save(update_fields=['condition'])
+        return self.borrowing
+
 
 class DigitalResourceAccess(models.Model):
     """Track digital resource access and downloads"""
@@ -388,6 +665,14 @@ class LibrarySettings(models.Model):
     late_fee_per_day = models.DecimalField(max_digits=5, decimal_places=2, default=0.50)
     reservation_duration_hours = models.PositiveIntegerField(default=48)
     max_reservations_per_user = models.PositiveIntegerField(default=3)
+    require_approval = models.BooleanField(
+        default=True,
+        help_text="Staff must approve borrowing requests before a book is handed over",
+    )
+    enable_delivery = models.BooleanField(
+        default=True,
+        help_text="Allow students to have books delivered instead of collecting them",
+    )
     enable_barcode = models.BooleanField(default=True)
     enable_qr_code = models.BooleanField(default=True)
     enable_digital_resources = models.BooleanField(default=True)

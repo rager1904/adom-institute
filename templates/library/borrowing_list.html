@@ -213,15 +213,18 @@
             </div>
             
             <div class="btn-group">
-                <a href="{% url 'library:borrowing_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>New Borrowing
-                </a>
-                <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#scanModal">
-                    <i class="fas fa-barcode me-2"></i>Scan Barcode
-                </button>
-                <button type="button" class="btn btn-secondary" id="toggleBulkSelect">
-                    <i class="fas fa-check-square me-2"></i>Bulk Actions
-                </button>
+                {% if role_ui.can_manage_library %}
+                    <a href="{% url 'library:borrowing_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>New Borrowing
+                    </a>
+                {% else %}
+                    <a href="{% url 'library:return_request_list' %}" class="btn btn-primary">
+                        <i class="fas fa-reply me-2"></i>Request a Return
+                    </a>
+                    <a href="{% url 'library:request_create' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-bookmark me-2"></i>Request a Book
+                    </a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -331,24 +334,6 @@
         </div>
     </div>
 
-    <!-- Bulk Actions -->
-    <div class="bulk-actions" id="bulkActions">
-        <div class="d-flex justify-content-between align-items-center">
-            <span id="selectedCount">0 borrowings selected</span>
-            <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-success" id="bulkReturn">
-                    <i class="fas fa-undo me-1"></i>Return Selected
-                </button>
-                <button type="button" class="btn btn-sm btn-warning" id="bulkExtend">
-                    <i class="fas fa-calendar-plus me-1"></i>Extend Due Date
-                </button>
-                <button type="button" class="btn btn-sm btn-info" id="bulkReminder">
-                    <i class="fas fa-bell me-1"></i>Send Reminders
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Borrowings List/Grid -->
     <div id="borrowingContainer" class="grid-view">
         <div class="row" id="borrowingGrid">
@@ -360,16 +345,13 @@
                     
                     <div class="card-body">
                         <div class="d-flex align-items-start mb-3">
-                            <input type="checkbox" class="form-check-input borrowing-checkbox me-3" 
-                                   value="{{ borrowing.id }}" style="display: none; margin-top: 20px;">
-                            
                             <div class="user-avatar">
-                                {{ borrowing.user.first_name|first }}{{ borrowing.user.last_name|first }}
+                                {{ borrowing.borrower.first_name|first }}{{ borrowing.borrower.last_name|first }}
                             </div>
                             
                             <div class="flex-grow-1">
-                                <h6 class="card-title mb-1">{{ borrowing.user.get_full_name }}</h6>
-                                <p class="text-muted small mb-2">{{ borrowing.user.username }}</p>
+                                <h6 class="card-title mb-1">{{ borrowing.borrower.get_full_name }}</h6>
+                                <p class="text-muted small mb-2">{{ borrowing.borrower.username }}</p>
                                 
                                 <span class="status-badge 
                                     {% if borrowing.is_overdue %}overdue{% elif borrowing.days_until_due <= 3 %}due-soon{% else %}on-time{% endif %}">
@@ -421,26 +403,31 @@
                         </div>
 
                         <div class="quick-actions">
-                            <button type="button" class="quick-action-btn btn-success" 
-                                    onclick="returnBook({{ borrowing.id }})"
-                                    title="Return Book">
-                                <i class="fas fa-undo me-1"></i>Return
-                            </button>
-                            <button type="button" class="quick-action-btn btn-warning" 
-                                    onclick="extendDueDate({{ borrowing.id }})"
-                                    title="Extend Due Date">
-                                <i class="fas fa-calendar-plus me-1"></i>Extend
-                            </button>
-                            <button type="button" class="quick-action-btn btn-info" 
-                                    onclick="sendReminder({{ borrowing.id }})"
-                                    title="Send Reminder">
-                                <i class="fas fa-bell me-1"></i>Remind
-                            </button>
-                            <button type="button" class="quick-action-btn btn-outline-secondary" 
-                                    onclick="viewDetails({{ borrowing.id }})"
-                                    title="View Details">
+                            {% if role_ui.can_manage_library %}
+                                <a class="quick-action-btn btn-success"
+                                   href="{% url 'library:return_book' borrowing.id %}"
+                                   title="Return Book">
+                                    <i class="fas fa-undo me-1"></i>Return
+                                </a>
+                            {% endif %}
+                            {% if not borrowing.return_date %}
+                                {% if borrowing.id in open_return_request_ids %}
+                                    <span class="quick-action-btn btn-outline-secondary" title="Return request already sent">
+                                        <i class="fas fa-reply me-1"></i>Return requested
+                                    </span>
+                                {% else %}
+                                    <a class="quick-action-btn btn-warning"
+                                       href="{% url 'library:return_request_create_for' borrowing.id %}"
+                                       title="Ask the library how to return this book">
+                                        <i class="fas fa-reply me-1"></i>Request Return
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                            <a class="quick-action-btn btn-outline-secondary"
+                               href="{% url 'library:book_detail' borrowing.book.id %}"
+                               title="View Book">
                                 <i class="fas fa-eye me-1"></i>Details
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -509,98 +496,6 @@
     {% endif %}
 </div>
 
-<!-- Barcode Scan Modal -->
-<div class="modal fade" id="scanModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-barcode me-2"></i>Scan Barcode</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="barcodeInput" class="form-label">Barcode</label>
-                    <input type="text" class="form-control" id="barcodeInput" placeholder="Scan or enter barcode..." autofocus>
-                </div>
-                <div id="scanResult" class="alert" style="display: none;"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="processBarcode()">
-                    <i class="fas fa-search me-2"></i>Search
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Return Book Modal -->
-<div class="modal fade" id="returnModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-undo me-2"></i>Return Book</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="returnForm">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    <input type="hidden" id="returnBorrowingId">
-                    <div id="returnBookDetails"></div>
-                    <div class="mb-3">
-                        <label for="returnNotes" class="form-label">Return Notes (Optional)</label>
-                        <textarea class="form-control" id="returnNotes" rows="3" placeholder="Any notes about the book condition..."></textarea>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="bookDamaged">
-                        <label class="form-check-label" for="bookDamaged">
-                            Book has damage or issues
-                        </label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-check me-2"></i>Confirm Return
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Extend Due Date Modal -->
-<div class="modal fade" id="extendModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-calendar-plus me-2"></i>Extend Due Date</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="extendForm">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    <input type="hidden" id="extendBorrowingId">
-                    <div id="extendBookDetails"></div>
-                    <div class="mb-3">
-                        <label for="newDueDate" class="form-label">New Due Date</label>
-                        <input type="date" class="form-control" id="newDueDate" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="extendReason" class="form-label">Reason for Extension</label>
-                        <textarea class="form-control" id="extendReason" rows="2" placeholder="Reason for extending the due date..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-check me-2"></i>Extend Due Date
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -611,7 +506,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('borrowingContainer');
         const gridBtn = document.getElementById('gridViewBtn');
         const listBtn = document.getElementById('listViewBtn');
-        
+
+        if (!container || !gridBtn || !listBtn) {
+            return;
+        }
+
         if (view === 'grid') {
             container.className = 'grid-view';
             gridBtn.classList.add('active');
@@ -621,258 +520,12 @@ document.addEventListener('DOMContentLoaded', function() {
             listBtn.classList.add('active');
             gridBtn.classList.remove('active');
         }
-        
+
         localStorage.setItem('borrowingView', view);
     };
-    
+
     // Load saved view preference
-    const savedView = localStorage.getItem('borrowingView') || 'grid';
-    switchView(savedView);
-    
-    // Bulk selection functionality
-    const toggleBulkBtn = document.getElementById('toggleBulkSelect');
-    const bulkActions = document.getElementById('bulkActions');
-    const borrowingCheckboxes = document.querySelectorAll('.borrowing-checkbox');
-    const selectedCount = document.getElementById('selectedCount');
-    let bulkMode = false;
-
-    toggleBulkBtn.addEventListener('click', function() {
-        bulkMode = !bulkMode;
-        if (bulkMode) {
-            borrowingCheckboxes.forEach(cb => cb.style.display = 'block');
-            toggleBulkBtn.innerHTML = '<i class="fas fa-times me-2"></i>Cancel Selection';
-            toggleBulkBtn.className = 'btn btn-warning';
-        } else {
-            borrowingCheckboxes.forEach(cb => {
-                cb.style.display = 'none';
-                cb.checked = false;
-            });
-            bulkActions.classList.remove('show');
-            toggleBulkBtn.innerHTML = '<i class="fas fa-check-square me-2"></i>Bulk Actions';
-            toggleBulkBtn.className = 'btn btn-secondary';
-        }
-        updateSelectedCount();
-    });
-
-    function updateSelectedCount() {
-        const selected = document.querySelectorAll('.borrowing-checkbox:checked').length;
-        selectedCount.textContent = `${selected} borrowings selected`;
-        if (selected > 0 && bulkMode) {
-            bulkActions.classList.add('show');
-        } else {
-            bulkActions.classList.remove('show');
-        }
-    }
-
-    borrowingCheckboxes.forEach(cb => {
-        cb.addEventListener('change', updateSelectedCount);
-    });
-
-    // Return book functionality
-    window.returnBook = function(borrowingId) {
-        const modal = new bootstrap.Modal(document.getElementById('returnModal'));
-        document.getElementById('returnBorrowingId').value = borrowingId;
-        
-        // Fetch borrowing details and populate modal
-        fetch(`/library/borrowings/${borrowingId}/details/`)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('returnBookDetails').innerHTML = `
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-book me-2"></i>${data.book_title}</h6>
-                        <p class="mb-1"><strong>Borrower:</strong> ${data.borrower_name}</p>
-                        <p class="mb-1"><strong>Borrowed:</strong> ${data.borrowed_date}</p>
-                        <p class="mb-0"><strong>Due Date:</strong> ${data.due_date}</p>
-                        ${data.is_overdue ? '<p class="text-danger mb-0"><strong>Status:</strong> Overdue</p>' : ''}
-                    </div>
-                `;
-                modal.show();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error loading borrowing details');
-            });
-    };
-
-    // Extend due date functionality
-    window.extendDueDate = function(borrowingId) {
-        const modal = new bootstrap.Modal(document.getElementById('extendModal'));
-        document.getElementById('extendBorrowingId').value = borrowingId;
-        
-        // Set minimum date to today
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('newDueDate').min = today;
-        
-        // Fetch borrowing details and populate modal
-        fetch(`/library/borrowings/${borrowingId}/details/`)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('extendBookDetails').innerHTML = `
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-book me-2"></i>${data.book_title}</h6>
-                        <p class="mb-1"><strong>Borrower:</strong> ${data.borrower_name}</p>
-                        <p class="mb-0"><strong>Current Due Date:</strong> ${data.due_date}</p>
-                    </div>
-                `;
-                modal.show();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error loading borrowing details');
-            });
-    };
-
-    // Send reminder functionality
-    window.sendReminder = function(borrowingId) {
-        if (confirm('Send reminder email to the borrower?')) {
-            fetch(`/library/borrowings/${borrowingId}/reminder/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Reminder sent successfully!');
-                } else {
-                    alert('Error: ' + (data.error || 'Failed to send reminder'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while sending the reminder');
-            });
-        }
-    };
-
-    // View details functionality
-    window.viewDetails = function(borrowingId) {
-        window.location.href = `/library/borrowings/${borrowingId}/`;
-    };
-
-    // Barcode processing
-    window.processBarcode = function() {
-        const barcode = document.getElementById('barcodeInput').value.trim();
-        const resultDiv = document.getElementById('scanResult');
-        
-        if (!barcode) {
-            resultDiv.className = 'alert alert-warning';
-            resultDiv.textContent = 'Please enter a barcode';
-            resultDiv.style.display = 'block';
-            return;
-        }
-        
-        fetch(`/library/barcode-scan/?barcode=${encodeURIComponent(barcode)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    resultDiv.className = 'alert alert-success';
-                    resultDiv.innerHTML = `
-                        <h6><i class="fas fa-check me-2"></i>Book Found</h6>
-                        <p class="mb-1"><strong>Title:</strong> ${data.book.title}</p>
-                        <p class="mb-1"><strong>Author:</strong> ${data.book.author}</p>
-                        <p class="mb-0"><strong>Status:</strong> ${data.book.is_available ? 'Available' : 'Not Available'}</p>
-                    `;
-                    
-                    if (data.book.is_available) {
-                        resultDiv.innerHTML += `
-                            <a href="/library/borrowings/create/?book=${data.book.id}" class="btn btn-sm btn-primary mt-2">
-                                <i class="fas fa-plus me-1"></i>Create Borrowing
-                            </a>
-                        `;
-                    }
-                } else {
-                    resultDiv.className = 'alert alert-danger';
-                    resultDiv.textContent = data.error || 'Book not found';
-                }
-                resultDiv.style.display = 'block';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                resultDiv.className = 'alert alert-danger';
-                resultDiv.textContent = 'Error processing barcode';
-                resultDiv.style.display = 'block';
-            });
-    };
-
-    // Form submissions
-    document.getElementById('returnForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const borrowingId = document.getElementById('returnBorrowingId').value;
-        const notes = document.getElementById('returnNotes').value;
-        const damaged = document.getElementById('bookDamaged').checked;
-        
-        fetch(`/library/borrowings/${borrowingId}/return/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                notes: notes,
-                damaged: damaged
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('returnModal')).hide();
-                location.reload();
-            } else {
-                alert('Error: ' + (data.error || 'Failed to return book'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while returning the book');
-        });
-    });
-
-    document.getElementById('extendForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const borrowingId = document.getElementById('extendBorrowingId').value;
-        const newDueDate = document.getElementById('newDueDate').value;
-        const reason = document.getElementById('extendReason').value;
-        
-        fetch(`/library/borrowings/${borrowingId}/extend/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                new_due_date: newDueDate,
-                reason: reason
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('extendModal')).hide();
-                location.reload();
-            } else {
-                alert('Error: ' + (data.error || 'Failed to extend due date'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while extending the due date');
-        });
-    });
-
-    // Auto-focus barcode input when modal opens
-    document.getElementById('scanModal').addEventListener('shown.bs.modal', function() {
-        document.getElementById('barcodeInput').focus();
-    });
-
-    // Enter key in barcode input
-    document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            processBarcode();
-        }
-    });
+    switchView(localStorage.getItem('borrowingView') || 'grid');
 });
 </script>
 {% endblock %}

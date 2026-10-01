@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}My Book Returns - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Library</div>
+            <h1 class="dashboard-title">My Returns</h1>
+            <p class="dashboard-subtitle">Books you are holding, and the return requests you have sent.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'library:return_request_create' %}" class="btn btn-primary">Request a return</a>
+        </div>
+    </div>
+
+    <section class="metric-grid">
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-book"></i></span>
+            <div class="metric-value">{{ held_books|length }}</div>
+            <div class="metric-label">Books with you</div>
+            <div class="metric-detail">Ready to hand back</div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-box-open"></i></span>
+            <div class="metric-value">{{ return_requests|length }}</div>
+            <div class="metric-label">Return requests</div>
+            <div class="metric-detail">Submitted to the library</div>
+        </article>
+    </section>
+
+    <section class="panel mb-3">
+        <div class="panel-heading">
+            <h2 class="panel-title">Books with you</h2>
+        </div>
+        <div class="focus-list">
+            {% for borrowing in held_books %}
+                <div class="focus-item">
+                    <span class="focus-icon"><i class="fas fa-book"></i></span>
+                    <div>
+                        <div class="focus-title">{{ borrowing.book.title }}</div>
+                        <div class="metric-detail">
+                            Due {{ borrowing.due_date|date:"d M Y" }}
+                            {% if borrowing.is_overdue %}<span class="text-danger">- overdue by {{ borrowing.days_overdue }} day{{ borrowing.days_overdue|pluralize }}</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="ms-auto d-flex gap-2">
+                        <a href="{% url 'library:return_request_create_for' borrowing.pk %}" class="btn btn-primary btn-sm">Return this book</a>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state"><p>You are not holding any books right now.</p></div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-heading">
+            <h2 class="panel-title">Your return requests</h2>
+        </div>
+        <div class="focus-list">
+            {% for item in return_requests %}
+                <div class="focus-item">
+                    <span class="focus-icon"><i class="fas fa-truck"></i></span>
+                    <div>
+                        <div class="focus-category">{{ item.get_status_display }} - {{ item.get_return_method_display }}</div>
+                        <div class="focus-title">{{ item.book.title }}</div>
+                        <div class="metric-detail">Requested {{ item.requested_at|date:"d M Y" }}</div>
+                        {% if item.method_overridden %}
+                            <div class="metric-detail">The library changed the return method to {{ item.get_return_method_display }}.</div>
+                        {% endif %}
+                        {% if item.staff_notes %}<div class="metric-detail">Library: {{ item.staff_notes }}</div>{% endif %}
+                    </div>
+                    {% if item.is_open %}
+                        <div class="ms-auto">
+                            <form method="post" action="{% url 'library:cancel_return_request' item.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-primary btn-sm">Withdraw</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <div class="empty-state"><p>You have not sent any return requests.</p></div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

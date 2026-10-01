@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Withdraw Return Request - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Library</div>
+            <h1 class="dashboard-title">Withdraw Return Request</h1>
+            <p class="dashboard-subtitle">You are still responsible for this book until it reaches the library.</p>
+        </div>
+    </div>
+
+    <section class="panel">
+        <div class="panel-heading">
+            <h2 class="panel-title">{{ return_request.book.title }}</h2>
+        </div>
+        <div class="focus-list">
+            <div class="focus-item">
+                <span class="focus-icon"><i class="fas fa-reply"></i></span>
+                <div>
+                    <div class="focus-category">{{ return_request.get_status_display }}</div>
+                    <div class="metric-detail">{{ return_request.get_return_method_display }}</div>
+                    <div class="metric-detail">Requested {{ return_request.requested_at|date:"d M Y" }}</div>
+                    <div class="metric-detail">Loan due {{ return_request.borrowing.due_date|date:"d M Y" }}</div>
+                </div>
+            </div>
+        </div>
+        <form method="post" class="mt-3 d-flex gap-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">Yes, withdraw this request</button>
+            <a href="{% url 'library:return_request_list' %}" class="btn btn-outline-primary">Keep it</a>
+        </form>
+    </section>
+</div>
+{% endblock %}

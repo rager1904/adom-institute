@@ -10,7 +10,7 @@ from accounts.validators import (
 )
 from .models import (
     Book, BookCategory, DigitalResource, BookBorrowing, BookReservation,
-    CourseResource, LibrarySettings
+    CourseResource, LibrarySettings, ReturnRequest
 )
 
 User = get_user_model()
@@ -232,13 +232,16 @@ class BookReturnForm(forms.Form):
     )
 
 class BookReservationForm(forms.ModelForm):
-    """Form for creating book reservations"""
+    """Form for creating book reservations on behalf of a member"""
     class Meta:
         model = BookReservation
-        fields = ['book', 'user', 'notes']
+        fields = ['book', 'user', 'fulfillment_method', 'delivery_address', 'delivery_phone', 'notes']
         widgets = {
             'book': forms.Select(attrs={'class': 'form-select'}),
             'user': forms.Select(attrs={'class': 'form-select'}),
+            'fulfillment_method': forms.Select(attrs={'class': 'form-select'}),
+            'delivery_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'delivery_phone': forms.TextInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
@@ -251,6 +254,13 @@ class BookReservationForm(forms.ModelForm):
         )
         # Only show active users
         self.fields['user'].queryset = User.objects.filter(is_active=True)
+        if not LibrarySettings.get_settings().enable_delivery:
+            self.fields['fulfillment_method'].choices = [
+                (value, label) for value, label in BookReservation.FULFILLMENT_METHOD_CHOICES
+                if value == 'pickup'
+            ]
+            self.fields['fulfillment_method'].initial = 'pickup'
+            self.fields['fulfillment_method'].widget = forms.HiddenInput()
 
     def clean(self):
         cleaned_data = super().clean()
@@ -281,6 +291,244 @@ class BookReservationForm(forms.ModelForm):
                 raise forms.ValidationError("User already has a pending reservation for this book.")
         
         return cleaned_data
+
+
+class BookRequestForm(forms.ModelForm):
+    """Student-facing book request.
+
+    The student picks how they want the book: collected from the school
+    library, or delivered to them by the school. Staff review it before the
+    book changes hands.
+    """
+
+    class Meta:
+        model = BookReservation
+        fields = ['book', 'fulfillment_method', 'delivery_address', 'delivery_phone', 'notes']
+        widgets = {
+            'book': forms.Select(attrs={'class': 'form-select'}),
+            'fulfillment_method': forms.RadioSelect(),
+            'delivery_address': forms.Textarea(attrs={
+                'class': 'form-control', 'rows': 3,
+                'placeholder': 'Where should the school deliver the book?',
+            }),
+            'delivery_phone': forms.TextInput(attrs={
+                'class': 'form-control', 'placeholder': 'Contact number for the courier',
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control', 'rows': 3,
+                'placeholder': 'Anything the library should know? (optional)',
+            }),
+        }
+        labels = {
+            'fulfillment_method': 'How would you like to receive this book?',
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        self.fields['book'].queryset = Book.objects.filter(
+            availability__in=['available', 'borrowed', 'reserved'],
+            is_active=True,
+        )
+        self.fields['book'].empty_label = "Choose a book"
+        self.fields['fulfillment_method'].initial = 'pickup'
+
+        settings = LibrarySettings.get_settings()
+        if not settings.enable_delivery:
+            self.fields['fulfillment_method'].choices = [
+                (value, label) for value, label in BookReservation.FULFILLMENT_METHOD_CHOICES
+                if value == 'pickup'
+            ]
+            self.fields['fulfillment_method'].initial = 'pickup'
+            self.fields['fulfillment_method'].widget = forms.HiddenInput()
+
+    def clean_book(self):
+        book = self.cleaned_data['book']
+        if self.user and BookReservation.objects.filter(
+            user=self.user,
+            book=book,
+            status__in=BookReservation.OPEN_STATUSES,
+        ).exists():
+            raise forms.ValidationError(
+                "You already have a live request for this book."
+            )
+        return book
+
+    def clean(self):
+        cleaned_data = super().clean()
+        settings = LibrarySettings.get_settings()
+
+        if not settings.enable_reservations:
+            raise forms.ValidationError("Book requests are currently disabled.")
+
+        if self.user:
+            open_requests = BookReservation.objects.filter(
+                user=self.user,
+                status__in=BookReservation.OPEN_STATUSES,
+            ).count()
+            if open_requests >= settings.max_reservations_per_user:
+                raise forms.ValidationError(
+                    f"You already have {open_requests} open requests, which is the "
+                    f"maximum of {settings.max_reservations_per_user}."
+                )
+
+        if cleaned_data.get('fulfillment_method') == 'delivery':
+            if not settings.enable_delivery:
+                raise forms.ValidationError("Delivery is currently unavailable. Please choose pickup.")
+            if not (cleaned_data.get('delivery_address') or '').strip():
+                raise forms.ValidationError(
+                    "Please give a delivery address, or choose pickup from the library."
+                )
+
+        return cleaned_data
+
+
+class BookRequestDecisionForm(forms.Form):
+    """Staff decision on a pending book request."""
+
+    action = forms.ChoiceField(
+        choices=[('approve', 'Approve'), ('reject', 'Reject')],
+        widget=forms.HiddenInput(),
+    )
+    fulfillment_method = forms.ChoiceField(
+        choices=BookReservation.FULFILLMENT_METHOD_CHOICES,
+        required=False,
+        label='Fulfil with',
+        help_text="Leave as-is unless you need to change how the student receives it.",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    staff_notes = forms.CharField(
+        required=False,
+        label='Notes',
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.reservation = kwargs.pop('reservation', None)
+        super().__init__(*args, **kwargs)
+        if self.reservation is not None:
+            self.fields['fulfillment_method'].initial = self.reservation.fulfillment_method
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('action') == 'reject' and not (cleaned_data.get('staff_notes') or '').strip():
+            self.add_error('staff_notes', "Tell the student why the request was rejected.")
+        if not LibrarySettings.get_settings().enable_delivery:
+            cleaned_data['fulfillment_method'] = 'pickup'
+        return cleaned_data
+
+
+class BookReturnRequestForm(forms.ModelForm):
+    """Student-initiated return of a book they are holding.
+
+    The student either drops the book off at the school library, or the school
+    courier collects it from them.
+    """
+
+    class Meta:
+        model = ReturnRequest
+        fields = ['return_method', 'delivery_address', 'delivery_phone', 'notes']
+        widgets = {
+            'return_method': forms.RadioSelect(),
+            'delivery_address': forms.Textarea(attrs={
+                'class': 'form-control', 'rows': 3,
+                'placeholder': 'Where should the courier collect the book?',
+            }),
+            'delivery_phone': forms.TextInput(attrs={
+                'class': 'form-control', 'placeholder': 'Contact number for the courier',
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control', 'rows': 3,
+                'placeholder': 'Anything the library should know? (optional)',
+            }),
+        }
+        labels = {
+            'return_method': 'How would you like to return this book?',
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.borrowing = kwargs.pop('borrowing', None)
+        super().__init__(*args, **kwargs)
+        self.fields['return_method'].initial = 'dropoff'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        self.cleaned_borrowing = self.borrowing
+
+        if self.borrowing is None:
+            raise forms.ValidationError("Select a book to return.")
+        if self.borrowing.return_date is not None:
+            raise forms.ValidationError("This book has already been returned.")
+        if ReturnRequest.objects.filter(
+            borrowing=self.borrowing,
+            status__in=ReturnRequest.OPEN_STATUSES,
+        ).exists():
+            raise forms.ValidationError(
+                "You already have an open return request for this book."
+            )
+
+        if cleaned_data.get('return_method') == 'collection':
+            if not (cleaned_data.get('delivery_address') or '').strip():
+                raise forms.ValidationError(
+                    "Please give a collection address, or drop the book off instead."
+                )
+            if not (cleaned_data.get('delivery_phone') or '').strip():
+                raise forms.ValidationError("A contact number is required for a courier collection.")
+
+        return cleaned_data
+
+
+class BookReturnDecisionForm(forms.Form):
+    """Staff decision on a pending return request."""
+
+    action = forms.ChoiceField(
+        choices=[('approve', 'Approve'), ('reject', 'Reject')],
+        widget=forms.HiddenInput(),
+    )
+    return_method = forms.ChoiceField(
+        choices=ReturnRequest.RETURN_METHOD_CHOICES,
+        required=False,
+        label='Handle as',
+        help_text="Leave as-is unless the student agreed to a different arrangement.",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    staff_notes = forms.CharField(
+        required=False,
+        label='Notes',
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.return_request = kwargs.pop('return_request', None)
+        super().__init__(*args, **kwargs)
+        if self.return_request is not None:
+            self.fields['return_method'].initial = self.return_request.return_method
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('action') == 'reject' and not (cleaned_data.get('staff_notes') or '').strip():
+            self.add_error('staff_notes', "Tell the student why the return request was rejected.")
+        return cleaned_data
+
+
+class BookReturnReceiveForm(forms.Form):
+    """Staff recording the physical receipt of a returned book."""
+
+    condition = forms.ChoiceField(
+        choices=[('', "Leave unchanged")] + Book.CONDITION_CHOICES,
+        required=False,
+        label='Condition on receipt',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    return_notes = forms.CharField(
+        required=False,
+        label='Notes',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control', 'rows': 3,
+            'placeholder': 'Optional notes about the return...',
+        }),
+    )
+
 
 class CourseResourceForm(forms.ModelForm):
     """Form for creating/editing course resources"""

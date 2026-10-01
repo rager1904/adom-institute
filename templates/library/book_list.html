@@ -274,14 +274,18 @@
                                         <i class="fas fa-edit"></i>
                                     </a>
                                 {% endif %}
-                                {% if book.is_available %}
+                                {% if role_ui.can_manage_library and book.is_available %}
                                 <button type="button" class="btn btn-outline-success btn-sm borrow-btn" data-book-id="{{ book.id }}">
                                     <i class="fas fa-hand-holding"></i>
                                 </button>
                                 {% endif %}
-                                <button type="button" class="btn btn-outline-info btn-sm reserve-btn" data-book-id="{{ book.id }}">
-                                    <i class="fas fa-bookmark"></i>
-                                </button>
+                                {% if book.id in my_request_book_ids %}
+                                    <span class="btn btn-outline-info btn-sm disabled" title="You already have a request for this book"><i class="fas fa-bookmark"></i></span>
+                                {% else %}
+                                    <a href="{% url 'library:request_create' %}?book={{ book.id }}" class="btn btn-outline-info btn-sm" title="Ask the library for this book">
+                                        <i class="fas fa-bookmark"></i>
+                                    </a>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -352,6 +356,7 @@
 </div>
 
 <!-- Borrow Book Modal -->
+{% if role_ui.can_manage_library %}
 <div class="modal fade" id="borrowModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -393,6 +398,7 @@
 </div>
 
 <!-- Reserve Book Modal -->
+{% if role_ui.can_manage_library %}
 <div class="modal fade" id="reserveModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -428,6 +434,8 @@
         </div>
     </div>
 </div>
+{% endif %}
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -477,89 +485,35 @@ document.addEventListener('DOMContentLoaded', function() {
         cb.addEventListener('change', updateSelectedCount);
     });
 
-    // Borrow book functionality
-    const borrowBtns = document.querySelectorAll('.borrow-btn');
-    const borrowModal = new bootstrap.Modal(document.getElementById('borrowModal'));
-    const borrowForm = document.getElementById('borrowForm');
-    const borrowBookId = document.getElementById('borrowBookId');
-
-    borrowBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            borrowBookId.value = this.dataset.bookId;
-            borrowModal.show();
+    // Borrow and reserve modals submit as ordinary forms so the server-rendered
+    // validation errors come back on the same page.
+    {% if role_ui.can_manage_library %}
+    const borrowModalEl = document.getElementById('borrowModal');
+    if (borrowModalEl) {
+        const borrowModal = new bootstrap.Modal(borrowModalEl);
+        document.querySelectorAll('.borrow-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.getElementById('borrowBookId').value = this.dataset.bookId;
+                borrowModal.show();
+            });
         });
-    });
 
-    borrowForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        
-        fetch('{% url "library:borrowing_create" %}', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                borrowModal.hide();
-                location.reload();
-            } else {
-                alert('Error: ' + (data.error || 'Failed to borrow book'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while borrowing the book');
+        const dueDateInput = document.getElementById('dueDate');
+        const twoWeeksLater = new Date(Date.now() + (14 * 24 * 60 * 60 * 1000));
+        dueDateInput.value = twoWeeksLater.toISOString().slice(0, 10);
+    }
+
+    const reserveModalEl = document.getElementById('reserveModal');
+    if (reserveModalEl) {
+        const reserveModal = new bootstrap.Modal(reserveModalEl);
+        document.querySelectorAll('.reserve-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.getElementById('reserveBookId').value = this.dataset.bookId;
+                reserveModal.show();
+            });
         });
-    });
-
-    // Reserve book functionality
-    const reserveBtns = document.querySelectorAll('.reserve-btn');
-    const reserveModal = new bootstrap.Modal(document.getElementById('reserveModal'));
-    const reserveForm = document.getElementById('reserveForm');
-    const reserveBookId = document.getElementById('reserveBookId');
-
-    reserveBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            reserveBookId.value = this.dataset.bookId;
-            reserveModal.show();
-        });
-    });
-
-    reserveForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        
-        fetch('{% url "library:reservation_create" %}', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                reserveModal.hide();
-                location.reload();
-            } else {
-                alert('Error: ' + (data.error || 'Failed to reserve book'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while reserving the book');
-        });
-    });
-
-    // Set default due date (2 weeks from today)
-    const dueDateInput = document.getElementById('dueDate');
-    const today = new Date();
-    const twoWeeksLater = new Date(today.getTime() + (14 * 24 * 60 * 60 * 1000));
-    dueDateInput.value = twoWeeksLater.toISOString().split('T')[0];
+    }
+    {% endif %}
 });
 </script>
 {% endblock %}

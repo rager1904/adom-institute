@@ -11,6 +11,7 @@ router.register(r'categories', views.BookCategoryViewSet)
 router.register(r'digital-resources', views.DigitalResourceViewSet)
 router.register(r'borrowings', views.BookBorrowingViewSet)
 router.register(r'reservations', views.BookReservationViewSet)
+router.register(r'return-requests', views.ReturnRequestViewSet)
 router.register(r'statistics', views.LibraryStatisticsViewSet, basename='statistics')
 
 # API URLs
@@ -51,10 +52,28 @@ urlpatterns = [
     path('borrowings/create/', views.BookBorrowingCreateView.as_view(), name='borrowing_create'),
     path('borrowings/<int:borrowing_id>/return/', views.return_book, name='return_book'),
     
-    # Reservations
+    # Student return requests
+    path('returns/', views.ReturnRequestListView.as_view(), name='return_request_list'),
+    path('returns/create/', views.ReturnRequestCreateView.as_view(), name='return_request_create'),
+    path('returns/create/<int:borrowing_id>/', views.ReturnRequestCreateView.as_view(), name='return_request_create_for'),
+    path('returns/<int:return_request_id>/cancel/', views.cancel_return_request, name='cancel_return_request'),
+    
+    # Reservations (book requests)
     path('reservations/', views.BookReservationListView.as_view(), name='reservation_list'),
     path('reservations/create/', views.BookReservationCreateView.as_view(), name='reservation_create'),
     path('reservations/<int:reservation_id>/cancel/', views.cancel_reservation, name='cancel_reservation'),
+    path('requests/create/', views.BookRequestCreateView.as_view(), name='request_create'),
+    
+    # Staff review of book requests
+    path('requests/review/', views.BookRequestReviewListView.as_view(), name='reservation_review'),
+    path('requests/<int:reservation_id>/decide/', views.decide_book_request, name='reservation_decide'),
+    path('requests/<int:reservation_id>/fulfil/', views.fulfil_book_request, name='reservation_fulfil'),
+    
+    # Staff review of return requests
+    path('returns/review/', views.ReturnRequestReviewListView.as_view(), name='return_request_review'),
+    path('returns/<int:return_request_id>/decide/', views.decide_return_request, name='return_request_decide'),
+    path('returns/<int:return_request_id>/transit/', views.mark_return_in_transit, name='return_request_transit'),
+    path('returns/<int:return_request_id>/receive/', views.receive_return_request, name='return_request_receive'),
     
     # Tools
     path('barcode-scan/', views.barcode_scan, name='barcode_scan'),

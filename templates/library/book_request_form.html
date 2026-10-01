@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Request a Book - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Library</div>
+            <h1 class="dashboard-title">Request a Book</h1>
+            <p class="dashboard-subtitle">Ask the library for a book, then collect it from school or have it delivered to you.</p>
+        </div>
+    </div>
+
+    <section class="panel mb-3">
+        <div class="panel-heading">
+            <h2 class="panel-title">Your request</h2>
+        </div>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.book.id_for_label }}">Book</label>
+                {{ form.book }}
+                {% for error in form.book.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="mb-3">
+                {% if delivery_enabled %}
+                    <span class="form-label d-block">{{ form.fulfillment_method.label }}</span>
+                    {% for radio in form.fulfillment_method %}
+                        <div class="form-check">
+                            {{ radio.tag }}
+                            <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    {{ form.fulfillment_method }}
+                    <div class="alert alert-info mb-0">Delivery is currently unavailable, so this book will be collected at the library.</div>
+                {% endif %}
+                {% for error in form.fulfillment_method.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+            </div>
+
+            {% if delivery_enabled %}
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.delivery_address.id_for_label }}">Delivery address</label>
+                    {{ form.delivery_address }}
+                    <div class="form-text">Only needed if you choose delivery.</div>
+                    {% for error in form.delivery_address.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.delivery_phone.id_for_label }}">Contact number</label>
+                    {{ form.delivery_phone }}
+                    {% for error in form.delivery_phone.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.notes.id_for_label }}">Notes</label>
+                {{ form.notes }}
+                {% for error in form.notes.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Send request</button>
+                <a href="{% url 'library:reservation_list' %}" class="btn btn-outline-primary">Cancel</a>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

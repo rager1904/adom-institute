@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Return Requests to Review - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Library</div>
+            <h1 class="dashboard-title">Return Requests</h1>
+            <p class="dashboard-subtitle">Approve how each book comes back, then check it in.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'library:reservation_review' %}" class="btn btn-outline-primary">Book requests</a>
+        </div>
+    </div>
+
+    <section class="metric-grid">
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-inbox"></i></span>
+            <div class="metric-value">{{ open_count }}</div>
+            <div class="metric-label">Open requests</div>
+            <div class="metric-detail">Awaiting approval or a book</div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-truck"></i></span>
+            <div class="metric-value">{{ collections_pending }}</div>
+            <div class="metric-label">Courier collections</div>
+            <div class="metric-detail">Approved, waiting to be dispatched</div>
+        </article>
+    </section>
+
+    <section class="panel mb-3">
+        <div class="panel-heading">
+            <h2 class="panel-title">Filter</h2>
+        </div>
+        <form method="get" class="d-flex gap-2">
+            <select class="form-select" name="status" style="max-width: 260px;">
+                <option value="open"{% if status_filter == 'open' %} selected{% endif %}>Open only</option>
+                <option value="pending"{% if status_filter == 'pending' %} selected{% endif %}>Pending approval</option>
+                <option value="approved"{% if status_filter == 'approved' %} selected{% endif %}>Approved, awaiting book</option>
+                <option value="in_transit"{% if status_filter == 'in_transit' %} selected{% endif %}>In transit</option>
+                <option value="received"{% if status_filter == 'received' %} selected{% endif %}>Received</option>
+                <option value="rejected"{% if status_filter == 'rejected' %} selected{% endif %}>Rejected</option>
+                <option value="cancelled"{% if status_filter == 'cancelled' %} selected{% endif %}>Cancelled</option>
+                <option value=""{% if not status_filter %} selected{% endif %}>All</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Apply</button>
+        </form>
+    </section>
+
+    <section class="panel">
+        <div class="panel-heading">
+            <h2 class="panel-title">Return requests</h2>
+        </div>
+        <div class="focus-list">
+            {% for item in return_requests %}
+                <div class="focus-item">
+                    <span class="focus-icon"><i class="fas fa-reply"></i></span>
+                    <div>
+                        <div class="focus-category">{{ item.get_status_display }} - {{ item.get_return_method_display }}</div>
+                        <div class="focus-title">{{ item.book.title }}</div>
+                        <div class="metric-detail">
+                            {{ item.user.get_full_name|default:item.user.username }}
+                            - requested {{ item.requested_at|date:"d M Y" }}
+                        </div>
+                        <div class="metric-detail">
+                            Loan due {{ item.borrowing.due_date|date:"d M Y" }}
+                            {% if item.borrowing.is_overdue %}<span class="text-danger">- overdue by {{ item.borrowing.days_overdue }} day{{ item.borrowing.days_overdue|pluralize }}</span>{% endif %}
+                        </div>
+                        {% if item.requires_collection %}
+                            {% if item.delivery_address %}<div class="metric-detail">Collect from: {{ item.delivery_address|linebreaksbr }}</div>{% endif %}
+                            {% if item.delivery_phone %}<div class="metric-detail">Contact: {{ item.delivery_phone }}</div>{% endif %}
+                        {% endif %}
+                        {% if item.notes %}<div class="metric-detail">Student note: {{ item.notes }}</div>{% endif %}
+                        {% if item.method_overridden %}
+                            <div class="metric-detail">Method changed to {{ item.get_return_method_display }}.</div>
+                        {% endif %}
+                        {% if item.staff_notes %}<div class="metric-detail">Library notes: {{ item.staff_notes }}</div>{% endif %}
+                    </div>
+                    <div class="ms-auto d-flex flex-column gap-2" style="min-width: 260px;">
+                        {% if item.status == 'pending' %}
+                            <form method="post" action="{% url 'library:return_request_decide' item.pk %}" class="d-flex flex-column gap-2">
+                                {% csrf_token %}
+                                <label class="form-label small mb-0" for="rmethod-{{ item.pk }}">Handle as</label>
+                                <select class="form-select form-select-sm" id="rmethod-{{ item.pk }}" name="return_method">
+                                    <option value="dropoff"{% if item.return_method == 'dropoff' %} selected{% endif %}>Drop Off at the School Library</option>
+                                    <option value="collection"{% if item.return_method == 'collection' %} selected{% endif %}>Collected by the School Courier</option>
+                                </select>
+                                <textarea class="form-control form-control-sm" name="staff_notes" rows="2" placeholder="Note to the student"></textarea>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">Approve</button>
+                                    <button type="submit" name="action" value="reject" class="btn btn-outline-primary btn-sm">Reject</button>
+                                </div>
+                            </form>
+                        {% elif item.status == 'approved' and item.requires_collection %}
+                            <form method="post" action="{% url 'library:return_request_transit' item.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary btn-sm">Mark in transit</button>
+                            </form>
+                            <a href="{% url 'library:return_request_receive' item.pk %}" class="btn btn-success btn-sm">Receive book</a>
+                        {% elif item.status in 'approved in_transit' %}
+                            <a href="{% url 'library:return_request_receive' item.pk %}" class="btn btn-success btn-sm">Receive book</a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state"><p>No return requests match this filter.</p></div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

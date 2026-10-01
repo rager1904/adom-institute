@@ -4,7 +4,8 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import (
     BookCategory, Book, DigitalResource, BookBorrowing, BookReservation,
-    DigitalResourceAccess, CourseResource, LibrarySettings, LibraryReport
+    DigitalResourceAccess, CourseResource, LibrarySettings, LibraryReport,
+    ReturnRequest
 )
 
 @admin.register(BookCategory)
@@ -219,15 +220,19 @@ class BookBorrowingAdmin(admin.ModelAdmin):
 @admin.register(BookReservation)
 class BookReservationAdmin(admin.ModelAdmin):
     list_display = [
-        'book', 'user', 'reservation_date', 'expiry_date', 
-        'status', 'is_expired'
+        'book', 'user', 'reservation_date', 'expiry_date',
+        'status', 'fulfillment_method', 'is_expired'
     ]
-    list_filter = ['status', 'reservation_date', 'expiry_date']
+    list_filter = ['status', 'fulfillment_method', 'method_overridden', 'reservation_date', 'expiry_date']
     search_fields = [
         'book__title', 'user__first_name', 'user__last_name', 'user__email'
     ]
-    readonly_fields = ['reservation_date', 'is_expired']
-    actions = ['mark_available', 'cancel_reservations']
+    readonly_fields = [
+        'reservation_date', 'is_expired', 'reviewed_by', 'reviewed_at',
+        'method_overridden', 'fulfilled_at', 'fulfilled_by', 'borrowing',
+    ]
+    autocomplete_fields = ['book']
+    actions = ['approve_requests', 'mark_available', 'fulfil_requests', 'cancel_reservations']
 
     def is_expired(self, obj):
         if obj.is_expired:
@@ -235,17 +240,83 @@ class BookReservationAdmin(admin.ModelAdmin):
         return format_html('<span style="color: green;">Active</span>')
     is_expired.short_description = 'Expired'
 
+    def approve_requests(self, request, queryset):
+        approved = 0
+        for reservation in queryset.filter(status='pending'):
+            reservation.approve(reviewed_by=request.user)
+            approved += 1
+        self.message_user(request, f"Approved {approved} book requests.")
+    approve_requests.short_description = "Approve selected book requests"
+
     def mark_available(self, request, queryset):
         for reservation in queryset:
             reservation.mark_available()
         self.message_user(request, f"Marked {queryset.count()} reservations as available.")
     mark_available.short_description = "Mark selected reservations as available"
 
+    def fulfil_requests(self, request, queryset):
+        handed_over = 0
+        for reservation in queryset:
+            if reservation.fulfil(fulfilled_by=request.user) is not None:
+                handed_over += 1
+        self.message_user(request, f"Handed over {handed_over} books.")
+    fulfil_requests.short_description = "Hand over selected books (creates the loan)"
+
     def cancel_reservations(self, request, queryset):
         for reservation in queryset:
             reservation.cancel_reservation()
         self.message_user(request, f"Cancelled {queryset.count()} reservations.")
     cancel_reservations.short_description = "Cancel selected reservations"
+
+
+@admin.register(ReturnRequest)
+class ReturnRequestAdmin(admin.ModelAdmin):
+    """Staff queue for student-initiated returns."""
+
+    list_display = [
+        'book', 'user', 'return_method', 'requested_at', 'status', 'received_at'
+    ]
+    list_filter = ['status', 'return_method', 'method_overridden', 'requested_at']
+    search_fields = [
+        'borrowing__book__title', 'user__first_name', 'user__last_name', 'user__email'
+    ]
+    readonly_fields = [
+        'requested_at', 'reviewed_by', 'reviewed_at', 'method_overridden',
+        'received_by', 'received_at', 'condition_on_receipt',
+    ]
+    actions = ['approve_requests', 'mark_in_transit', 'receive_books', 'reject_requests']
+
+    def approve_requests(self, request, queryset):
+        approved = 0
+        for return_request in queryset.filter(status='pending'):
+            return_request.approve(reviewed_by=request.user)
+            approved += 1
+        self.message_user(request, f"Approved {approved} return requests.")
+    approve_requests.short_description = "Approve selected return requests"
+
+    def mark_in_transit(self, request, queryset):
+        dispatched = 0
+        for return_request in queryset.filter(status='approved'):
+            return_request.mark_in_transit()
+            dispatched += 1
+        self.message_user(request, f"Marked {dispatched} return requests in transit.")
+    mark_in_transit.short_description = "Mark selected requests as in transit"
+
+    def receive_books(self, request, queryset):
+        received = 0
+        for return_request in queryset.filter(status__in=['approved', 'in_transit']):
+            if return_request.receive(received_by=request.user) is not None:
+                received += 1
+        self.message_user(request, f"Checked in {received} returned books.")
+    receive_books.short_description = "Check in selected returned books"
+
+    def reject_requests(self, request, queryset):
+        rejected = 0
+        for return_request in queryset.filter(status='pending'):
+            return_request.reject(reviewed_by=request.user, staff_notes='Rejected from the library console.')
+            rejected += 1
+        self.message_user(request, f"Rejected {rejected} return requests.")
+    reject_requests.short_description = "Reject selected return requests"
 
 @admin.register(DigitalResourceAccess)
 class DigitalResourceAccessAdmin(admin.ModelAdmin):

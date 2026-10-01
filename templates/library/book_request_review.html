@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Book Requests to Review - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Library</div>
+            <h1 class="dashboard-title">Book Requests</h1>
+            <p class="dashboard-subtitle">Approve or decline student requests, then hand the book over.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'library:return_request_review' %}" class="btn btn-outline-primary">Return requests</a>
+        </div>
+    </div>
+
+    <section class="panel">
+        <div class="panel-heading">
+            <h2 class="panel-title">Waiting on you ({{ reservations|length }})</h2>
+        </div>
+        <div class="focus-list">
+            {% for reservation in reservations %}
+                <div class="focus-item">
+                    <span class="focus-icon"><i class="fas fa-book"></i></span>
+                    <div>
+                        <div class="focus-category">{{ reservation.get_status_display }}</div>
+                        <div class="focus-title">{{ reservation.book.title }}</div>
+                        <div class="metric-detail">
+                            {{ reservation.user.get_full_name|default:reservation.user.username }}
+                            - asked {{ reservation.reservation_date|date:"d M Y" }}
+                        </div>
+                        <div class="metric-detail">
+                            Wants: {{ reservation.get_fulfillment_method_display }}
+                            {% if reservation.delivery_phone %} - {{ reservation.delivery_phone }}{% endif %}
+                        </div>
+                        {% if reservation.requires_delivery and reservation.delivery_address %}
+                            <div class="metric-detail">Deliver to: {{ reservation.delivery_address|linebreaksbr }}</div>
+                        {% endif %}
+                        {% if reservation.notes %}
+                            <div class="metric-detail">Student note: {{ reservation.notes }}</div>
+                        {% endif %}
+                        {% if reservation.is_expired %}
+                            <div class="text-danger">The pickup window has lapsed.</div>
+                        {% endif %}
+                    </div>
+                    <div class="ms-auto d-flex flex-column gap-2" style="min-width: 260px;">
+                        {% if reservation.status == 'pending' %}
+                            <form method="post" action="{% url 'library:reservation_decide' reservation.pk %}" class="d-flex flex-column gap-2">
+                                {% csrf_token %}
+                                <label class="form-label small mb-0" for="method-{{ reservation.pk }}">Fulfil with</label>
+                                <select class="form-select form-select-sm" id="method-{{ reservation.pk }}" name="fulfillment_method">
+                                    <option value="pickup"{% if reservation.fulfillment_method == 'pickup' %} selected{% endif %}>Collect from the School Library</option>
+                                    {% if settings.enable_delivery %}
+                                        <option value="delivery"{% if reservation.fulfillment_method == 'delivery' %} selected{% endif %}>Delivered to Me by the School</option>
+                                    {% endif %}
+                                </select>
+                                <textarea class="form-control form-control-sm" name="staff_notes" rows="2" placeholder="Note to the student"></textarea>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">Approve</button>
+                                    <button type="submit" name="action" value="reject" class="btn btn-outline-primary btn-sm">Reject</button>
+                                </div>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{% url 'library:reservation_fulfil' reservation.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" name="confirm" value="1" class="btn btn-success btn-sm">Hand over now</button>
+                            </form>
+                            <form method="post" action="{% url 'library:cancel_reservation' reservation.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-primary btn-sm">Cancel request</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state"><p>No book requests are waiting.</p></div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Return Book at Desk - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Library</div>
+            <h1 class="dashboard-title">Check In Book</h1>
+            <p class="dashboard-subtitle">Take "{{ borrowing.book.title }}" back at the desk.</p>
+        </div>
+    </div>
+
+    {% if return_request %}
+        <div class="alert alert-info">
+            {{ return_request.user.get_full_name|default:return_request.user.username }} asked to return this book
+            ({{ return_request.get_return_method_display }}). Checking it in here will close that request too.
+        </div>
+    {% endif %}
+
+    <section class="metric-grid">
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-user"></i></span>
+            <div class="metric-value">{{ borrowing.borrower.get_full_name|default:borrowing.borrower.username }}</div>
+            <div class="metric-label">Borrower</div>
+            <div class="metric-detail">Borrowed {{ borrowing.borrowed_date|date:"d M Y" }}</div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-clock"></i></span>
+            <div class="metric-value">{{ borrowing.due_date|date:"d M Y" }}</div>
+            <div class="metric-label">Was due</div>
+            <div class="metric-detail">
+                {% if borrowing.is_overdue %}Overdue by {{ borrowing.days_overdue }} day{{ borrowing.days_overdue|pluralize }}{% else %}Within time{% endif %}
+            </div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-truck"></i></span>
+            <div class="metric-value">{{ borrowing.get_fulfillment_method_display }}</div>
+            <div class="metric-label">How it was received</div>
+            <div class="metric-detail">{{ borrowing.book.get_condition_display }}</div>
+        </article>
+    </section>
+
+    <section class="panel">
+        <div class="panel-heading">
+            <h2 class="panel-title">Return details</h2>
+        </div>
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.return_notes.id_for_label }}">{{ form.return_notes.label }}</label>
+                {{ form.return_notes }}
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">Confirm return</button>
+                <a href="{% url 'library:borrowing_list' %}" class="btn btn-outline-primary">Cancel</a>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

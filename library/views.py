@@ -5,14 +5,14 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse, HttpResponse
 from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+    ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView, FormView
 )
 from django.urls import reverse_lazy, reverse
 from django.db.models import Q, Count, Sum
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.contrib.auth import get_user_model
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets, status, filters, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -28,13 +28,16 @@ from accounts.permissions import (
 
 from .models import (
     Book, BookCategory, DigitalResource, BookBorrowing, BookReservation,
-    DigitalResourceAccess, CourseResource, LibrarySettings, LibraryReport
+    DigitalResourceAccess, CourseResource, LibrarySettings, LibraryReport,
+    ReturnRequest
 )
 from .forms import (
     BookSearchForm, BookForm, BookCategoryForm, DigitalResourceSearchForm,
     DigitalResourceForm, BookBorrowingForm, BookReturnForm, BookReservationForm,
     CourseResourceForm, LibrarySettingsForm, BulkBookImportForm,
-    BookBarcodeScanForm, DigitalResourceUploadForm
+    BookBarcodeScanForm, DigitalResourceUploadForm,
+    BookRequestForm, BookRequestDecisionForm, BookReturnRequestForm,
+    BookReturnDecisionForm, BookReturnReceiveForm
 )
 from .serializers import (
     BookSerializer, BookCategorySerializer, DigitalResourceSerializer,
@@ -43,7 +46,7 @@ from .serializers import (
     BookDetailSerializer, DigitalResourceDetailSerializer, LibraryStatisticsSerializer,
     UserLibraryActivitySerializer, BookSearchSerializer, DigitalResourceSearchSerializer,
     BookBorrowActionSerializer, BookReturnActionSerializer, BookReserveActionSerializer,
-    DigitalResourceDownloadSerializer
+    DigitalResourceDownloadSerializer, ReturnRequestSerializer
 )
 
 User = get_user_model()
@@ -76,11 +79,58 @@ def can_manage_resources(user):
     return is_admin_user(user) or is_teacher_user(user)
 
 
+class IsLibraryStaffOrReadOnly(permissions.BasePermission):
+    """Read for any signed-in user; write only for library staff (admins).
+
+    Borrowing and returning books are staff decisions, so the API must not let
+    a student quietly close their own loan or issue books to themselves.
+    """
+
+    message = 'Only library staff can record borrowing and returns.'
+
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return bool(request.user and request.user.is_authenticated)
+        return bool(request.user and request.user.is_authenticated and is_admin_user(request.user))
+
+
+class IsLibraryStaffOrOwnRequest(permissions.BasePermission):
+    """Self-service create is allowed, but only staff may review or re-file.
+
+    A request row is the student's own until staff approve, reject, hand the
+    book over or check it back in.
+    """
+
+    message = 'Only library staff can review requests.'
+
+    REVIEWING_ACTIONS = {'decide', 'fulfil', 'transit', 'receive', 'in_transit'}
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if is_admin_user(request.user):
+            return True
+        if request.method not in permissions.SAFE_METHODS:
+            return getattr(view, 'action', None) not in self.REVIEWING_ACTIONS
+        return True
+
+
+def _scoped_to_own_requests(queryset, user, field):
+    if is_admin_user(user):
+        return queryset
+    return queryset.filter(**{field: user})
+
+
 # API Viewsets
 class BookViewSet(viewsets.ModelViewSet):
-    """API viewset for Book model"""
+    """API viewset for Book model.
+
+    Reads are open to any signed-in user. ``borrow`` and ``reserve`` both name
+    a third party in the payload, so they stay staff-only.
+    """
     queryset = Book.objects.all()
     serializer_class = BookSerializer
+    permission_classes = [IsAuthenticated, IsLibraryStaffOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'availability', 'condition', 'is_active']
     search_fields = ['title', 'author', 'isbn', 'description']
@@ -158,9 +208,10 @@ class BookViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class BookCategoryViewSet(viewsets.ModelViewSet):
-    """API viewset for BookCategory model"""
+    """API viewset for BookCategory model. Catalogue changes are staff-only."""
     queryset = BookCategory.objects.all()
     serializer_class = BookCategorySerializer
+    permission_classes = [IsAuthenticated, IsLibraryStaffOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['is_active']
     search_fields = ['name', 'description']
@@ -267,17 +318,30 @@ class DigitalResourceViewSet(viewsets.ModelViewSet):
 
 class BookBorrowingViewSet(viewsets.ModelViewSet):
     """API viewset for BookBorrowing model"""
-    queryset = BookBorrowing.objects.all()
+    queryset = BookBorrowing.objects.select_related('book', 'borrower').all()
     serializer_class = BookBorrowingSerializer
+    permission_classes = [IsAuthenticated, IsLibraryStaffOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['book', 'borrower', 'is_active']
     ordering_fields = ['borrowed_date', 'due_date', 'return_date']
     ordering = ['-borrowed_date']
 
+    def get_queryset(self):
+        return _scoped_to_own_requests(
+            super().get_queryset(), self.request.user, 'borrower',
+        )
+
     @action(detail=True, methods=['post'])
     def return_book(self, request, pk=None):
         """Return a borrowed book"""
         borrowing = self.get_object()
+
+        if borrowing.return_date is not None:
+            return Response(
+                {'detail': 'This book has already been returned.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = BookReturnActionSerializer(data=request.data)
         
         if serializer.is_valid():
@@ -286,6 +350,15 @@ class BookBorrowingViewSet(viewsets.ModelViewSet):
             borrowing.return_book(request.user)
             borrowing.notes += f"\nReturn notes: {return_notes}"
             borrowing.save()
+
+            # A student-initiated return request, if any, is now settled.
+            ReturnRequest.objects.filter(
+                borrowing=borrowing, status__in=ReturnRequest.OPEN_STATUSES,
+            ).update(
+                status='received',
+                received_by=request.user,
+                received_at=borrowing.return_date,
+            )
             
             return Response({
                 'message': 'Book returned successfully',
@@ -294,14 +367,111 @@ class BookBorrowingViewSet(viewsets.ModelViewSet):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class BookReservationViewSet(viewsets.ModelViewSet):
-    """API viewset for BookReservation model"""
-    queryset = BookReservation.objects.all()
+    """API viewset for BookReservation model.
+
+    Students may raise a request against themselves; staff do the reviewing.
+    """
+    queryset = BookReservation.objects.select_related('book', 'user').all()
     serializer_class = BookReservationSerializer
+    permission_classes = [IsAuthenticated, IsLibraryStaffOrOwnRequest]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['book', 'user', 'status']
     ordering_fields = ['reservation_date', 'expiry_date']
     ordering = ['-reservation_date']
+
+    def get_queryset(self):
+        return _scoped_to_own_requests(
+            super().get_queryset(), self.request.user, 'user',
+        )
+
+
+class ReturnRequestViewSet(viewsets.ModelViewSet):
+    """API viewset for student-initiated return requests"""
+
+    queryset = ReturnRequest.objects.select_related(
+        'borrowing', 'borrowing__book', 'user',
+    ).all()
+    serializer_class = ReturnRequestSerializer
+    permission_classes = [IsAuthenticated, IsLibraryStaffOrOwnRequest]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['status', 'return_method', 'user']
+    ordering_fields = ['requested_at', 'reviewed_at', 'received_at']
+    ordering = ['-requested_at']
+
+    def get_queryset(self):
+        return _scoped_to_own_requests(
+            super().get_queryset(), self.request.user, 'user',
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def decide(self, request, pk=None):
+        """Approve or reject a pending return request (staff only)."""
+        if not is_admin_user(request.user):
+            return Response(
+                {'detail': IsLibraryStaffOrOwnRequest.message},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        return_request = self.get_object()
+        if return_request.status != 'pending':
+            return Response(
+                {'detail': 'Only a pending return request can be decided.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        action_name = request.data.get('action', 'approve')
+        method = request.data.get('return_method') or None
+        notes = request.data.get('staff_notes', '')
+
+        if action_name == 'reject':
+            return_request.reject(reviewed_by=request.user, staff_notes=notes)
+        elif action_name == 'approve':
+            return_request.approve(reviewed_by=request.user, return_method=method)
+        else:
+            return Response(
+                {'action': ['Must be "approve" or "reject".']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(ReturnRequestSerializer(return_request).data)
+
+    @action(detail=True, methods=['post'])
+    def receive(self, request, pk=None):
+        """Check a returned book back in and close the loan (staff only)."""
+        if not is_admin_user(request.user):
+            return Response(
+                {'detail': IsLibraryStaffOrReadOnly.message},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        return_request = self.get_object()
+        if return_request.status not in ('approved', 'in_transit'):
+            return Response(
+                {'detail': 'This return request is not awaiting a book.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        borrowing = return_request.receive(
+            received_by=request.user,
+            condition=request.data.get('condition', ''),
+            notes=request.data.get('return_notes', ''),
+        )
+        if borrowing is None:
+            return Response(
+                {'detail': 'Could not close that loan - it may already be returned.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({
+            'message': 'Book received.',
+            'return_request': ReturnRequestSerializer(return_request).data,
+            'late_fee': float(borrowing.late_fee),
+        })
 
 class LibraryStatisticsViewSet(viewsets.ViewSet):
     """API viewset for library statistics"""
@@ -451,7 +621,24 @@ class LibraryDashboardView(LoginRequiredMixin, TemplateView):
             return_date__isnull=True
         ).count()
         context['total_digital_resources'] = DigitalResource.objects.filter(is_active=True).count()
-        
+
+        # Queue sizes. Staff see the whole library's backlog; everyone else
+        # sees only their own.
+        if is_admin_user(self.request.user):
+            context['pending_request_count'] = BookReservation.objects.filter(
+                status='pending',
+            ).count()
+            context['open_return_request_count'] = ReturnRequest.objects.filter(
+                status__in=ReturnRequest.OPEN_STATUSES,
+            ).count()
+        else:
+            context['pending_request_count'] = BookReservation.objects.filter(
+                user=self.request.user, status='pending',
+            ).count()
+            context['open_return_request_count'] = ReturnRequest.objects.filter(
+                user=self.request.user, status__in=ReturnRequest.OPEN_STATUSES,
+            ).count()
+
         # Today's activity
         context['borrowings_today'] = BookBorrowing.objects.filter(borrowed_date__date=today).count()
         context['returns_today'] = BookBorrowing.objects.filter(return_date__date=today).count()
@@ -511,6 +698,14 @@ class BookListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['search_form'] = BookSearchForm(self.request.GET)
         context['categories'] = BookCategory.objects.filter(is_active=True)
+        # Books this member already has a live request for, so the catalogue
+        # can grey out the request button.
+        context['my_request_book_ids'] = set(
+            BookReservation.objects.filter(
+                user=self.request.user,
+                status__in=BookReservation.OPEN_STATUSES,
+            ).values_list('book_id', flat=True)
+        )
         return context
 
 class BookDetailView(LoginRequiredMixin, DetailView):
@@ -753,21 +948,69 @@ class DigitalResourceDeleteView(LoginRequiredMixin, AcademicStaffRequiredMixin, 
         messages.success(request, 'Digital resource deleted successfully.')
         return response
 
+def _library_settings():
+    return LibrarySettings.get_settings()
+
+
+def _expire_lapsed_requests():
+    """Close requests whose pickup window has passed."""
+    now = timezone.now()
+    for reservation in BookReservation.objects.filter(
+        status__in=['approved', 'available'], expiry_date__lt=now
+    ):
+        reservation.mark_expired()
+    return ReturnRequest.objects.filter(
+        status__in=['approved', 'in_transit'], requested_at__lt=now
+    ).update(status='cancelled')
+
+
+def can_review_library_requests(user):
+    """Who may approve or decline book and return requests."""
+    return bool(user and user.is_authenticated and is_admin_user(user))
+
+
 class BookBorrowingListView(LoginRequiredMixin, ListView):
     """Book borrowing list view"""
     model = BookBorrowing
     template_name = 'library/borrowing_list.html'
     context_object_name = 'borrowings'
     paginate_by = 20
-    
+
     def get_queryset(self):
         queryset = BookBorrowing.objects.select_related('book', 'borrower').order_by('-borrowed_date')
-        
+
         # Filter by user unless administrator.
         if not is_admin_user(self.request.user):
             queryset = queryset.filter(borrower=self.request.user)
-        
+
         return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        _expire_lapsed_requests()
+        borrowings = BookBorrowing.objects.filter(return_date__isnull=True)
+        if not is_admin_user(self.request.user):
+            borrowings = borrowings.filter(borrower=self.request.user)
+
+        now = timezone.now()
+        soon = now + timedelta(days=3)
+        context['total_borrowings'] = borrowings.count()
+        context['overdue_count'] = sum(1 for b in borrowings if b.is_overdue)
+        context['due_soon_count'] = borrowings.filter(due_date__gte=now, due_date__lte=soon).count()
+        context['returned_today'] = BookBorrowing.objects.filter(
+            return_date__date=timezone.localdate(),
+            **({} if is_admin_user(self.request.user) else {'borrower': self.request.user}),
+        ).count()
+        context['pending_return_requests'] = ReturnRequest.objects.filter(
+            borrowing__in=borrowings, status__in=ReturnRequest.OPEN_STATUSES,
+        ).count()
+        context['open_return_request_ids'] = set(
+            ReturnRequest.objects.filter(
+                borrowing__in=borrowings, status__in=ReturnRequest.OPEN_STATUSES,
+            ).values_list('borrowing_id', flat=True)
+        )
+        return context
+
 
 class BookBorrowingCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
     """Book borrowing create view"""
@@ -775,43 +1018,62 @@ class BookBorrowingCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView
     form_class = BookBorrowingForm
     template_name = 'library/borrowing_form.html'
     success_url = reverse_lazy('library:borrowing_list')
-    
+
     def form_valid(self, form):
         response = super().form_valid(form)
-        
+
         # Update book availability
         book = form.instance.book
         book.availability = 'borrowed'
         book.save()
-        
+
         messages.success(self.request, 'Book borrowed successfully.')
         return response
+
 
 @login_required
 @user_passes_test(is_admin_user)
 def return_book(request, borrowing_id):
-    """Return a borrowed book"""
-    borrowing = get_object_or_404(BookBorrowing, id=borrowing_id)
-    
+    """Return a borrowed book at the desk"""
+    borrowing = get_object_or_404(
+        BookBorrowing.objects.select_related('book', 'borrower'), id=borrowing_id,
+    )
+
+    if borrowing.return_date is not None:
+        messages.info(request, 'This book has already been returned.')
+        return redirect('library:borrowing_list')
+
+    open_return = ReturnRequest.objects.filter(
+        borrowing=borrowing, status__in=ReturnRequest.OPEN_STATUSES,
+    ).first()
+
     if request.method == 'POST':
         form = BookReturnForm(request.POST)
         if form.is_valid():
             return_notes = form.cleaned_data.get('return_notes', '')
-            
+
             borrowing.return_book(request.user)
             if return_notes:
                 borrowing.notes += f"\nReturn notes: {return_notes}"
                 borrowing.save()
-            
+
+            if open_return is not None:
+                open_return.received_by = request.user
+                open_return.received_at = borrowing.return_date
+                open_return.status = 'received'
+                open_return.save()
+
             messages.success(request, 'Book returned successfully.')
             return redirect('library:borrowing_list')
     else:
         form = BookReturnForm()
-    
+
     return render(request, 'library/return_book.html', {
         'borrowing': borrowing,
+        'return_request': open_return,
         'form': form
     })
+
 
 class BookReservationListView(LoginRequiredMixin, ListView):
     """Book reservation list view"""
@@ -819,47 +1081,486 @@ class BookReservationListView(LoginRequiredMixin, ListView):
     template_name = 'library/reservation_list.html'
     context_object_name = 'reservations'
     paginate_by = 20
-    
+
     def get_queryset(self):
-        queryset = BookReservation.objects.select_related('book', 'user').order_by('-reservation_date')
-        
+        _expire_lapsed_requests()
+        queryset = BookReservation.objects.select_related(
+            'book', 'user', 'borrowing',
+        ).order_by('-reservation_date')
+
         # Filter by user unless administrator.
         if not is_admin_user(self.request.user):
             queryset = queryset.filter(user=self.request.user)
-        
+
         return queryset
 
-class BookReservationCreateView(LoginRequiredMixin, CreateView):
-    """Book reservation create view"""
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        reservations = BookReservation.objects.filter(status__in=BookReservation.OPEN_STATUSES)
+        if not is_admin_user(self.request.user):
+            reservations = reservations.filter(user=self.request.user)
+        context['total_reservations'] = reservations.count()
+        context['ready_count'] = reservations.filter(status='available').count()
+        context['pending_count'] = reservations.filter(status='pending').count()
+        context['fulfilled_today'] = BookReservation.objects.filter(
+            fulfilled_at__date=timezone.localdate(),
+            **({} if is_admin_user(self.request.user) else {'user': self.request.user}),
+        ).count()
+        return context
+
+
+class BookReservationCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
+    """Raise a book request on behalf of a member (staff only).
+
+    Students use :class:`BookRequestCreateView` instead, which pins the
+    request to their own account.
+    """
     model = BookReservation
     form_class = BookReservationForm
     template_name = 'library/reservation_form.html'
     success_url = reverse_lazy('library:reservation_list')
-    
+
     def form_valid(self, form):
-        form.instance.user = self.request.user
-        
-        # Set expiry date
-        settings = LibrarySettings.get_settings()
-        form.instance.expiry_date = timezone.now() + timedelta(hours=settings.reservation_duration_hours)
-        
+        settings = _library_settings()
+        form.instance.expiry_date = timezone.now() + timedelta(
+            hours=settings.reservation_duration_hours
+        )
+        if not settings.require_approval:
+            form.instance.status = 'approved'
+            form.instance.reviewed_by = self.request.user
+            form.instance.reviewed_at = timezone.now()
+
         response = super().form_valid(form)
-        messages.success(self.request, 'Book reserved successfully.')
+        messages.success(
+            self.request,
+            'Request recorded and approved.' if not settings.require_approval
+            else 'Request recorded and sent for approval.',
+        )
         return response
 
+
+class BookRequestCreateView(LoginRequiredMixin, CreateView):
+    """A student asks for a book, choosing pickup or delivery."""
+
+    model = BookReservation
+    form_class = BookRequestForm
+    template_name = 'library/book_request_form.html'
+    success_url = reverse_lazy('library:reservation_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def get_initial(self):
+        initial = super().get_initial()
+        book_id = self.request.GET.get('book')
+        if book_id:
+            initial['book'] = book_id
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['delivery_enabled'] = _library_settings().enable_delivery
+        return context
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        settings = _library_settings()
+
+        # The pickup window starts when staff approve, not when the student asks.
+        form.instance.expiry_date = timezone.now() + timedelta(
+            hours=settings.reservation_duration_hours
+        )
+
+        # When approval is switched off, hand the book over immediately.
+        if not settings.require_approval:
+            form.instance.status = 'approved'
+            form.instance.reviewed_by = self.request.user
+            form.instance.reviewed_at = timezone.now()
+
+        response = super().form_valid(form)
+
+        if not settings.require_approval:
+            borrowing = self.object.fulfil(self.request.user)
+            if borrowing is None:
+                messages.warning(
+                    self.request,
+                    'Your request was approved but the book is no longer available. '
+                    'The library will get in touch.',
+                )
+            else:
+                messages.success(
+                    self.request,
+                    f'Request approved - "{self.object.book.title}" is due on '
+                    f'{timezone.localtime(borrowing.due_date):%d %b %Y}.',
+                )
+                return redirect('library:borrowing_list')
+        else:
+            messages.success(
+                self.request,
+                'Request submitted. The library will review it and let you know how '
+                'you can collect the book.',
+            )
+        return response
+
+
 @login_required
+@user_passes_test(is_admin_user)
 def cancel_reservation(request, reservation_id):
-    """Cancel a book reservation"""
-    reservation = get_object_or_404(BookReservation, id=reservation_id, user=request.user)
-    
+    """Cancel any book reservation"""
+    reservation = get_object_or_404(BookReservation, id=reservation_id)
+
+    if reservation.status == 'fulfilled':
+        messages.error(request, 'That request has already been handed over.')
+        return redirect('library:reservation_list')
+
     if request.method == 'POST':
         reservation.cancel_reservation()
-        messages.success(request, 'Reservation cancelled successfully.')
+        messages.success(request, 'Request cancelled.')
         return redirect('library:reservation_list')
-    
+
     return render(request, 'library/cancel_reservation.html', {
         'reservation': reservation
     })
+
+
+class BookRequestReviewListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
+    """Queue of book requests waiting on a librarian."""
+
+    model = BookReservation
+    template_name = 'library/book_request_review.html'
+    context_object_name = 'reservations'
+    paginate_by = 20
+
+    def get_queryset(self):
+        _expire_lapsed_requests()
+        return BookReservation.objects.filter(
+            status__in=['pending', 'approved', 'available'],
+        ).select_related('book', 'user').order_by('reservation_date')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['settings'] = _library_settings()
+        context['decision_forms'] = {
+            reservation.pk: BookRequestDecisionForm(
+                reservation=reservation,
+                initial={
+                    'action': 'approve',
+                    'fulfillment_method': reservation.fulfillment_method,
+                },
+            )
+            for reservation in context['reservations']
+        }
+        return context
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def decide_book_request(request, reservation_id):
+    """Approve or reject a pending book request."""
+    reservation = get_object_or_404(BookReservation, id=reservation_id)
+
+    if not reservation.is_open:
+        messages.error(request, 'That request is no longer open.')
+        return redirect('library:reservation_review')
+
+    if request.method != 'POST':
+        return redirect('library:reservation_review')
+
+    form = BookRequestDecisionForm(request.POST, reservation=reservation)
+    if not form.is_valid():
+        for error in form.errors.get('__all__', []) + form.errors.get('staff_notes', []):
+            messages.error(request, error)
+        return redirect('library:reservation_review')
+
+    action = form.cleaned_data['action']
+    staff_notes = form.cleaned_data.get('staff_notes', '')
+
+    if action == 'reject':
+        reservation.reject(reviewed_by=request.user, staff_notes=staff_notes)
+        messages.success(request, f'Request for "{reservation.book.title}" rejected.')
+    else:
+        reservation.approve(
+            reviewed_by=request.user,
+            fulfillment_method=form.cleaned_data.get('fulfillment_method'),
+        )
+        if reservation.method_overridden:
+            messages.warning(
+                request,
+                f'Approved with {reservation.get_fulfillment_method_display()} '
+                'instead of the student\'s choice.',
+            )
+        else:
+            messages.success(
+                request,
+                f'Approved - {reservation.get_fulfillment_method_display()}.',
+            )
+
+    return redirect('library:reservation_review')
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def fulfil_book_request(request, reservation_id):
+    """Hand an approved request over, creating the loan."""
+    reservation = get_object_or_404(BookReservation, id=reservation_id)
+
+    if reservation.status not in ('approved', 'available'):
+        messages.error(request, 'Only an approved request can be handed over.')
+        return redirect('library:reservation_review')
+
+    if request.method == 'POST' and 'confirm' not in request.POST:
+        return redirect('library:reservation_review')
+
+    borrowing = reservation.fulfil(fulfilled_by=request.user)
+    if borrowing is None:
+        messages.error(
+            request,
+            f'"{reservation.book.title}" is not available to hand over right now.',
+        )
+        return redirect('library:reservation_review')
+
+    messages.success(
+        request,
+        f'"{reservation.book.title}" handed to {reservation.user.get_full_name()}. '
+        f'Due {timezone.localtime(borrowing.due_date):%d %b %Y}.',
+    )
+    return redirect('library:borrowing_list')
+
+
+class ReturnRequestListView(LoginRequiredMixin, ListView):
+    """A student's own return requests."""
+
+    model = ReturnRequest
+    template_name = 'library/return_request_list.html'
+    context_object_name = 'return_requests'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return ReturnRequest.objects.select_related(
+            'borrowing', 'borrowing__book', 'user',
+        ).filter(user=self.request.user).order_by('-requested_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['held_books'] = BookBorrowing.objects.filter(
+            borrower=self.request.user, return_date__isnull=True,
+        ).exclude(
+            return_requests__status__in=ReturnRequest.OPEN_STATUSES,
+        ).select_related('book').order_by('due_date')
+        return context
+
+
+class ReturnRequestCreateView(LoginRequiredMixin, FormView):
+    """A student asks to give a book back."""
+
+    form_class = BookReturnRequestForm
+    template_name = 'library/return_request_form.html'
+
+    def get_borrowing(self):
+        borrowing_id = self.request.GET.get('borrowing') or self.kwargs.get('borrowing_id')
+        if not borrowing_id:
+            return None
+        return get_object_or_404(
+            BookBorrowing.objects.select_related('book'),
+            id=borrowing_id,
+            borrower=self.request.user,
+        )
+
+    def get_initial(self):
+        initial = super().get_initial()
+        if self.request.GET.get('method'):
+            initial['return_method'] = self.request.GET['method']
+        return initial
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['borrowing'] = self.get_borrowing()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['borrowing'] = self.get_borrowing()
+        return context
+
+    def get_success_url(self):
+        return reverse('library:return_request_list')
+
+    def form_valid(self, form):
+        borrowing = form.cleaned_borrowing
+        return_request = form.save(commit=False)
+        return_request.borrowing = borrowing
+        return_request.user = self.request.user
+        return_request.save()
+
+        if borrowing.is_overdue:
+            messages.warning(
+                self.request,
+                'This book is overdue - a late fee may still apply.',
+            )
+        messages.success(
+            self.request,
+            f'Return request submitted for "{borrowing.book.title}". '
+            'The library will confirm how to hand it back.',
+        )
+        return super().form_valid(form)
+
+
+@login_required
+def cancel_return_request(request, return_request_id):
+    """Withdraw an open return request."""
+    return_request = get_object_or_404(ReturnRequest, id=return_request_id, user=request.user)
+
+    if not return_request.is_open:
+        messages.error(request, 'That return request is closed.')
+        return redirect('library:return_request_list')
+
+    if request.method == 'POST':
+        return_request.cancel()
+        messages.success(request, 'Return request withdrawn.')
+        return redirect('library:return_request_list')
+
+    return render(request, 'library/cancel_return_request.html', {
+        'return_request': return_request,
+    })
+
+
+class ReturnRequestReviewListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
+    """Queue of return requests waiting on a librarian."""
+
+    model = ReturnRequest
+    template_name = 'library/return_request_review.html'
+    context_object_name = 'return_requests'
+    paginate_by = 20
+
+    def get_queryset(self):
+        status = self.request.GET.get('status', 'open')
+        queryset = ReturnRequest.objects.select_related(
+            'borrowing', 'borrowing__book', 'user',
+        ).order_by('-requested_at')
+        if status == 'open':
+            return queryset.filter(status__in=ReturnRequest.OPEN_STATUSES)
+        if status:
+            return queryset.filter(status=status)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status_filter'] = self.request.GET.get('status', 'open')
+        context['open_count'] = ReturnRequest.objects.filter(
+            status__in=ReturnRequest.OPEN_STATUSES,
+        ).count()
+        context['collections_pending'] = ReturnRequest.objects.filter(
+            status='approved', return_method='collection',
+        ).count()
+        context['decision_forms'] = {
+            item.pk: BookReturnDecisionForm(
+                return_request=item,
+                initial={'action': 'approve', 'return_method': item.return_method},
+            )
+            for item in context['return_requests']
+            if item.status == 'pending'
+        }
+        return context
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def decide_return_request(request, return_request_id):
+    """Approve or reject a pending return request."""
+    return_request = get_object_or_404(ReturnRequest, id=return_request_id)
+
+    if return_request.status != 'pending':
+        messages.error(request, 'Only a pending return request can be decided.')
+        return redirect('library:return_request_review')
+
+    if request.method != 'POST':
+        return redirect('library:return_request_review')
+
+    form = BookReturnDecisionForm(request.POST, return_request=return_request)
+    if not form.is_valid():
+        for error in form.errors.get('__all__', []) + form.errors.get('staff_notes', []):
+            messages.error(request, error)
+        return redirect('library:return_request_review')
+
+    action = form.cleaned_data['action']
+    staff_notes = form.cleaned_data.get('staff_notes', '')
+
+    if action == 'reject':
+        return_request.reject(reviewed_by=request.user, staff_notes=staff_notes)
+        messages.success(request, 'Return request rejected.')
+    else:
+        return_request.approve(
+            reviewed_by=request.user,
+            return_method=form.cleaned_data.get('return_method'),
+        )
+        if return_request.requires_collection:
+            messages.success(
+                request,
+                'Approved - arrange a courier collection and mark it in transit.',
+            )
+        else:
+            messages.success(request, 'Approved - waiting for the student to drop it off.')
+
+    return redirect('library:return_request_review')
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def mark_return_in_transit(request, return_request_id):
+    """Flag an approved courier collection as on its way."""
+    return_request = get_object_or_404(ReturnRequest, id=return_request_id)
+
+    if request.method != 'POST':
+        return redirect('library:return_request_review')
+
+    if return_request.status != 'approved':
+        messages.error(request, 'Only an approved request can be dispatched.')
+        return redirect('library:return_request_review')
+
+    return_request.mark_in_transit()
+    messages.success(request, 'Marked as in transit.')
+    return redirect('library:return_request_review')
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def receive_return_request(request, return_request_id):
+    """Record the book as back in the library and close the loan."""
+    return_request = get_object_or_404(
+        ReturnRequest.objects.select_related('borrowing', 'borrowing__book', 'user'),
+        id=return_request_id,
+    )
+
+    if return_request.status not in ('approved', 'in_transit'):
+        messages.error(request, 'This return request is not awaiting a book.')
+        return redirect('library:return_request_review')
+
+    form = BookReturnReceiveForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        borrowing = return_request.receive(
+            received_by=request.user,
+            condition=form.cleaned_data.get('condition', ''),
+            notes=form.cleaned_data.get('return_notes', ''),
+        )
+        if borrowing is None:
+            messages.error(request, 'Could not close that loan - it may already be returned.')
+        else:
+            suffix = f' Late fee: {borrowing.late_fee}.' if borrowing.late_fee else ''
+            messages.success(
+                request, f'"{return_request.book.title}" received and checked in.{suffix}'
+            )
+            return redirect('library:borrowing_list')
+    else:
+        form = BookReturnReceiveForm()
+
+    return render(request, 'library/receive_return_request.html', {
+        'return_request': return_request,
+        'borrowing': return_request.borrowing,
+        'form': form,
+    })
+
 
 @login_required
 def download_resource(request, resource_id):

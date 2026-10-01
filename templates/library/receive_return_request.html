@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Receive Returned Book - ADOM Institute{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-kicker">Library</div>
+            <h1 class="dashboard-title">Receive Book</h1>
+            <p class="dashboard-subtitle">Check "{{ return_request.book.title }}" back into the library and close the loan.</p>
+        </div>
+    </div>
+
+    <section class="metric-grid">
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-user"></i></span>
+            <div class="metric-value">{{ return_request.user.get_full_name|default:return_request.user.username }}</div>
+            <div class="metric-label">Borrower</div>
+            <div class="metric-detail">Handed over {{ borrowing.borrowed_date|date:"d M Y" }}</div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-clock"></i></span>
+            <div class="metric-value">{{ borrowing.due_date|date:"d M Y" }}</div>
+            <div class="metric-label">Was due</div>
+            <div class="metric-detail">
+                {% if borrowing.is_overdue %}Overdue by {{ borrowing.days_overdue }} day{{ borrowing.days_overdue|pluralize }}{% else %}Returned within time{% endif %}
+            </div>
+        </article>
+        <article class="metric-card">
+            <span class="metric-icon"><i class="fas fa-reply"></i></span>
+            <div class="metric-value">{{ return_request.get_return_method_display }}</div>
+            <div class="metric-label">How it came back</div>
+            <div class="metric-detail">Requested {{ return_request.requested_at|date:"d M Y" }}</div>
+        </article>
+    </section>
+
+    <section class="panel">
+        <div class="panel-heading">
+            <h2 class="panel-title">Check in</h2>
+        </div>
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.condition.id_for_label }}">{{ form.condition.label }}</label>
+                {{ form.condition }}
+                <div class="form-text">Book condition when it came back: {{ borrowing.book.get_condition_display }}.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.return_notes.id_for_label }}">{{ form.return_notes.label }}</label>
+                {{ form.return_notes }}
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">Receive and close loan</button>
+                <a href="{% url 'library:return_request_review' %}" class="btn btn-outline-primary">Cancel</a>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
