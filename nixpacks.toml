@@ -1,0 +1,17 @@
+[phases.setup]
+nixPkgs = ["python311", "postgresql", "gcc", "g++", "libffi", "openssl", "zlib", "libjpeg", "libpng", "libwebp", "freetype", "pango", "cairo", "gdk-pixbuf", "pkg-config", "musl", "libxml2", "libxslt", "shared-mime-info"]
+
+[phases.install]
+cmds = [
+  "pip install --upgrade pip",
+  "pip install --no-cache-dir -r requirements.txt"
+]
+
+[phases.build]
+cmds = [
+  "mkdir -p /app/staticfiles /app/media /app/logs /app/beat-schedule",
+  "python manage.py collectstatic --noinput --verbosity 0"
+]
+
+[start]
+cmd = "sh -c 'mkdir -p /app/logs && /app/entrypoint.sh gunicorn adom.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120 --access-logfile - --error-logfile -'"

@@ -361,6 +361,10 @@ if not DEBUG:
     # OCI Load Balancer (scaled) when terminating TLS.
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=not DEBUG, cast=bool)
+# Platform health probes (Railway, Docker, k8s) may hit /health/ over plain HTTP
+# from inside the network. A 301 there makes the container look unhealthy, so the
+# probe path is exempt from the HTTPS redirect. Everything else still redirects.
+SECURE_REDIRECT_EXEMPT = [r'^health/$']
 SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=not DEBUG, cast=bool)
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=not DEBUG, cast=bool)
 SESSION_COOKIE_HTTPONLY = True
