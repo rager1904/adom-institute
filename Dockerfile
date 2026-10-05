@@ -22,7 +22,7 @@ RUN apt-get update \
         libxslt-dev \
         libpango1.0-dev \
         libcairo2-dev \
-        libgdk-pixbuf2.0-dev \
+        libgdk-pixbuf-2.0-dev \
         shared-mime-info \
         curl \
     && rm -rf /var/lib/apt/lists/*
