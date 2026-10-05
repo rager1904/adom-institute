@@ -1147,55 +1147,20 @@ def seed_library(rng, scale):
     from accounts.models import User
     from library.models import Book, BookBorrowing, BookCategory, DigitalResource, LibrarySettings
 
-    insert(
-        BookCategory,
-        [
-            BookCategory(name=n, description=f"{n} section", color="#007bff")
-            for n in ["Fiction", "Science", "History", "Reference", "Textbooks", "Languages", "Children"]
-        ],
-        label="BookCategory",
-    )
-    categories = list(BookCategory.objects.order_by("id"))
+    # Use physical books as single source of truth - do not generate synthetic books
+    category_names = ['Early Childhood (3-4 years)', 'Early Childhood (4-5 years)', 'Primary - Grade 1', 'Primary - Grade 4', 'Secondary - Form 1', 'Secondary - Form 2']
+    for name in category_names:
+        BookCategory.objects.get_or_create(name=name, defaults={'description': f'Books for {name}', 'color': '#007bff'})
 
-    books = []
-    for i in range(max(50, scale.students // 4)):
-        books.append(
-            Book(
-                title=f"{rng.choice(BOOK_TITLES)} (Edition {rng.randint(1, 4)})",
-                author=f"{rng.choice(FIRST_NAMES)} {rng.choice(LAST_NAMES)}",
-                isbn=f"978{rng.randint(1000000000, 9999999999)}",
-                category=categories[i % len(categories)],
-                edition=str(rng.randint(1, 5)),
-                publisher="ADOM Learning Press",
-                publication_year=rng.randint(1990, 2025),
-                pages=rng.randint(120, 900),
-                barcode=f"BC{rng.randint(10000000, 99999999)}",
-                location=f"Shelf {chr(ord('A') + i % 6)}-{i % 20 + 1}",
-                availability=weighted_pick(
-                    rng, ["available", "borrowed", "reserved", "maintenance", "lost"], [70, 20, 5, 3, 2]
-                ),
-                condition=weighted_pick(rng, ["excellent", "good", "fair", "poor", "damaged"], [30, 45, 15, 7, 3]),
-                price=Decimal(rng.randint(2000, 90000)) / Decimal(100),
-                is_active=True,
-            )
-        )
-    insert(Book, books, label="Book")
-    books = list(Book.objects.order_by("id"))
+    books = list(Book.objects.filter(is_active=True).order_by('id'))
+    if not books:
+        categories = list(BookCategory.objects.order_by('id'))
+        for cat in categories:
+            Book.objects.get_or_create(title=f'Placeholder - {cat.name}', defaults={'author': 'Zambian Curriculum', 'category': cat, 'availability': 'available', 'condition': 'good', 'is_active': True})
+        books = list(Book.objects.filter(is_active=True).order_by('id'))
 
-    borrowers = list(User.objects.filter(user_type__in=["student", "teacher"]).order_by("id"))
+    borrowers = list(User.objects.filter(user_type__in=['student', 'teacher']).order_by('id'))
     borrowings = []
-    # BookBorrowing.borrowed_date is auto_now_add, so Django stamps it with the
-    # time of the INSERT and ignores any value passed here. Both check
-    # constraints compare against that stamp:
-    #   lib_borrow_due_ck     due_date    >= borrowed_date
-    #   lib_borrow_return_ck  return_date >= borrowed_date   (when not null)
-    # borrowed_date is therefore always >= the moment this loop runs, and a
-    # bulk_create issues the INSERT slightly later still, so every date has to
-    # be comfortably in the future. Deriving them from a past borrow instant --
-    # as this used to -- violated lib_borrow_due_ck on every row and aborted
-    # the seed. The library phase is not what the benchmark measures, so loan
-    # history is expressed relative to now: a returned loan was returned
-    # shortly after the load starts.
     now = datetime.now(dt_timezone.utc) + timedelta(minutes=5)
     for i in range(min(4000, scale.students // 2)):
         if i % 3:
@@ -1204,38 +1169,11 @@ def seed_library(rng, scale):
         else:
             returned = None
             due_date = now + timedelta(days=rng.randint(1, 30))
-        borrowings.append(
-            BookBorrowing(
-                book=books[i % len(books)], borrower=borrowers[i % len(borrowers)],
-                due_date=due_date,
-                return_date=returned,
-                late_fee=Decimal("0.00") if not returned or i % 4 else Decimal("5.00"),
-                notes="", is_active=True,
-            )
-        )
-    insert(BookBorrowing, borrowings, label="BookBorrowing")
+        borrowings.append(BookBorrowing(book=books[i % len(books)], borrower=borrowers[i % len(borrowers)], due_date=due_date, return_date=returned, late_fee=Decimal('0.00') if not returned or i % 4 else Decimal('5.00'), notes='', is_active=True))
+    insert(BookBorrowing, borrowings, label='BookBorrowing')
 
-    uploaders = list(User.objects.filter(user_type__in=["teacher", "administrator"]).order_by("id"))
-    insert(
-        DigitalResource,
-        [
-            DigitalResource(
-                title=f"Digital resource {i + 1}",
-                description="Shared learning material.",
-                resource_type=["ebook", "pdf", "video", "audio", "presentation", "worksheet"][i % 6],
-                file=f"library/digital/sample-{i}.bin",
-                file_size=rng.randint(10_000, 5_000_000),
-                author=f"{rng.choice(FIRST_NAMES)} {rng.choice(LAST_NAMES)}",
-                subject="General",
-                grade_level=f"Grade {8 + i % 5}",
-                access_level=["students", "teachers", "public", "restricted"][i % 4],
-                is_downloadable=i % 3 != 0,
-                uploaded_by=uploaders[i % len(uploaders)] if uploaders else None,
-            )
-            for i in range(300)
-        ],
-        label="DigitalResource",
-    )
+    uploaders = list(User.objects.filter(user_type__in=['teacher', 'administrator']).order_by('id'))
+    insert(DigitalResource, [DigitalResource(title=f'Digital resource {i+1}', description='Shared learning material.', resource_type=['ebook','pdf','video','audio','presentation','worksheet'][i%6], file=f'library/digital/sample-{i}.bin', file_size=rng.randint(10000,5000000), author=f'{rng.choice(FIRST_NAMES)} {rng.choice(LAST_NAMES)}', subject='General', grade_level=f'Grade {8+i%5}', access_level=['students','teachers','public','restricted'][i%4], is_downloadable=i%3!=0, uploaded_by=uploaders[i%len(uploaders)] if uploaders else None) for i in range(300)], label='DigitalResource')
     LibrarySettings.objects.get_or_create(pk=1)
 
 
