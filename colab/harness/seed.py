@@ -1162,14 +1162,15 @@ def seed_library(rng, scale):
     borrowers = list(User.objects.filter(user_type__in=['student', 'teacher']).order_by('id'))
     borrowings = []
     now = datetime.now(dt_timezone.utc) + timedelta(minutes=5)
-    for i in range(min(4000, scale.students // 2)):
-        if i % 3:
-            returned = now + timedelta(minutes=rng.randint(1, 240))
-            due_date = now + timedelta(days=14)
-        else:
-            returned = None
-            due_date = now + timedelta(days=rng.randint(1, 30))
-        borrowings.append(BookBorrowing(book=books[i % len(books)], borrower=borrowers[i % len(borrowers)], due_date=due_date, return_date=returned, late_fee=Decimal('0.00') if not returned or i % 4 else Decimal('5.00'), notes='', is_active=True))
+    if books and borrowers:
+        for i in range(min(4000, scale.students // 2)):
+            if i % 3:
+                returned = now + timedelta(minutes=rng.randint(1, 240))
+                due_date = now + timedelta(days=14)
+            else:
+                returned = None
+                due_date = now + timedelta(days=rng.randint(1, 30))
+            borrowings.append(BookBorrowing(book=books[i % len(books)], borrower=borrowers[i % len(borrowers)], due_date=due_date, return_date=returned, late_fee=Decimal('0.00') if not returned or i % 4 else Decimal('5.00'), notes='', is_active=True))
     insert(BookBorrowing, borrowings, label='BookBorrowing')
 
     uploaders = list(User.objects.filter(user_type__in=['teacher', 'administrator']).order_by('id'))
