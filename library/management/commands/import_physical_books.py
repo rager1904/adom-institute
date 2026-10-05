@@ -43,7 +43,14 @@ class Command(BaseCommand):
 
         base_path = PHYSICAL_MEDIA_BASE
         if not os.path.isabs(base_path):
+            # Try relative to project root
             base_path = os.path.join(os.getcwd(), base_path)
+        # Also try from manage.py location
+        if not os.path.exists(base_path):
+            from django.conf import settings
+            base_path_alt = os.path.join(settings.BASE_DIR, 'media', 'library', 'pysical', 'media')
+            if os.path.exists(base_path_alt):
+                base_path = base_path_alt
 
         count = 0
         for root, dirs, filenames in os.walk(base_path):
