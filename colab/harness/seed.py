@@ -1156,7 +1156,7 @@ def seed_library(rng, scale):
     if not books:
         categories = list(BookCategory.objects.order_by('id'))
         for cat in categories:
-            Book.objects.get_or_create(title=f'Placeholder - {cat.name}', defaults={'author': 'Zambian Curriculum', 'category': cat, 'availability': 'available', 'condition': 'good', 'is_active': True})
+# no placeholders - require physical books
         books = list(Book.objects.filter(is_active=True).order_by('id'))
 
     borrowers = list(User.objects.filter(user_type__in=['student', 'teacher']).order_by('id'))
