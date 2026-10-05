@@ -1156,7 +1156,7 @@ def seed_library(rng, scale):
     if not books:
         categories = list(BookCategory.objects.order_by('id'))
         for cat in categories:
-# no placeholders - require physical books
+            pass  # no placeholders - require physical books
         books = list(Book.objects.filter(is_active=True).order_by('id'))
 
     borrowers = list(User.objects.filter(user_type__in=['student', 'teacher']).order_by('id'))
