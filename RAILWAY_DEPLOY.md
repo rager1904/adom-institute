@@ -36,12 +36,13 @@ DB_PORT     = <PGPORT>
 
 **Option B (shared references):** App service → Variables → Shared Variable (service name must match exactly):
 ```
-DB_NAME     = ${{PostgreSQL.PGDATABASE}}
-DB_USER     = ${{PostgreSQL.PGUSER}}
-DB_PASSWORD = ${{PostgreSQL.PGPASSWORD}}
-DB_HOST     = ${{PostgreSQL.PGHOST}}
-DB_PORT     = ${{PostgreSQL.PGPORT}}
+DB_NAME     = ${{postgres.PGDATABASE}}
+DB_USER     = ${{postgres.PGUSER}}
+DB_PASSWORD = ${{postgres.PGPASSWORD}}
+DB_HOST     = ${{postgres.PGHOST}}
+DB_PORT     = ${{postgres.PGPORT}}
 ```
+(If your service is named `PostgreSQL`, use `${{PostgreSQL.*}}` instead.)
 
 **Verify:** Run `python -c "import os; print({k: bool(os.getenv(k)) for k in ('DB_NAME','DB_USER','DB_PASSWORD','DB_HOST','DB_PORT')})"` in a Railway one-off command — all should be `True`.
 

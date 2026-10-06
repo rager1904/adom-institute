@@ -67,15 +67,15 @@ DB_PORT     = <PGPORT>
 match exactly. In the app service → **Variables** → **Shared Variable**:
 
 ```
-DB_NAME     = ${{PostgreSQL.PGDATABASE}}
-DB_USER     = ${{PostgreSQL.PGUSER}}
-DB_PASSWORD = ${{PostgreSQL.PGPASSWORD}}
-DB_HOST     = ${{PostgreSQL.PGHOST}}
-DB_PORT     = ${{PostgreSQL.PGPORT}}
+DB_NAME     = ${{postgres.PGDATABASE}}
+DB_USER     = ${{postgres.PGUSER}}
+DB_PASSWORD = ${{postgres.PGPASSWORD}}
+DB_HOST     = ${{postgres.PGHOST}}
+DB_PORT     = ${{postgres.PGPORT}}
 ```
 
-If your Postgres service is named differently (e.g., `postgres`), update the prefix to
-match (`${{postgres.PGDATABASE}}`).
+If your Postgres service is named differently, update the prefix to match. For a service
+named `PostgreSQL` (capital P/S), use `${{PostgreSQL.*}}` instead.
 
 **Verify after setting:** In the app service → **Deployments** → latest → **View Logs**
 or run a one-off command: `python -c "import os; print({k: bool(os.getenv(k)) for k in ('DB_NAME','DB_USER','DB_PASSWORD','DB_HOST','DB_PORT')})"`
