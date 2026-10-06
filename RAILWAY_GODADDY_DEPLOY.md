@@ -49,7 +49,22 @@ service automatically.
 `adom/settings.py:124-128` reads `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`,
 `DB_PORT`. Railway does not know that, so nothing wires up on its own.
 
-App service → **Variables** → **Shared Variable** → **Add Reference**, five times:
+**Option A (recommended, least error-prone):** Copy values from Postgres
+
+1. Go to the **PostgreSQL** service → **Connect** tab.
+2. Copy `PGHOST`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `PGPORT`.
+3. Go to your **app** service → **Variables** → **Raw Variables** and add:
+
+```
+DB_NAME     = <PGDATABASE>
+DB_USER     = <PGUSER>
+DB_PASSWORD = <PGPASSWORD>
+DB_HOST     = <PGHOST>
+DB_PORT     = <PGPORT>
+```
+
+**Option B (shared variable references):** If you prefer references, the service name must
+match exactly. In the app service → **Variables** → **Shared Variable**:
 
 ```
 DB_NAME     = ${{PostgreSQL.PGDATABASE}}
@@ -58,6 +73,13 @@ DB_PASSWORD = ${{PostgreSQL.PGPASSWORD}}
 DB_HOST     = ${{PostgreSQL.PGHOST}}
 DB_PORT     = ${{PostgreSQL.PGPORT}}
 ```
+
+If your Postgres service is named differently (e.g., `postgres`), update the prefix to
+match (`${{postgres.PGDATABASE}}`).
+
+**Verify after setting:** In the app service → **Deployments** → latest → **View Logs**
+or run a one-off command: `python -c "import os; print({k: bool(os.getenv(k)) for k in ('DB_NAME','DB_USER','DB_PASSWORD','DB_HOST','DB_PORT')})"`
+All five should be `True`.
 
 Skipping this is the single most common failure. Symptoms: `DB_ENGINE=postgresql is
 required when DEBUG=False`, or a connection refused error on first request.

@@ -24,8 +24,17 @@ Single-service deploy (Django + gunicorn + WhiteNoise) on Railway.
 1. Project → **+ New** → **Database** → **PostgreSQL**.
 2. Railway auto-injects `DATABASE_URL`, `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGPORT`.
 3. This project reads `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_PORT`, **not** `DATABASE_URL`.
-   → Add a **shared variable** to the Django service (Railway → service → Variables → Shared Variable) that maps each one:
 
+**Option A (recommended):** Copy from Postgres → Connect and set raw variables on the app service:
+```
+DB_NAME     = <PGDATABASE>
+DB_USER     = <PGUSER>
+DB_PASSWORD = <PGPASSWORD>
+DB_HOST     = <PGHOST>
+DB_PORT     = <PGPORT>
+```
+
+**Option B (shared references):** App service → Variables → Shared Variable (service name must match exactly):
 ```
 DB_NAME     = ${{PostgreSQL.PGDATABASE}}
 DB_USER     = ${{PostgreSQL.PGUSER}}
@@ -33,6 +42,8 @@ DB_PASSWORD = ${{PostgreSQL.PGPASSWORD}}
 DB_HOST     = ${{PostgreSQL.PGHOST}}
 DB_PORT     = ${{PostgreSQL.PGPORT}}
 ```
+
+**Verify:** Run `python -c "import os; print({k: bool(os.getenv(k)) for k in ('DB_NAME','DB_USER','DB_PASSWORD','DB_HOST','DB_PORT')})"` in a Railway one-off command — all should be `True`.
 
 (Alternatively skip this and set `DB_*` by hand from the Postgres service's connect dialog.)
 
