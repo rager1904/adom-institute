@@ -10,7 +10,7 @@ echo "[entrypoint] starting ($$)"
 DB_ENGINE="${DB_ENGINE:-sqlite}"
 DB_HOST="${DB_HOST:-}"
 DB_PORT="${DB_PORT:-5432}"
-REDIS_HOSTS="${REDIS_HOSTS:-redis}"
+REDIS_HOSTS="${REDIS_HOSTS:-}"
 
 wait_for_port() {
   host="$1"

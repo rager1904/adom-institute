@@ -9,9 +9,9 @@ cmds = [
 
 [phases.build]
 cmds = [
-  "mkdir -p /app/staticfiles /app/media /app/logs /app/beat-schedule",
+  "mkdir -p staticfiles media logs beat-schedule",
   "python manage.py collectstatic --noinput --verbosity 0"
 ]
 
 [start]
-cmd = "sh -c 'mkdir -p /app/logs && /app/entrypoint.sh gunicorn adom.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120 --access-logfile - --error-logfile -'"
+cmd = "sh -c 'mkdir -p logs && ./entrypoint.sh gunicorn adom.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 2 --timeout 120 --access-logfile - --error-logfile -'"
