@@ -22,7 +22,7 @@ from adom.protected_media import serve_public_media
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from accounts.views import HomeView
+from accounts.views import HomeView, PublicPageView
 from adom.views import health_check
 from academics.urls import router as academics_router
 from accounts.urls import router as accounts_router
@@ -52,6 +52,10 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('health/', health_check, name='health'),
     path('', HomeView.as_view(), name='home'),
+    path('about/', PublicPageView.as_view(), {'page': 'about'}, name='public_about'),
+    path('privacy/', PublicPageView.as_view(), {'page': 'privacy'}, name='public_privacy'),
+    path('terms/', PublicPageView.as_view(), {'page': 'terms'}, name='public_terms'),
+    path('contact/', PublicPageView.as_view(), {'page': 'contact'}, name='public_contact'),
     path('admin/', admin.site.urls),
     
     # API Documentation

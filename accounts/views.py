@@ -188,6 +188,67 @@ class HomeView(TemplateView):
         return context
 
 
+class PublicPageView(TemplateView):
+    """Public marketing and legal information pages for the landing site."""
+    template_name = 'public_page.html'
+
+    PAGES = {
+        'about': {
+            'title': 'About ADOM Institute',
+            'eyebrow': 'Built for real schools',
+            'intro': 'A clearer picture of every school day.',
+            'summary': 'ADOM Institute brings the daily work of a school into one shared workspace, helping school teams spend less time chasing information and more time supporting learners.',
+            'sections': [
+                ('One connected school workspace', 'Keep learner records, classes, attendance, assessments, fees, library resources, timetables, and school communication together in a role-aware platform.'),
+                ('Designed around the people in a school', 'Administrators get a school-wide view, teachers can focus on their classes, and families can stay informed through the parts of the platform made available to them.'),
+                ('Technology that can grow with you', 'ADOM is built as a modular education platform. Institutions can shape their workflows over time and use optional AI-supported tools where they are appropriate.'),
+            ],
+        },
+        'privacy': {
+            'title': 'Privacy at ADOM Institute',
+            'eyebrow': 'Privacy and responsible data use',
+            'intro': 'School information deserves careful handling.',
+            'summary': 'ADOM Institute processes account and education information to provide school management features. Each institution is responsible for its lawful use of the platform and for deciding which staff members may access its records.',
+            'sections': [
+                ('Information used to provide the service', 'Depending on the features an institution uses, the platform may store account details, learner and staff records, attendance, academic activity, fee records, messages, and uploaded school documents.'),
+                ('Access and security', 'Access is provided through authenticated accounts and role-based permissions. Institutions should assign accounts carefully, keep credentials private, and promptly remove access when a person no longer needs it.'),
+                ('AI-supported features', 'When an institution enables AI tools, submitted prompts and selected school content may be processed to provide a response. Avoid submitting sensitive personal information unless the institution has approved that use and appropriate safeguards are in place.'),
+                ('Questions and requests', 'For questions about a school record, contact the institution that manages it. For platform privacy questions, contact the ADOM Institute team using the contact details provided by your institution.'),
+            ],
+        },
+        'terms': {
+            'title': 'Terms of use',
+            'eyebrow': 'Using the platform',
+            'intro': 'Clear expectations for a shared school workspace.',
+            'summary': 'These terms describe the basic expectations for using the ADOM Institute website and platform. Institutions may also have separate service or data-processing agreements that govern their use.',
+            'sections': [
+                ('Use accounts responsibly', 'Use only accounts assigned to you, protect your login credentials, and keep profile information accurate. Do not attempt to access records or features beyond your assigned permissions.'),
+                ('Respect school information', 'Use platform information only for legitimate education and administration purposes. Do not disclose learner, family, or staff information to people who are not authorized to receive it.'),
+                ('Content and availability', 'Institutions remain responsible for the information they enter and the permissions they configure. Features may change as the platform is maintained and improved; critical school records should follow the institution’s backup and retention procedures.'),
+                ('Questions', 'If you believe an account or record has been accessed improperly, notify your institution administrator promptly so they can review access and take appropriate action.'),
+            ],
+        },
+        'contact': {
+            'title': 'Contact ADOM Institute',
+            'eyebrow': 'Start a conversation',
+            'intro': 'Let’s make school operations clearer.',
+            'summary': 'Interested in bringing ADOM Institute to your school? Your institution can register to explore the platform or contact its platform administrator for support with an existing account.',
+            'sections': [
+                ('For schools exploring ADOM', 'Use the institution registration link to begin setting up your school. A school administrator can then invite the right staff and configure the features your team needs.'),
+                ('For current users', 'For password, access, learner-record, or fee questions, contact your school administrator first. They can verify your identity and route the request to the right team.'),
+                ('For platform questions', 'For partnership and platform enquiries, contact your institution’s ADOM representative or use the registration page to leave your school details.'),
+            ],
+        },
+    }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        page = self.kwargs['page']
+        context['page'] = self.PAGES[page]
+        context['page_key'] = page
+        return context
+
+
 class AIHubView(TemplateView):
     template_name = 'accounts/ai_hub.html'
 
