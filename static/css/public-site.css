@@ -437,7 +437,6 @@ table.price td strong { color: var(--navy); }
     .site-brand-text { font-size: 19px; }
 }
 @media (max-width: 420px) {
-    .nav-actions .btn-navy { display: none; }
     .hero-cta .btn { width: 100%; }
     .book-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
     .book-body { padding: 12px 12px 14px; }
