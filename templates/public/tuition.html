@@ -1,0 +1,101 @@
+{% extends 'public/base_public.html' %}
+
+{% block title %}Tuition Classes | ADOM Institute{% endblock %}
+{% block description %}New Zambian Curriculum tuition classes, homework assistance, revision, examination preparation and holiday tuition for learners at ADOM Institute.{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="wrap">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="{% url 'home' %}">Home</a> <i class="fas fa-chevron-right"></i> <a href="{% url 'public_courses' %}">Schools &amp; Courses</a> <i class="fas fa-chevron-right"></i> <span>Tuition Classes</span>
+        </nav>
+        <span class="eyebrow">School of Tuition &amp; Academic Support</span>
+        <h1>Extra support that helps learners succeed</h1>
+        <p>Structured tuition aligned to the New Zambian Curriculum — in small groups or one-to-one, with a focus on understanding, confidence and exam readiness.</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="grid grid-2" style="align-items:start;gap:40px">
+            <div>
+                <div class="section-head" style="margin-bottom:22px">
+                    <span class="eyebrow">What we offer</span>
+                    <h2 class="section-title">Tuition for every stage</h2>
+                </div>
+                <ul class="pill-list" style="margin-top:0">
+                    <li>New Zambian Curriculum tuition classes</li>
+                    <li>Homework assistance</li>
+                    <li>Revision classes</li>
+                    <li>Examination preparation</li>
+                    <li>Holiday tuition</li>
+                    <li>Individual tutoring</li>
+                    <li>Group learning</li>
+                </ul>
+                <p class="section-sub" style="margin-top:22px">Classes cover the core subjects of the New Zambian Curriculum and are delivered by experienced tutors who track each learner's progress.</p>
+            </div>
+
+            <div class="grid" style="gap:18px">
+                <div class="feature-row">
+                    <div class="ico"><i class="fas fa-users"></i></div>
+                    <div><h3>Small groups or one-to-one</h3><p>Choose group learning for peer support or individual tutoring for focused attention on specific subjects.</p></div>
+                </div>
+                <div class="feature-row">
+                    <div class="ico"><i class="fas fa-pen-ruler"></i></div>
+                    <div><h3>Exam and revision focus</h3><p>Targeted revision, past-paper practice and examination preparation to build confidence before assessments.</p></div>
+                </div>
+                <div class="feature-row">
+                    <div class="ico"><i class="fas fa-sun"></i></div>
+                    <div><h3>Holiday tuition</h3><p>Keep learners engaged and ahead during school holidays with structured holiday programmes.</p></div>
+                </div>
+                <div class="feature-row">
+                    <div class="ico"><i class="fas fa-location-dot"></i></div>
+                    <div><h3>Lusaka &amp; Ndola</h3><p>Tuition is available at our Liberty Mall, Lusaka and Mitengo, Ndola locations.</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <div class="section-head center">
+            <span class="eyebrow">How it works</span>
+            <h2 class="section-title">Getting started is simple</h2>
+        </div>
+        <div class="grid grid-3">
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-phone"></i></div>
+                <h3>1. Enquire</h3>
+                <p>Contact us by WhatsApp or phone and tell us the learner's grade, subjects and preferred times.</p>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-calendar-check"></i></div>
+                <h3>2. Get a schedule</h3>
+                <p>We recommend a group or one-to-one plan and confirm the class schedule and fees.</p>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-book-open-reader"></i></div>
+                <h3>3. Start learning</h3>
+                <p>Learners join structured classes with ongoing revision, practice and progress feedback.</p>
+            </article>
+        </div>
+        <div class="notice" style="margin-top:28px"><i class="fas fa-circle-info"></i><span>Tuition schedules and fees depend on the grade, subjects and class format. Contact us for the current term's timetable.</span></div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="cta">
+            <div>
+                <h2>Enrol a learner in tuition</h2>
+                <p>Share the learner's grade and subjects, and we will help you choose the right class.</p>
+            </div>
+            <div class="cta-actions">
+                <a class="btn btn-wa btn-lg" href="https://wa.me/260967920605?text=Hello%20ADOM%20Institute%2C%20I%20would%20like%20to%20enquire%20about%20tuition%20classes" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> Enquire on WhatsApp</a>
+                <a class="btn btn-outline btn-lg" href="{% url 'public_admissions' %}">Admissions</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

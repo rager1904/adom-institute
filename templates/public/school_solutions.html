@@ -1,0 +1,149 @@
+{% extends 'public/base_public.html' %}
+
+{% block title %}School Solutions & Institutional Services | ADOM Institute{% endblock %}
+{% block description %}Computer laboratory setup, library development, bulk educational supply, ICT installation and teacher training for schools and institutions across Zambia.{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="wrap">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="{% url 'home' %}">Home</a> <i class="fas fa-chevron-right"></i> <span>School Solutions</span>
+        </nav>
+        <span class="eyebrow">School Solutions &amp; Institutional Services</span>
+        <h1>Complete solutions for schools and institutions</h1>
+        <p>From computer laboratories and libraries to bulk supply and teacher training — ADOM Institute helps institutions equip, upgrade and support learning environments.</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="section-head">
+            <span class="eyebrow">What we deliver</span>
+            <h2 class="section-title">Services for schools and organisations</h2>
+            <p class="section-sub">We work with schools, colleges and organisations to plan, supply and support the right resources.</p>
+        </div>
+
+        <div class="grid grid-3">
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-network-wired"></i></div>
+                <h3>Computer laboratory setup</h3>
+                <p>New lab setup and upgrades, including desktops, networking, instructor stations and classroom management software.</p>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-book-bookmark"></i></div>
+                <h3>Library development</h3>
+                <p>Library development and supply of curriculum-aligned books and learning resources.</p>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-boxes-stacked"></i></div>
+                <h3>Bulk supply</h3>
+                <p>Supply of educational materials, computers, printers and stationery in the quantities your institution needs.</p>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-screwdriver-wrench"></i></div>
+                <h3>Installation &amp; training</h3>
+                <p>ICT equipment installation and user training so staff and learners get the most from every device.</p>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                <h3>Bulk procurement &amp; quotations</h3>
+                <p>Customised school quotations and procurement support for planned budgets and purchases.</p>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-chalkboard-user"></i></div>
+                <h3>Teacher training</h3>
+                <p>Teacher training in AI, ICT and digital teaching tools to strengthen classroom delivery.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section alt" id="quote">
+    <div class="wrap">
+        <div class="grid grid-2" style="align-items:start;gap:44px">
+            <div>
+                <div class="section-head" style="margin-bottom:20px">
+                    <span class="eyebrow">Request a quotation</span>
+                    <h2 class="section-title">Tell us what your school needs</h2>
+                    <p class="section-sub">Share a few details and we will prepare a customised quotation. The form opens a WhatsApp message you can send to us directly.</p>
+                </div>
+                <div class="grid" style="gap:16px">
+                    <div class="feature-row"><div class="ico"><i class="fas fa-building-columns"></i></div><div><h3>Schools &amp; institutions</h3><p>Ideal for laboratories, libraries, offices and classroom supplies.</p></div></div>
+                    <div class="feature-row"><div class="ico"><i class="fas fa-hand-holding-heart"></i></div><div><h3>Procurement support</h3><p>We help you plan quantities and budgets for a formal quotation.</p></div></div>
+                    <div class="feature-row"><div class="ico"><i class="fas fa-truck-fast"></i></div><div><h3>Delivery arranged</h3><p>Confirm a preferred delivery date and we coordinate supply and installation.</p></div></div>
+                </div>
+            </div>
+
+            <form class="card" id="quoteForm" novalidate>
+                <div style="display:grid;gap:16px">
+                    <label style="font-size:13px;font-weight:600;color:var(--navy)">School / institution name
+                        <input type="text" id="qSchool" required placeholder="e.g. Riverside Academy" style="width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d8ded8;border-radius:10px;font:inherit;">
+                    </label>
+                    <label style="font-size:13px;font-weight:600;color:var(--navy)">Location
+                        <input type="text" id="qLocation" required placeholder="e.g. Kitwe, Copperbelt" style="width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d8ded8;border-radius:10px;font:inherit;">
+                    </label>
+                    <div class="grid grid-2" style="gap:14px">
+                        <label style="font-size:13px;font-weight:600;color:var(--navy)">Contact person
+                            <input type="text" id="qPerson" required placeholder="Full name" style="width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d8ded8;border-radius:10px;font:inherit;">
+                        </label>
+                        <label style="font-size:13px;font-weight:600;color:var(--navy)">Phone
+                            <input type="tel" id="qPhone" required placeholder="0970 000 000" style="width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d8ded8;border-radius:10px;font:inherit;">
+                        </label>
+                    </div>
+                    <label style="font-size:13px;font-weight:600;color:var(--navy)">Items required
+                        <textarea id="qItems" rows="3" required placeholder="e.g. 20 desktops, 1 server, 300 exercise books" style="width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d8ded8;border-radius:10px;font:inherit;resize:vertical;"></textarea>
+                    </label>
+                    <div class="grid grid-2" style="gap:14px">
+                        <label style="font-size:13px;font-weight:600;color:var(--navy)">Quantities
+                            <input type="text" id="qQty" placeholder="e.g. 20 sets" style="width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d8ded8;border-radius:10px;font:inherit;">
+                        </label>
+                        <label style="font-size:13px;font-weight:600;color:var(--navy)">Preferred delivery date
+                            <input type="date" id="qDate" style="width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d8ded8;border-radius:10px;font:inherit;">
+                        </label>
+                    </div>
+                    <button class="btn btn-green btn-lg btn-block" type="submit"><i class="fab fa-whatsapp"></i> Send Quotation Request</button>
+                    <p style="font-size:12px;color:var(--muted);text-align:center;margin:0">Prefer email? Write to us at <a href="mailto:info@adominstitute.com" style="color:var(--green);font-weight:600">info@adominstitute.com</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        var form = document.getElementById('quoteForm');
+        if (!form) return;
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            var school = document.getElementById('qSchool').value.trim();
+            var location = document.getElementById('qLocation').value.trim();
+            var person = document.getElementById('qPerson').value.trim();
+            var phone = document.getElementById('qPhone').value.trim();
+            var items = document.getElementById('qItems').value.trim();
+            var qty = document.getElementById('qQty').value.trim();
+            var date = document.getElementById('qDate').value.trim();
+
+            if (!school || !location || !person || !phone || !items) {
+                alert('Please complete the required fields before sending.');
+                return;
+            }
+
+            var lines = [
+                'SCHOOL QUOTATION REQUEST',
+                'School: ' + school,
+                'Location: ' + location,
+                'Contact: ' + person,
+                'Phone: ' + phone,
+                'Items: ' + items
+            ];
+            if (qty) { lines.push('Quantities: ' + qty); }
+            if (date) { lines.push('Preferred delivery date: ' + date); }
+
+            var url = 'https://wa.me/260967920605?text=' + encodeURIComponent(lines.join('\n'));
+            window.open(url, '_blank', 'noopener');
+        });
+    })();
+</script>
+{% endblock %}

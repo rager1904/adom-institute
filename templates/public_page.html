@@ -1,49 +1,65 @@
-{% extends 'base.html' %}
+{% extends 'public/base_public.html' %}
 
 {% block title %}{{ page.title }} | ADOM Institute{% endblock %}
-
-{% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
-<style>
-    :root{--landing-ink:#173b31;--landing-green:#17483a;--landing-cream:#f7f5ef;--landing-muted:#68766d;--landing-gold:#e1b94f}
-    body{background:var(--landing-cream);color:#26342d;font-family:'DM Sans',sans-serif}.edu-auth-main{padding:0!important}
-    .landing{min-height:100vh;background:var(--landing-cream)}.landing-wrap{max-width:1240px;margin:auto;padding:0 34px}
-    .landing-header{height:86px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(23,59,49,.1)}
-    .landing-brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--landing-ink);font-size:27px;letter-spacing:-1px}.landing-brand strong{font-weight:700}
-    .landing-mark{width:48px;height:43px;display:grid;place-items:center;color:var(--landing-green);font-size:43px;font-weight:800;line-height:1;position:relative}.landing-mark:after{content:'';position:absolute;width:12px;height:9px;background:#f2be27;bottom:3px;left:18px;clip-path:polygon(50% 0,100% 100%,0 100%)}
-    .landing-nav,.landing-actions{display:flex;align-items:center;gap:30px}.landing-nav a{color:#45554c;font-size:14px;text-decoration:none}.landing-nav a:hover,.landing-nav a[aria-current=page]{color:var(--landing-green);font-weight:700}
-    .landing-btn{min-height:43px;display:inline-flex;align-items:center;justify-content:center;padding:0 18px;border-radius:4px;text-decoration:none;font-size:13px;font-weight:700}
-    .landing-btn-outline{border:1px solid #c9d0c9;color:var(--landing-ink)}.landing-btn-primary{background:var(--landing-green);color:white;border:1px solid var(--landing-green)}
-    .page-content{max-width:930px;padding:85px 0 100px}.page-eyebrow{color:#9b7721;font-size:10px;text-transform:uppercase;letter-spacing:2px;font-weight:700;display:flex;gap:11px;align-items:center}.page-eyebrow:before{content:'';height:1px;width:25px;background:var(--landing-gold)}
-    .page-content h1{max-width:850px;margin:21px 0 22px;color:var(--landing-ink);font:400 clamp(48px,7vw,78px)/1.02 'DM Serif Display',Georgia,serif;letter-spacing:-1.8px}
-    .page-summary{max-width:760px;color:#59665e;font-size:18px;line-height:1.8;border-left:3px solid #e1b94f;padding-left:21px;margin-bottom:56px}
-    .page-sections{display:grid;grid-template-columns:1fr 1fr;gap:0 50px}.page-section{border-top:1px solid #deded4;padding:24px 0 27px}.page-section h2{font:400 25px 'DM Serif Display',Georgia,serif;color:var(--landing-ink);margin:0 0 10px}.page-section p{font-size:14px;line-height:1.8;color:var(--landing-muted);margin:0}
-    .page-cta{background:#eaece3;padding:24px 28px;margin-top:25px;display:flex;align-items:center;justify-content:space-between;gap:20px}.page-cta p{color:#536258;margin:0;font-size:14px;line-height:1.6}.page-cta a{white-space:nowrap}
-    .landing-footer{border-top:1px solid #e4e2d9;color:#778178;font-size:11px;padding:20px 0 25px;display:flex;justify-content:space-between;gap:20px}.landing-footer a{text-decoration:none;color:#536258;margin-left:18px}
-    @media(max-width:760px){.landing-wrap{padding:0 20px}.landing-header{height:72px}.landing-nav{display:none}.landing-brand{font-size:20px}.landing-mark{width:36px;height:36px;font-size:36px}.landing-mark:after{left:13px}.landing-actions{gap:8px}.landing-btn{padding:0 11px;min-height:39px;font-size:11px}.page-content{padding:56px 0 70px}.page-content h1{font-size:52px}.page-summary{font-size:16px;margin-bottom:35px}.page-sections{grid-template-columns:1fr}.page-cta,.landing-footer{align-items:flex-start;flex-direction:column}.landing-footer a{margin:0 14px 0 0}}
-</style>
-{% endblock %}
+{% block description %}{{ page.summary }}{% endblock %}
 
 {% block content %}
-<div class="landing"><div class="landing-wrap">
-    <header class="landing-header">
-        <a class="landing-brand" href="{% url 'home' %}" aria-label="ADOM Institute home"><span class="landing-mark">A</span><span><strong>ADOM</strong> Institute</span></a>
-        <nav class="landing-nav" aria-label="Main navigation">
-            <a href="{% url 'home' %}#product">Product</a><a href="{% url 'public_about' %}" {% if page_key == 'about' %}aria-current="page"{% endif %}>About</a><a href="{% url 'public_privacy' %}" {% if page_key == 'privacy' %}aria-current="page"{% endif %}>Privacy</a><a href="{% url 'public_contact' %}" {% if page_key == 'contact' %}aria-current="page"{% endif %}>Contact</a>
+<section class="page-hero">
+    <div class="wrap">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="{% url 'home' %}">Home</a> <i class="fas fa-chevron-right"></i> <span>{{ page.title }}</span>
         </nav>
-        <div class="landing-actions"><a class="landing-btn landing-btn-outline" href="{% url 'accounts:login' %}">Sign in</a><a class="landing-btn landing-btn-primary" href="{% url 'accounts:institution_register' %}">Book a walkthrough</a></div>
-    </header>
-    <main class="page-content">
-        <div class="page-eyebrow">{{ page.eyebrow }}</div>
+        <span class="eyebrow">{{ page.eyebrow }}</span>
         <h1>{{ page.intro }}</h1>
-        <p class="page-summary">{{ page.summary }}</p>
-        <div class="page-sections">
-            {% for heading, body in page.sections %}<section class="page-section"><h2>{{ heading }}</h2><p>{{ body }}</p></section>{% endfor %}
+        <p>{{ page.summary }}</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="grid grid-2" style="gap:0 50px">
+            {% for heading, body in page.sections %}
+            <article style="border-top:1px solid var(--line);padding:24px 0 27px">
+                <h3 style="font-size:23px;margin-bottom:10px">{{ heading }}</h3>
+                <p style="color:var(--muted);font-size:14.5px">{{ body }}</p>
+            </article>
+            {% endfor %}
         </div>
-        {% if page_key == 'contact' %}<div class="page-cta"><p>Ready to explore ADOM Institute with your school team?</p><a class="landing-btn landing-btn-primary" href="{% url 'accounts:institution_register' %}">Register your institution <span aria-hidden="true">→</span></a></div>{% endif %}
-    </main>
-    <footer class="landing-footer"><span>© {% now "Y" %} ADOM Institute · Built for learning communities</span><nav aria-label="Footer navigation"><a href="{% url 'public_about' %}">About ADOM</a><a href="{% url 'public_privacy' %}">Privacy</a><a href="{% url 'public_terms' %}">Terms</a><a href="{% url 'public_contact' %}">Contact</a><a href="{% url 'accounts:login' %}">Sign in</a></nav></footer>
-</div></div>
+
+        {% if page_key == 'contact' %}
+        <div class="contact-grid" style="margin-top:40px">
+            <div class="contact-card">
+                <div class="ico"><i class="fas fa-phone"></i></div>
+                <h3>Call us</h3>
+                <p><a href="tel:+260967920605">0967 920 605</a></p>
+            </div>
+            <div class="contact-card">
+                <div class="ico"><i class="fab fa-whatsapp"></i></div>
+                <h3>WhatsApp</h3>
+                <p><a href="https://wa.me/260967920605" target="_blank" rel="noopener">Send an enquiry</a></p>
+            </div>
+            <div class="contact-card">
+                <div class="ico"><i class="fas fa-location-dot"></i></div>
+                <h3>Visit us</h3>
+                <p>Liberty Mall, Lusaka<br>Mitengo, Ndola</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <div class="cta">
+            <div>
+                <h2>{% if page_key == 'contact' %}We would love to hear from you{% else %}Learn more about ADOM Institute{% endif %}</h2>
+                <p>Explore our schools and courses, educational books and ICT products, or request a quotation for your institution.</p>
+            </div>
+            <div class="cta-actions">
+                <a class="btn btn-gold btn-lg" href="{% url 'public_courses' %}">Explore Courses</a>
+                <a class="btn btn-outline btn-lg" href="{% url 'public_contact' %}">Contact Us</a>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}

@@ -1,0 +1,253 @@
+{% extends 'public/base_public.html' %}
+{% load static %}
+
+{% block title %}Educational Books & Supplies | ADOM Institute{% endblock %}
+{% block description %}Curriculum-aligned educational books and learning materials from ADOM Institute: early childhood 3-5 years, primary school Grade 1-4, Form 1 and Form 2 titles, plus school stationery.{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="wrap">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="{% url 'home' %}">Home</a> <i class="fas fa-chevron-right"></i> <span>Educational Books</span>
+        </nav>
+        <span class="eyebrow">Educational Books &amp; Supplies</span>
+        <h1>Quality learning materials for every grade</h1>
+        <p>Curriculum-aligned books and stationery for schools, parents and learners — available for individual purchase or bulk school orders.</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="section-head">
+            <span class="eyebrow">Book categories</span>
+            <h2 class="section-title">Browse the titles we stock</h2>
+            <p class="section-sub">Choose a level below to see the covers and titles currently available. Additional curriculum subjects can be sourced on request.</p>
+        </div>
+
+        <nav class="book-cat-nav" aria-label="Book categories">
+            <a href="#books-3-4">3–4 Years <b>2</b></a>
+            <a href="#books-4-5">4–5 Years <b>3</b></a>
+            <a href="#books-grade-1">Grade 1 <b>1</b></a>
+            <a href="#books-grade-4">Grade 4 <b>1</b></a>
+            <a href="#books-form-1">Form 1 <b>11</b></a>
+            <a href="#books-form-2">Form 2 <b>9</b></a>
+        </nav>
+
+        <section class="book-cat" id="books-3-4">
+            <div class="book-cat-head"><h3>Early Childhood — 3–4 Years</h3><span>2 titles</span></div>
+            <div class="book-grid">
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/3-4-years/pre-mathematics-and-science-for-early-childhood-education.jpeg' %}" alt="Pre-Mathematics and Science For Early Childhood Education cover" loading="lazy"></div>
+                    <div class="book-body">
+                        <span class="cond">Early Childhood</span>
+                        <h3>Pre-Mathematics &amp; Science For Early Childhood Education</h3>
+                        <div class="book-price">K100<small>Confirm at order</small></div>
+                    </div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/3-4-years/creative-and-technology-studies-for-early-childhood-education.jpeg' %}" alt="Creative and Technology Studies For Early Childhood Education cover" loading="lazy"></div>
+                    <div class="book-body">
+                        <span class="cond">Early Childhood</span>
+                        <h3>Creative &amp; Technology Studies For Early Childhood Education</h3>
+                        <div class="book-price">K100<small>Confirm at order</small></div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="book-cat" id="books-4-5">
+            <div class="book-cat-head"><h3>Early Childhood — 4–5 Years</h3><span>3 titles</span></div>
+            <div class="book-grid">
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/4-5-years/pre-literacy-in-english-for-early-childhood-education.jpeg' %}" alt="Pre-Literacy in English For Early Childhood Education cover" loading="lazy"></div>
+                    <div class="book-body">
+                        <span class="cond">Early Childhood</span>
+                        <h3>Pre-Literacy in English For Early Childhood Education</h3>
+                        <div class="book-price">K100<small>Confirm at order</small></div>
+                    </div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/4-5-years/creative-and-technology-studies-for-early-childhood-education.jpeg' %}" alt="Creative and Technology Studies For Early Childhood Education cover" loading="lazy"></div>
+                    <div class="book-body">
+                        <span class="cond">Early Childhood</span>
+                        <h3>Creative &amp; Technology Studies For Early Childhood Education</h3>
+                        <div class="book-price">K100<small>Confirm at order</small></div>
+                    </div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/4-5-years/pre-mathematics-and-science-for-early-childhood-education.jpeg' %}" alt="Pre-Mathematics and Science For Early Childhood Education cover" loading="lazy"></div>
+                    <div class="book-body">
+                        <span class="cond">Early Childhood</span>
+                        <h3>Pre-Mathematics &amp; Science For Early Childhood Education</h3>
+                        <div class="book-price">K100<small>Confirm at order</small></div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="book-cat" id="books-grade-1">
+            <div class="book-cat-head"><h3>Primary School — Grade 1</h3><span>1 title</span></div>
+            <div class="book-grid">
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/grade-1/creative-and-technology-studies-for-primary-schools.jpeg' %}" alt="Creative and Technology Studies For Primary Schools cover" loading="lazy"></div>
+                    <div class="book-body">
+                        <span class="cond">Primary School</span>
+                        <h3>Creative &amp; Technology Studies For Primary Schools</h3>
+                        <div class="book-price">K100<small>Confirm at order</small></div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="book-cat" id="books-grade-4">
+            <div class="book-cat-head"><h3>Primary School — Grade 4</h3><span>1 title</span></div>
+            <div class="book-grid">
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/grade-4/mathematics-for-primary-schools.jpeg' %}" alt="Mathematics For Primary Schools cover" loading="lazy"></div>
+                    <div class="book-body">
+                        <span class="cond">Primary School</span>
+                        <h3>Mathematics For Primary Schools</h3>
+                        <div class="book-price">K100<small>Confirm at order</small></div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="book-cat" id="books-form-1">
+            <div class="book-cat-head"><h3>Secondary School — Form 1</h3><span>11 titles</span></div>
+            <div class="book-grid">
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-1/art-and-design-for-secondary-schools-teachers-guide.jpeg' %}" alt="Art and Design for Secondary Schools (Teachers Guide) cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 1</span><h3>Art &amp; Design for Secondary Schools (Teachers Guide)</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-1/biology-for-secondary-schools.jpeg' %}" alt="Biology for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 1</span><h3>Biology for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-1/civic-education-for-secondary-schools.jpeg' %}" alt="Civic Education for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 1</span><h3>Civic Education for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-1/english-language-for-secondary-schools.jpeg' %}" alt="English Language for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 1</span><h3>English Language for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-1/fashion-and-fabrics-for-secondary-schools.jpeg' %}" alt="Fashion and Fabrics for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 1</span><h3>Fashion &amp; Fabrics for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-1/food-and-nutrition-for-secondary-schools.jpeg' %}" alt="Food and Nutrition for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 1</span><h3>Food &amp; Nutrition for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-1/geography-for-secondary-schools.jpeg' %}" alt="Geography for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 1</span><h3>Geography for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-1/hospitality-management-for-secondary-schools.jpeg' %}" alt="Hospitality Management for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 1</span><h3>Hospitality Management for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-1/literature-in-english-for-secondary-schools.jpeg' %}" alt="Literature in English for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 1</span><h3>Literature in English for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-1/physics-for-secondary-schools.jpeg' %}" alt="Physics for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 1</span><h3>Physics for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-1/travel-and-tourism-for-secondary-schools.jpeg' %}" alt="Travel and Tourism for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 1</span><h3>Travel &amp; Tourism for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+            </div>
+        </section>
+
+        <section class="book-cat" id="books-form-2">
+            <div class="book-cat-head"><h3>Secondary School — Form 2</h3><span>9 titles</span></div>
+            <div class="book-grid">
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-2/art-and-design-for-zambia-secondary-schools.jpeg' %}" alt="Art and Design for Zambia Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 2</span><h3>Art &amp; Design for Zambia Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-2/chemistry-for-secondary-schools.jpeg' %}" alt="Chemistry for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 2</span><h3>Chemistry for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-2/civic-education-for-secondary-schools.jpeg' %}" alt="Civic Education for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 2</span><h3>Civic Education for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-2/fashion-and-fabrics-for-secondary-schools.jpeg' %}" alt="Fashion and Fabrics for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 2</span><h3>Fashion &amp; Fabrics for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-2/food-and-nutrition-for-secondary-schools-teacher-guide.jpeg' %}" alt="Food and Nutrition for Secondary Schools (Teacher Guide) cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 2</span><h3>Food &amp; Nutrition for Secondary Schools (Teacher Guide)</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-2/geography-for-secondary-schools.jpeg' %}" alt="Geography for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 2</span><h3>Geography for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-2/hospitality-management-for-secondary-schools.jpeg' %}" alt="Hospitality Management for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 2</span><h3>Hospitality Management for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-2/literature-in-english-for-secondary-schools.jpeg' %}" alt="Literature in English for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 2</span><h3>Literature in English for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+                <article class="book">
+                    <div class="book-cover"><img src="{% static 'images/books/form-2/travel-and-tourism-for-secondary-schools.jpeg' %}" alt="Travel and Tourism for Secondary Schools cover" loading="lazy"></div>
+                    <div class="book-body"><span class="cond">Form 2</span><h3>Travel &amp; Tourism for Secondary Schools</h3><div class="book-price">K120<small>Confirm at order</small></div></div>
+                </article>
+            </div>
+        </section>
+
+        <div class="table-wrap" style="margin-top:58px">
+            <table class="price">
+                <thead>
+                    <tr>
+                        <th>Product category</th>
+                        <th>Products</th>
+                        <th>Advertised price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Early Childhood (3–5 Years)</strong></td><td>Pre-Mathematics &amp; Science, Pre-Literacy in English, Creative &amp; Technology Studies</td><td class="price-tag">K100</td></tr>
+                    <tr><td><strong>Primary School (Grade 1–4)</strong></td><td>Creative &amp; Technology Studies, Mathematics and other available curriculum subjects</td><td class="price-tag">K100</td></tr>
+                    <tr><td><strong>Form 1</strong></td><td>Art &amp; Design, Biology, Civic Education, English, Fashion &amp; Fabrics, Food &amp; Nutrition, Geography, Hospitality, Literature, Physics, Travel &amp; Tourism</td><td class="price-tag">K120</td></tr>
+                    <tr><td><strong>Form 2</strong></td><td>Art &amp; Design, Chemistry, Civic Education, Fashion &amp; Fabrics, Food &amp; Nutrition, Geography, Hospitality, Literature, Travel &amp; Tourism</td><td class="price-tag">K120</td></tr>
+                    <tr><td><strong>School stationery</strong></td><td>Exercise books, pens, pencils, rulers and other supplies</td><td class="price-tag" style="color:var(--navy)">Request quote</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="price-note"><i class="fas fa-triangle-exclamation"></i><span>These are previously advertised prices. Stock availability and current prices are confirmed before publication and at the time of order. Where a title is described as CDC-approved, the product listing reflects the actual publisher and approval status.</span></div>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <div class="grid grid-2" style="align-items:center;gap:44px">
+            <div>
+                <div class="section-head" style="margin-bottom:20px">
+                    <span class="eyebrow">Ordering</span>
+                    <h2 class="section-title">Order for a learner, a class or a whole school</h2>
+                </div>
+                <p class="section-sub">Select the grade, subject and quantity you need. Schools can upload a bulk book list or request a formal quotation.</p>
+                <div class="cta-actions" style="margin-top:24px">
+                    <a class="btn btn-green btn-lg" href="{% url 'public_shop' %}">Place an Order</a>
+                    <a class="btn btn-outline btn-lg" href="{% url 'public_school_solutions' %}#quote">Bulk School Order</a>
+                </div>
+            </div>
+            <div class="grid" style="gap:16px">
+                <div class="feature-row"><div class="ico"><i class="fas fa-filter"></i></div><div><h3>Filter by grade &amp; subject</h3><p>Find titles by grade, subject and availability for fast selection.</p></div></div>
+                <div class="feature-row"><div class="ico"><i class="fas fa-cart-plus"></i></div><div><h3>Choose quantities</h3><p>Order single copies or class sets, with delivery or collection arranged for you.</p></div></div>
+                <div class="feature-row"><div class="ico"><i class="fas fa-file-invoice"></i></div><div><h3>Request a quotation</h3><p>Schools and institutions can request a formal quotation for bulk supplies.</p></div></div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

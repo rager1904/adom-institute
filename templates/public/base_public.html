@@ -1,0 +1,167 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ADOM Institute | Learn Today • Lead Tomorrow{% endblock %}</title>
+    <meta name="description" content="{% block description %}ADOM Institute empowers learners, professionals and businesses through practical education, digital skills, financial training and quality educational resources.{% endblock %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/public-site.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="public-site">
+    <div class="topbar">
+        <div class="wrap topbar-inner">
+            <span><i class="fas fa-location-dot"></i> Liberty Mall, Lusaka &nbsp;•&nbsp; Mitengo, Ndola</span>
+            <span class="topbar-links">
+                <a href="tel:+260967920605"><i class="fas fa-phone"></i> 0967 920 605</a>
+                <a href="https://wa.me/260967920605?text=Hello%20ADOM%20Institute%2C%20I%20would%20like%20to%20enquire" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> WhatsApp Enquiries</a>
+            </span>
+        </div>
+    </div>
+
+    <header class="site-header">
+        <div class="wrap header-inner">
+            <a class="site-brand" href="{% url 'home' %}" aria-label="ADOM Institute home">
+                <span class="site-mark">A</span>
+                <span class="site-brand-text"><span><strong>ADOM</strong> Institute</span><span class="site-brand-motto">Learn Today • Lead Tomorrow</span></span>
+            </a>
+
+            <div class="nav-actions">
+                <a class="btn btn-wa btn-sm" href="https://wa.me/260967920605?text=Hello%20ADOM%20Institute%2C%20I%20would%20like%20to%20enquire" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+                <a class="btn btn-navy btn-sm" href="{% url 'public_admissions' %}">Enrol Now</a>
+            </div>
+
+            <button class="mobile-toggle" type="button" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+
+        {% with current=request.resolver_match.url_name %}
+        <nav class="site-nav" id="siteNav" aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="{% url 'home' %}" {% if current == 'home' %}class="active"{% endif %}>Home</a></li>
+                <li><a href="{% url 'public_about' %}" {% if current == 'public_about' %}class="active"{% endif %}>About Us</a></li>
+                <li class="has-drop">
+                    <a href="{% url 'public_courses' %}" {% if current == 'public_courses' %}class="active"{% endif %}>Schools &amp; Courses <i class="fas fa-chevron-down"></i></a>
+                    <div class="drop">
+                        <a href="{% url 'public_courses' %}#ai">School of AI &amp; Digital Skills</a>
+                        <a href="{% url 'public_courses' %}#finance">School of Finance, Investment &amp; Business</a>
+                        <a href="{% url 'public_courses' %}#accounting">School of Accounting, Taxation &amp; Business Admin</a>
+                        <a href="{% url 'public_tuition' %}">School of Tuition &amp; Academic Support</a>
+                        <a href="{% url 'public_courses' %}#ict">School of Computer &amp; ICT Skills</a>
+                        <a href="{% url 'public_courses' %}">View all programmes <span>Durations, fees and outlines</span></a>
+                    </div>
+                </li>
+                <li><a href="{% url 'public_tuition' %}" {% if current == 'public_tuition' %}class="active"{% endif %}>Tuition Classes</a></li>
+                <li><a href="{% url 'public_books' %}" {% if current == 'public_books' %}class="active"{% endif %}>Educational Books</a></li>
+                <li class="has-drop">
+                    <a href="{% url 'public_ict' %}" {% if current == 'public_ict' %}class="active"{% endif %}>Computers &amp; ICT <i class="fas fa-chevron-down"></i></a>
+                    <div class="drop">
+                        <a href="{% url 'public_ict' %}#desktops">Desktop Computers</a>
+                        <a href="{% url 'public_ict' %}#laptops">Laptops</a>
+                        <a href="{% url 'public_ict' %}#printers">Printers</a>
+                        <a href="{% url 'public_ict' %}#accessories">ICT Accessories</a>
+                        <a href="{% url 'public_ict' %}">Featured products &amp; prices <span>Desktops, laptops, printers</span></a>
+                    </div>
+                </li>
+                <li><a href="{% url 'public_school_solutions' %}" {% if current == 'public_school_solutions' %}class="active"{% endif %}>School Solutions</a></li>
+                <li class="has-drop">
+                    <a href="{% url 'public_shop' %}" {% if current == 'public_shop' %}class="active"{% endif %}>Shop / Order Online <i class="fas fa-chevron-down"></i></a>
+                    <div class="drop">
+                        <a href="{% url 'public_books' %}">Educational Books <span>Grade 1–4, Form 1–2 and more</span></a>
+                        <a href="{% url 'public_ict' %}">Computers &amp; ICT Products <span>Laptops, desktops, printers</span></a>
+                        <a href="{% url 'public_shop' %}">Place an order <span>Delivery or collection</span></a>
+                        <a href="{% url 'public_school_solutions' %}#quote">School bulk quotation</a>
+                    </div>
+                </li>
+                <li><a href="{% url 'public_admissions' %}" {% if current == 'public_admissions' %}class="active"{% endif %}>Admissions</a></li>
+                <li><a href="{% url 'public_contact' %}" {% if current == 'public_contact' %}class="active"{% endif %}>Contact Us</a></li>
+            </ul>
+        </nav>
+        {% endwith %}
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="wrap">
+            <div class="footer-grid">
+                <div>
+                    <div class="footer-brand">
+                        <span class="site-mark">A</span>
+                        <span class="site-brand-text"><span><strong>ADOM</strong> Institute</span><span class="site-brand-motto">Learn Today • Lead Tomorrow</span></span>
+                    </div>
+                    <p>An education, training and educational supplies institution empowering learners, professionals and businesses through practical education, digital skills, financial training and quality educational resources.</p>
+                </div>
+                <div>
+                    <h4>Programmes</h4>
+                    <ul>
+                        <li><a href="{% url 'public_courses' %}#ai">AI &amp; Digital Skills</a></li>
+                        <li><a href="{% url 'public_courses' %}#finance">Finance &amp; Forex</a></li>
+                        <li><a href="{% url 'public_courses' %}#accounting">Accounting &amp; Taxation</a></li>
+                        <li><a href="{% url 'public_tuition' %}">Tuition &amp; Academic Support</a></li>
+                        <li><a href="{% url 'public_courses' %}#ict">Computer &amp; ICT Skills</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Shop &amp; Services</h4>
+                    <ul>
+                        <li><a href="{% url 'public_books' %}">Educational Books</a></li>
+                        <li><a href="{% url 'public_ict' %}">Computers &amp; ICT</a></li>
+                        <li><a href="{% url 'public_school_solutions' %}">School Solutions</a></li>
+                        <li><a href="{% url 'public_shop' %}">Order Online</a></li>
+                        <li><a href="{% url 'public_admissions' %}">Admissions</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Contact</h4>
+                    <ul>
+                        <li><a href="tel:+260967920605"><i class="fas fa-phone"></i>&nbsp; 0967 920 605</a></li>
+                        <li><a href="https://wa.me/260967920605" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i>&nbsp; WhatsApp Enquiries</a></li>
+                        <li><i class="fas fa-location-dot"></i>&nbsp; Liberty Mall, Lusaka</li>
+                        <li><i class="fas fa-location-dot"></i>&nbsp; Mitengo, Ndola</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>© {% now "Y" %} ADOM Institute. All rights reserved.</span>
+                <span>
+                    <a href="{% url 'public_privacy' %}">Privacy</a> &nbsp;·&nbsp;
+                    <a href="{% url 'public_terms' %}">Terms</a> &nbsp;·&nbsp;
+                    <a href="{% url 'public_contact' %}">Contact</a>
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        (function () {
+            var toggle = document.getElementById('navToggle');
+            var nav = document.getElementById('siteNav');
+            if (toggle && nav) {
+                toggle.addEventListener('click', function () {
+                    var open = nav.classList.toggle('open');
+                    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    toggle.innerHTML = open ? '<i class="fas fa-xmark"></i>' : '<i class="fas fa-bars"></i>';
+                });
+            }
+            document.querySelectorAll('.has-drop > a').forEach(function (link) {
+                link.addEventListener('click', function (event) {
+                    if (window.matchMedia('(max-width: 900px)').matches) {
+                        event.preventDefault();
+                        link.parentElement.classList.toggle('open');
+                    }
+                });
+            });
+        })();
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

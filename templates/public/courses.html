@@ -1,0 +1,164 @@
+{% extends 'public/base_public.html' %}
+
+{% block title %}Schools & Courses | ADOM Institute{% endblock %}
+{% block description %}Explore schools and training programmes at ADOM Institute: AI and digital skills, finance and forex, accounting and taxation, tuition and academic support, and computer and ICT skills.{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="wrap">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="{% url 'home' %}">Home</a> <i class="fas fa-chevron-right"></i> <span>Schools &amp; Courses</span>
+        </nav>
+        <span class="eyebrow">Schools &amp; Courses</span>
+        <h1>Practical programmes that build real skills</h1>
+        <p>Each school below offers structured training with clear durations, fees and outlines. Every course ends with a practical, applied outcome you can use immediately.</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="section-head">
+            <span class="eyebrow">Choose your path</span>
+            <h2 class="section-title">Our schools</h2>
+            <p class="section-sub">From artificial intelligence to forex trading, accounting, tuition and ICT — find the programme that fits your goals.</p>
+        </div>
+
+        <div class="grid" style="gap:26px">
+
+            <article class="school" id="ai">
+                <div class="school-icon"><i class="fas fa-robot"></i></div>
+                <div>
+                    <h3>School of Artificial Intelligence &amp; Digital Skills</h3>
+                    <p>Build confidence with the tools shaping modern work — from ChatGPT and prompt engineering to spreadsheets and data.</p>
+                    <ul class="pill-list">
+                        <li>AI &amp; ChatGPT for Beginners</li>
+                        <li>Prompt Engineering</li>
+                        <li>AI for Business</li>
+                        <li>AI for Teachers</li>
+                        <li>AI for Accounting</li>
+                        <li>Excel &amp; Data Analysis</li>
+                        <li>Digital Office Skills</li>
+                    </ul>
+                    <div class="featured-note"><i class="fas fa-star"></i> Featured: 5-Day Certificate in AI &amp; ChatGPT — K750</div>
+                </div>
+            </article>
+
+            <article class="school" id="finance">
+                <div class="school-icon"><i class="fas fa-chart-line"></i></div>
+                <div>
+                    <h3>School of Finance, Investment &amp; Business Skills</h3>
+                    <p>Understand money, markets and business finance — with a strong emphasis on risk awareness and sound decision-making.</p>
+                    <ul class="pill-list">
+                        <li>Forex Trading for Beginners</li>
+                        <li>Advanced Forex Trading</li>
+                        <li>Financial Literacy</li>
+                        <li>Investment Fundamentals</li>
+                        <li>Budgeting</li>
+                        <li>Cash Flow</li>
+                        <li>Bookkeeping</li>
+                        <li>Taxation</li>
+                        <li>Payroll</li>
+                        <li>Financial Management</li>
+                    </ul>
+                    <div class="featured-note"><i class="fas fa-star"></i> Featured: 5-Day Certificate in Forex Trading for Beginners — K750</div>
+                    <div class="notice" style="margin-top:16px"><i class="fas fa-triangle-exclamation"></i><span>Forex training is educational. It involves risk awareness and does not guarantee trading profits.</span></div>
+                </div>
+            </article>
+
+            <article class="school" id="accounting">
+                <div class="school-icon"><i class="fas fa-calculator"></i></div>
+                <div>
+                    <h3>School of Accounting, Taxation &amp; Business Administration</h3>
+                    <p>Practical accounting and compliance skills for administrators, entrepreneurs and finance staff.</p>
+                    <ul class="pill-list">
+                        <li>Practical Bookkeeping</li>
+                        <li>Accounting with Excel</li>
+                        <li>ZRA Taxation &amp; Online Returns</li>
+                        <li>PAYE</li>
+                        <li>NAPSA</li>
+                        <li>NHIMA</li>
+                        <li>Business Registration</li>
+                        <li>Entrepreneurship</li>
+                        <li>Business Management</li>
+                    </ul>
+                </div>
+            </article>
+
+            <article class="school" id="tuition">
+                <div class="school-icon"><i class="fas fa-graduation-cap"></i></div>
+                <div>
+                    <h3>School of Tuition &amp; Academic Support</h3>
+                    <p>Structured academic support for learners following the New Zambian Curriculum, in groups or one-to-one.</p>
+                    <ul class="pill-list">
+                        <li>New Zambian Curriculum tuition</li>
+                        <li>Homework assistance</li>
+                        <li>Revision classes</li>
+                        <li>Examination preparation</li>
+                        <li>Holiday tuition</li>
+                        <li>Individual tutoring</li>
+                        <li>Group learning</li>
+                    </ul>
+                    <a class="link" style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;color:var(--green);font-weight:700;font-size:13.5px;text-decoration:none" href="{% url 'public_tuition' %}">See tuition classes &amp; schedules <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </article>
+
+            <article class="school" id="ict">
+                <div class="school-icon"><i class="fas fa-computer"></i></div>
+                <div>
+                    <h3>School of Computer &amp; ICT Skills</h3>
+                    <p>Essential digital skills for study, employment and business — from basic literacy to business software.</p>
+                    <ul class="pill-list">
+                        <li>Basic Computer Literacy</li>
+                        <li>Microsoft Word</li>
+                        <li>Microsoft Excel</li>
+                        <li>Microsoft PowerPoint</li>
+                        <li>Digital Marketing</li>
+                        <li>Internet Skills</li>
+                        <li>Computer Applications</li>
+                        <li>Introduction to Business Software</li>
+                    </ul>
+                </div>
+            </article>
+
+        </div>
+
+        <div class="notice" style="margin-top:30px"><i class="fas fa-circle-info"></i><span>Course schedules, intake dates and current fees are confirmed at enrolment. Contact us to check the next available intake.</span></div>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <div class="section-head">
+            <span class="eyebrow">Business &amp; Professional Support</span>
+            <h2 class="section-title">Practical training and capacity building</h2>
+            <p class="section-sub">Programmes for entrepreneurs, finance staff and institutions, drawing on practical bookkeeping and business administration expertise.</p>
+        </div>
+        <div class="grid grid-4">
+            <div class="feature-row"><div class="ico"><i class="fas fa-rocket"></i></div><div><h3>Business startup training</h3></div></div>
+            <div class="feature-row"><div class="ico"><i class="fas fa-building"></i></div><div><h3>Company registration workshops</h3></div></div>
+            <div class="feature-row"><div class="ico"><i class="fas fa-desktop"></i></div><div><h3>Accounting software training</h3></div></div>
+            <div class="feature-row"><div class="ico"><i class="fas fa-cash-register"></i></div><div><h3>Odoo &amp; POS user training</h3></div></div>
+            <div class="feature-row"><div class="ico"><i class="fas fa-warehouse"></i></div><div><h3>Inventory management</h3></div></div>
+            <div class="feature-row"><div class="ico"><i class="fas fa-money-check-dollar"></i></div><div><h3>Payroll administration</h3></div></div>
+            <div class="feature-row"><div class="ico"><i class="fas fa-hand-holding-dollar"></i></div><div><h3>Debt collection skills</h3></div></div>
+            <div class="feature-row"><div class="ico"><i class="fas fa-chart-pie"></i></div><div><h3>Small-business financial management</h3></div></div>
+        </div>
+        <div class="notice" style="margin-top:28px"><i class="fas fa-circle-info"></i><span>Training programmes are delivered by ADOM Institute. Any professional services delivered directly by Cornerstone Bookkeeping Solutions are separate and are provided by that firm, not by ADOM Institute.</span></div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="cta">
+            <div>
+                <h2>Not sure which programme is right for you?</h2>
+                <p>Tell us your goals and we will recommend the best course or combination of courses.</p>
+            </div>
+            <div class="cta-actions">
+                <a class="btn btn-wa btn-lg" href="https://wa.me/260967920605?text=Hello%20ADOM%20Institute%2C%20I%20need%20help%20choosing%20a%20course" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> Ask on WhatsApp</a>
+                <a class="btn btn-outline btn-lg" href="{% url 'public_admissions' %}">Enrol Now</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,151 +1,227 @@
-{% extends 'base.html' %}
+{% extends 'public/base_public.html' %}
 {% load static %}
 
-{% block title %}ADOM Institute | More time for teaching{% endblock %}
-
-{% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
-<style>
-    :root { --landing-ink:#173b31; --landing-green:#17483a; --landing-cream:#f7f5ef; --landing-muted:#68766d; --landing-gold:#e1b94f; }
-    body { background:var(--landing-cream); color:#26342d; font-family:'DM Sans',sans-serif; }
-    .edu-auth-main { padding:0 !important; }
-    .landing { overflow:hidden; background:var(--landing-cream); min-height:100vh; }
-    .landing-wrap { max-width:1240px; margin:auto; padding:0 34px; }
-    .landing-header { height:86px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(23,59,49,.1); }
-    .landing-brand { display:flex; align-items:center; gap:11px; text-decoration:none; color:var(--landing-ink); font-size:27px; letter-spacing:-1px; }
-    .landing-brand strong { font-weight:700; }
-    .landing-mark { width:48px; height:43px; display:grid; place-items:center; color:var(--landing-green); font-family:'DM Sans',sans-serif; font-size:43px; font-weight:800; line-height:1; position:relative; }
-    .landing-mark:after { content:''; position:absolute; width:12px; height:9px; background:#f2be27; bottom:3px; left:18px; clip-path:polygon(50% 0,100% 100%,0 100%); }
-    .landing-nav { display:flex; align-items:center; gap:34px; }
-    .landing-nav a { color:#45554c; font-size:13px; text-decoration:none; transition:color .2s; }
-    .landing-nav a:hover { color:var(--landing-green); }
-    .landing-actions { display:flex; gap:11px; align-items:center; }
-    .landing-btn { min-height:43px; display:inline-flex; align-items:center; justify-content:center; padding:0 18px; border-radius:4px; text-decoration:none; font-size:13px; font-weight:700; transition:transform .2s,background .2s; }
-    .landing-btn:hover { transform:translateY(-1px); }
-    .landing-btn-outline { border:1px solid #c9d0c9; color:var(--landing-ink); }
-    .landing-btn-primary { background:var(--landing-green); color:white; border:1px solid var(--landing-green); }
-    .landing-btn-primary:hover { background:#10372c; color:white; }
-    .landing-hero { display:grid; grid-template-columns:.9fr 1.1fr; gap:34px; align-items:center; padding:42px 0 32px; }
-    .landing-eyebrow { color:#9b7721; font-size:10px; text-transform:uppercase; letter-spacing:2px; font-weight:700; display:flex; gap:11px; align-items:center; }
-    .landing-eyebrow:before { content:''; height:1px; width:25px; background:var(--landing-gold); }
-    .landing-title { max-width:650px; margin:20px 0 19px; color:var(--landing-ink); font:400 clamp(48px,5.3vw,72px)/.99 'DM Serif Display',Georgia,serif; letter-spacing:-1.9px; }
-    .landing-copy { max-width:520px; color:var(--landing-muted); line-height:1.8; font-size:15px; }
-    .landing-cta { display:flex; gap:23px; align-items:center; margin-top:27px; }
-    .landing-text-link { text-decoration:none; color:var(--landing-ink); font-size:13px; font-weight:700; }
-    .landing-trust { display:flex; gap:9px; align-items:center; color:#738077; font-size:11px; margin-top:28px; }
-    .landing-trust i { color:var(--landing-green); font-size:12px; }
-    .dashboard-stage { min-width:0; position:relative; padding:28px 0; }
-    .dashboard-sun { position:absolute; width:430px; height:430px; border-radius:50%; right:-35px; top:50%; transform:translateY(-50%); background:repeating-conic-gradient(from 0deg at 50% 50%,#f7df91 0deg 1deg,transparent 1deg 8deg); opacity:.8; mask:radial-gradient(circle,transparent 0 48%,#000 49% 75%,transparent 76%); }
-    .dashboard-window { position:relative; z-index:1; background:#fff; border:1px solid #e6e8e1; border-radius:8px; box-shadow:0 24px 65px rgba(35,56,44,.13),0 3px 9px rgba(35,56,44,.05); overflow:hidden; transform:rotate(.4deg); }
-    .dash-top { display:none; }
-    .dash-dot { height:7px; width:7px; border-radius:50%; background:#dce2dc; }
-    .dash-brand { margin-left:7px; color:#24483b; font-size:11px; font-weight:700; }
-    .dash-user { margin-left:auto; width:24px; height:24px; display:grid; place-items:center; border-radius:50%; background:#eee4cf; color:#775f2a; font-size:8px; font-weight:700; }
-    .dash-body { display:grid; grid-template-columns:135px 1fr; min-height:460px; }
-    .dash-sidebar { background:#073d32; padding:17px 10px; color:#c6d6cb; display:flex; flex-direction:column; }
-    .dash-side-label { text-transform:uppercase; font-size:7px; letter-spacing:1.1px; color:#87a496; padding:0 7px 9px; }
-    .dash-nav { display:flex; align-items:center; gap:8px; height:34px; padding:0 8px; font-size:9px; border-radius:5px; margin-bottom:3px; }
-    .dash-nav i { width:11px; text-align:center; font-size:9px; }
-    .dash-nav.active { background:#174f41; color:#f0ca42; font-weight:700; }
-    .dash-school { margin-top:auto; padding:10px 8px; border:1px solid rgba(255,255,255,.2); border-radius:5px; color:#fff; font-size:8px; line-height:1.5; }
-    .dash-content { padding:15px 17px; min-width:0; }
-    .dash-toolbar { display:flex; align-items:center; gap:9px; border-bottom:1px solid #edf0eb; height:36px; margin:-15px -17px 12px; padding:0 16px; color:#718078; font-size:8px; }
-    .dash-search { border:1px solid #e5e9e4; border-radius:5px; padding:6px 9px; flex:1; color:#77847c; }
-    .dash-profile { display:flex; gap:6px; align-items:center; margin-left:auto; color:#3c4c42; font-size:8px; }
-    .dash-profile span { width:23px;height:23px;display:grid;place-items:center;border-radius:50%;background:#e6e8eb;color:#43505c;font-weight:700; }
-    .dash-heading { font:400 22px 'DM Serif Display',Georgia,serif; color:#233d32; }
-    .dash-date { font-size:9px; color:#89938a; margin-top:3px; }
-    .dash-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:17px; }
-    .dash-stat { border:1px solid #edf0ea; padding:11px 9px 10px; border-radius:6px; }
-    .dash-stat-label { color:#849087; font-size:8px; white-space:nowrap; }
-    .dash-stat-value { color:#233d32; font-size:17px; font-weight:700; margin-top:5px; letter-spacing:-.5px; }
-    .dash-stat-note { color:#63846f; font-size:7px; margin-top:3px; }
-    .dash-lower { display:grid; grid-template-columns:1.1fr .9fr; gap:9px; margin-top:10px; }
-    .dash-panel { border:1px solid #edf0ea; border-radius:6px; padding:11px 10px; min-width:0; }
-    .dash-panel-title { color:#30463a; font-size:9px; font-weight:700; }
-    .chart { width:100%; height:96px; margin-top:7px; }
-    .notice { display:flex; gap:7px; margin-top:10px; align-items:flex-start; }
-    .notice-icon { width:22px; height:22px; border-radius:4px; background:#f7f0db; display:grid; place-items:center; color:#a17a27; font-size:9px; flex:0 0 auto; }
-    .notice strong { display:block; color:#384a3e; font-size:8px; line-height:1.5; }
-    .notice span { display:block; color:#879087; font-size:7px; margin-top:3px; }
-    .dash-legend { color:#879087; font-size:7px; margin-top:3px; }
-    .dash-legend b { color:#397356; }
-    .feature-strip { display:grid; grid-template-columns:repeat(5,1fr); border-top:1px solid #dfdfd5; border-bottom:1px solid #dfdfd5; padding:20px 0; }
-    .feature-item { display:flex; justify-content:center; align-items:center; gap:12px; color:#4b5b50; font-size:12px; font-weight:600; border-right:1px solid #e5e3da; }
-    .feature-item:last-child { border-right:0; }
-    .feature-item i { color:#176048; font-size:18px; width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:#e7eee3; }
-    .feature-item:nth-child(even) i { background:#fff4d3;color:#e6a500; }
-    .feature-item span { display:block;color:#717c74;font-size:11px;font-weight:400;line-height:1.35;margin-top:4px;max-width:130px; }
-    .landing-next { text-align:left; padding:49px 0 72px; }
-    .landing-next .landing-eyebrow { margin-bottom:12px; }
-    .landing-next h2 { color:var(--landing-ink); font:400 clamp(35px,4.4vw,54px) 'DM Serif Display',Georgia,serif; margin:0; }
-    .landing-next p { color:var(--landing-muted); font-size:14px; max-width:570px; margin:12px 0 0; line-height:1.7; }
-    .home-detail-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:35px;padding:26px 0 67px;border-top:1px solid #dfdfd5 }
-    .home-detail h3 { color:var(--landing-ink);font:400 25px 'DM Serif Display',Georgia,serif;margin:0 0 9px }
-    .home-detail p { color:var(--landing-muted);font-size:13px;line-height:1.75;margin:0 }
-    .home-close { background:#103d32;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:25px;padding:30px 34px;margin-bottom:50px }
-    .home-close h2 { font:400 30px 'DM Serif Display',Georgia,serif;margin:0 0 6px }
-    .home-close p { color:#d0ddd5;font-size:13px;margin:0 }
-    .home-close .landing-btn { background:#f4c43b;border-color:#f4c43b;color:#173b31;white-space:nowrap }
-    .landing-footer { border-top:1px solid #e4e2d9; color:#778178; font-size:11px; padding:20px 0 25px; display:flex; justify-content:space-between; gap:20px; }
-    .landing-footer a { text-decoration:none; color:#536258; margin-left:18px; }
-    @media(max-width:900px) { .landing-wrap{padding:0 24px}.landing-nav{gap:18px}.landing-hero{gap:24px;padding-top:57px}.landing-title{font-size:clamp(46px,7vw,64px)}.dash-body{grid-template-columns:98px 1fr}.dash-content{padding:17px 12px}.dash-sidebar{padding:15px 7px}.dash-nav{gap:6px;padding:0 6px} }
-    @media(max-width:700px) { .landing-wrap{padding:0 19px}.landing-header{height:72px}.landing-nav{display:none}.landing-actions{gap:7px}.landing-btn{padding:0 12px;min-height:39px;font-size:11px}.landing-brand{font-size:14px}.landing-mark{width:33px;height:33px}.landing-hero{grid-template-columns:1fr;padding:52px 0 35px;gap:24px}.landing-title{font-size:clamp(47px,12vw,65px);letter-spacing:-1.4px}.landing-copy{font-size:14px}.dashboard-stage{padding:7px 0 20px}.dashboard-sun{width:320px;height:320px;right:-80px}.dash-body{grid-template-columns:98px 1fr;min-height:310px}.dash-content{padding:16px 12px}.feature-strip{grid-template-columns:repeat(2,1fr);row-gap:17px;padding:18px 0}.feature-item{justify-content:flex-start;border:0;padding-left:10px;font-size:11px}.feature-item:last-child{grid-column:1/-1}.landing-next{padding:42px 0 42px}.home-detail-grid{grid-template-columns:1fr;gap:20px;padding-bottom:38px}.home-close{align-items:flex-start;flex-direction:column;padding:24px;margin-bottom:32px}.landing-footer{flex-direction:column;gap:11px}.landing-footer a{margin:0 14px 0 0} }
-    @media(max-width:390px){.landing-actions .landing-btn-outline{display:none}.landing-cta{gap:14px}.landing-btn{padding:0 12px}.dash-body{grid-template-columns:84px 1fr}.dash-sidebar{padding-left:5px;padding-right:5px}.dash-stat{padding:8px 6px}.dash-stat-value{font-size:13px}.dash-nav{font-size:7px}}
-</style>
-{% endblock %}
+{% block title %}ADOM Institute | Learn Today • Lead Tomorrow{% endblock %}
+{% block description %}ADOM Institute is an education, training and educational supplies institution in Zambia. Explore courses in AI, forex, accounting and ICT, plus curriculum books and computers for schools.{% endblock %}
 
 {% block content %}
-<div class="landing">
-    <div class="landing-wrap">
-        <header class="landing-header">
-            <a class="landing-brand" href="{% url 'home' %}" aria-label="ADOM Institute home"><span class="landing-mark">A</span><span><strong>ADOM</strong> Institute</span></a>
-            <nav class="landing-nav" aria-label="Main navigation">
-                <a href="#product">Product</a><a href="{% url 'public_about' %}">About</a><a href="{% url 'public_privacy' %}">Privacy</a><a href="{% url 'public_contact' %}">Contact</a>
-            </nav>
-            <div class="landing-actions"><a class="landing-btn landing-btn-outline" href="{% url 'accounts:login' %}">Sign in</a><a class="landing-btn landing-btn-primary" href="{% url 'accounts:institution_register' %}">Book a walkthrough</a></div>
-        </header>
+<section class="hero">
+    <div class="wrap hero-grid">
+        <div class="hero-intro">
+            <span class="eyebrow">Education • Training • Educational Supplies</span>
+            <h1 class="hero-title">Your Future Starts With Learning</h1>
+            <span class="hero-motto">Learn Today • Lead Tomorrow</span>
+            <p class="hero-lede">Empowering learners, professionals and businesses through practical education, digital skills, financial training and quality educational resources.</p>
+            <div class="hero-cta">
+                <a class="btn btn-green btn-lg" href="{% url 'public_courses' %}">Explore Courses <i class="fas fa-arrow-right"></i></a>
+                <a class="btn btn-gold btn-lg" href="{% url 'public_shop' %}"><i class="fas fa-bag-shopping"></i> Shop Educational Products</a>
+            </div>
+            <div class="hero-tags">
+                <span class="hero-tag"><i class="fas fa-chalkboard-user"></i> Practical Training</span>
+                <span class="hero-tag"><i class="fas fa-graduation-cap"></i> Tuition Classes</span>
+                <span class="hero-tag"><i class="fas fa-book"></i> Curriculum Books</span>
+                <span class="hero-tag"><i class="fas fa-laptop"></i> Computers &amp; ICT</span>
+            </div>
+        </div>
 
-        <main>
-            <section class="landing-hero" id="product">
-                <div class="landing-intro">
-                    <div class="landing-eyebrow">School operations, in one place</div>
-                    <h1 class="landing-title">More time for teaching.<br>Less time chasing details.</h1>
-                    <p class="landing-copy">Bring admissions, attendance, fees and family updates together in one calm workspace, designed for African schools.</p>
-                    <div class="landing-cta"><a class="landing-btn landing-btn-primary" href="{% url 'accounts:institution_register' %}">Explore the platform <i class="fas fa-arrow-right ms-2" aria-hidden="true"></i></a><a class="landing-text-link" href="#how-it-works">How ADOM works <span aria-hidden="true">→</span></a></div>
-                    <div class="landing-trust"><i class="fas fa-check" aria-hidden="true"></i><span>Built for school teams&nbsp; &nbsp; <i class="fas fa-check" aria-hidden="true"></i> Works across roles&nbsp; &nbsp; <i class="fas fa-check" aria-hidden="true"></i> Privacy-minded by design</span></div>
-                </div>
-                <div class="dashboard-stage" aria-label="Illustration of the ADOM school management dashboard">
-                    <div class="dashboard-sun"></div>
-                    <div class="dashboard-window">
-                        <div class="dash-top"><span class="dash-brand" style="margin-left:2px">▲ &nbsp; ADOM Institute</span><span class="dash-user">MP</span></div>
-                        <div class="dash-body">
-                            <aside class="dash-sidebar" aria-label="Dashboard preview navigation"><div class="dash-brand" style="color:#fff;margin:0 5px 20px">▲ &nbsp; ADOM Institute</div><div class="dash-nav active"><i class="fas fa-house"></i>Home</div><div class="dash-nav"><i class="fas fa-user-graduate"></i>Learners</div><div class="dash-nav"><i class="fas fa-book-open"></i>Academics</div><div class="dash-nav"><i class="fas fa-calendar-check"></i>Attendance</div><div class="dash-nav"><i class="fas fa-circle-dollar-to-slot"></i>Fees</div><div class="dash-nav"><i class="fas fa-message"></i>Communications</div><div class="dash-nav"><i class="fas fa-chart-column"></i>Reports</div><div class="dash-school">Riverside Academy<br><small>Lusaka, Zambia</small> &nbsp;⌄</div></aside>
-                            <div class="dash-content">
-                                <div class="dash-toolbar"><span class="dash-search"><i class="fas fa-search"></i> &nbsp; Search learners, parents, classes...</span><i class="fas fa-bell"></i><span class="dash-profile"><span>MP</span><b>Ms. Phiri<br><small style="font-weight:400;color:#879087">School Administrator</small></b>⌄</span></div>
-                                <div class="dash-heading">Good morning, Ms. Phiri</div><div class="dash-date">Wednesday, 7 October</div>
-                                <div class="dash-stats"><div class="dash-stat"><div class="dash-stat-label">Attendance</div><div class="dash-stat-value">94.2%</div><div class="dash-stat-note"><i class="fas fa-arrow-up"></i> 2.4% this week</div></div><div class="dash-stat"><div class="dash-stat-label">Fees collected</div><div class="dash-stat-value">K42,850</div><div class="dash-stat-note">This term</div></div><div class="dash-stat"><div class="dash-stat-label">Learners</div><div class="dash-stat-value">1,284</div><div class="dash-stat-note">Across 32 classes</div></div></div>
-                                <div class="dash-lower"><div class="dash-panel"><div style="display:flex;justify-content:space-between"><div class="dash-panel-title">Attendance this week</div><small style="color:#176048;font-size:7px">View details →</small></div><svg class="chart" viewBox="0 0 260 100" role="img" aria-label="Attendance by weekday bar chart"><path d="M0 78H260M0 56H260M0 34H260M0 12H260" stroke="#edf0ea" stroke-width="1"/><g fill="#28624e"><rect x="25" y="28" width="28" height="50" rx="3"/><rect x="74" y="22" width="28" height="56" rx="3"/><rect x="123" y="26" width="28" height="52" rx="3"/><rect x="172" y="39" width="28" height="39" rx="3"/><rect x="221" y="31" width="28" height="47" rx="3" opacity=".3"/></g><g fill="#77847c" font-size="8" font-family="sans-serif"><text x="29" y="94">Mon</text><text x="78" y="94">Tue</text><text x="127" y="94">Wed</text><text x="176" y="94">Thu</text><text x="225" y="94">Fri</text></g></svg></div><div class="dash-panel"><div style="display:flex;justify-content:space-between"><div class="dash-panel-title">Notices</div><small style="color:#176048;font-size:7px">See all →</small></div><div class="notice"><div class="notice-icon"><i class="fas fa-bullhorn"></i></div><div><strong>Grade 8B · Science room change</strong><span>2 hours ago</span></div></div><div class="notice"><div class="notice-icon" style="background:#e8f0e7;color:#397356"><i class="fas fa-file-lines"></i></div><div><strong>Term 2 fee reminder</strong><span>Yesterday</span></div></div><div class="notice"><div class="notice-icon" style="background:#e8f0e7;color:#397356"><i class="fas fa-calendar"></i></div><div><strong>Parents’ meeting · 14 October</strong><span>3 October</span></div></div></div></div>
-                                <div class="dash-lower"><div class="dash-panel"><div style="display:flex;justify-content:space-between"><div class="dash-panel-title">Today’s upcoming</div><small style="color:#176048;font-size:7px">See all →</small></div><div class="notice"><div style="color:#176048;font-size:8px">● &nbsp;08:00</div><div><strong>Staff briefing</strong></div><small style="margin-left:auto;color:#879087;font-size:7px">Staff room</small></div><div class="notice"><div style="color:#e3a800;font-size:8px">● &nbsp;10:30</div><div><strong>Grade 9 Mathematics</strong></div><small style="margin-left:auto;color:#879087;font-size:7px">Room B3</small></div><div class="notice"><div style="color:#176048;font-size:8px">● &nbsp;14:00</div><div><strong>Parent meeting</strong></div><small style="margin-left:auto;color:#879087;font-size:7px">Administration</small></div></div><div class="dash-panel"><div style="display:flex;justify-content:space-between"><div class="dash-panel-title">Recent activity</div><small style="color:#176048;font-size:7px">See all →</small></div><div class="notice"><div class="notice-icon" style="background:#e7e9fa;color:#4650a8">TM</div><div><strong>Thandiwe M. marked attendance</strong><span>Grade 7A</span></div><small style="margin-left:auto;color:#879087;font-size:7px">10 min ago</small></div><div class="notice"><div class="notice-icon" style="background:#e8f0e7;color:#397356">BK</div><div><strong>Brian K. submitted a fee payment</strong><span>Grade 6B</span></div><small style="margin-left:auto;color:#879087;font-size:7px">1 hour ago</small></div><div class="notice"><div class="notice-icon" style="background:#fae9e5;color:#a14839">SN</div><div><strong>Sarah N. added a new learner</strong><span>Grade 1</span></div><small style="margin-left:auto;color:#879087;font-size:7px">3 hours ago</small></div></div></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+        <div class="hero-art">
+            <svg viewBox="0 0 560 440" role="img" aria-label="Learner using a laptop surrounded by books and technology">
+                <defs>
+                    <linearGradient id="heroBg" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stop-color="#0c2340"/>
+                        <stop offset="1" stop-color="#145c37"/>
+                    </linearGradient>
+                    <linearGradient id="heroGold" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stop-color="#f4d477"/>
+                        <stop offset="1" stop-color="#e2b84c"/>
+                    </linearGradient>
+                </defs>
+                <rect width="560" height="440" rx="26" fill="url(#heroBg)"/>
+                <circle cx="470" cy="60" r="130" fill="#ffffff" opacity="0.05"/>
+                <circle cx="70" cy="400" r="150" fill="#ffffff" opacity="0.05"/>
+                <circle cx="300" cy="40" r="8" fill="url(#heroGold)" opacity="0.9"/>
+                <circle cx="500" cy="250" r="6" fill="#ffffff" opacity="0.5"/>
+                <circle cx="60" cy="120" r="5" fill="url(#heroGold)" opacity="0.8"/>
 
-            <section class="feature-strip" aria-label="Platform areas"><div class="feature-item"><i class="fas fa-people-group"></i><div>Learners<span>Admissions, profiles and class management</span></div></div><div class="feature-item"><i class="fas fa-book-open"></i><div>Academics<span>Timetables, results and reporting</span></div></div><div class="feature-item"><i class="fas fa-calendar-days"></i><div>Attendance<span>Simple, reliable and real-time</span></div></div><div class="feature-item"><i class="fas fa-coins"></i><div>Fees<span>Tracking, payments and reminders</span></div></div><div class="feature-item"><i class="far fa-comment"></i><div>Family updates<span>Keep parents informed and engaged</span></div></div></section>
+                <!-- desk -->
+                <rect x="66" y="352" width="428" height="12" rx="6" fill="#ffffff" opacity="0.22"/>
 
-            <section class="landing-next"><div class="landing-eyebrow">Built for real schools</div><h2>A clearer picture of every school day.</h2><p>Give administrators, teachers and families a shared place to stay connected to the work that helps learners thrive.</p></section>
-            <section class="home-detail-grid" id="how-it-works" aria-label="How ADOM supports school teams">
-                <article class="home-detail"><h3>One view for the whole school</h3><p>Keep day-to-day administration, academic work, attendance, fees, library resources and communication connected in a single platform.</p></article>
-                <article class="home-detail"><h3>Useful to every role</h3><p>Role-based workspaces help school leaders, teachers, learners and families find the information and tools relevant to them.</p></article>
-                <article class="home-detail"><h3>Built to support better decisions</h3><p>Bring records and reporting together so school teams can understand what is happening and respond with more confidence.</p></article>
-            </section>
-            <section class="home-close"><div><h2>Make room for the work that matters.</h2><p>Explore how ADOM Institute could support your school team.</p></div><a class="landing-btn" href="{% url 'accounts:institution_register' %}">Register your institution <span aria-hidden="true">→</span></a></section>
-        </main>
-        <footer class="landing-footer"><span>© {% now "Y" %} ADOM Institute · Built for learning communities</span><nav aria-label="Footer navigation"><a href="{% url 'public_about' %}">About ADOM</a><a href="{% url 'public_privacy' %}">Privacy</a><a href="{% url 'public_terms' %}">Terms</a><a href="{% url 'public_contact' %}">Contact</a><a href="{% url 'accounts:login' %}">Sign in</a></nav></footer>
+                <!-- laptop -->
+                <rect x="198" y="188" width="214" height="152" rx="12" fill="#f2f4f1"/>
+                <rect x="210" y="200" width="190" height="128" rx="8" fill="#0c2340"/>
+                <rect x="228" y="248" width="26" height="62" rx="4" fill="#1c7a4a"/>
+                <rect x="266" y="228" width="26" height="82" rx="4" fill="#2f9a63"/>
+                <rect x="304" y="262" width="26" height="48" rx="4" fill="#e2b84c"/>
+                <rect x="342" y="212" width="26" height="98" rx="4" fill="#2f9a63"/>
+                <rect x="222" y="216" width="60" height="8" rx="4" fill="#ffffff" opacity="0.5"/>
+                <rect x="180" y="338" width="250" height="14" rx="7" fill="#cfd6dd"/>
+
+                <!-- person -->
+                <circle cx="120" cy="230" r="30" fill="#ffd9a8"/>
+                <path d="M90 232c0-30 14-46 30-46s30 16 30 46c-10 6-20-6-30-6s-18 10-30 6z" fill="#3a2b22"/>
+                <path d="M68 352c6-52 30-72 52-72s46 20 52 72z" fill="#1c7a4a"/>
+                <path d="M150 300c22 4 34 16 44 30" stroke="#1c7a4a" stroke-width="18" stroke-linecap="round" fill="none"/>
+
+                <!-- books -->
+                <rect x="410" y="322" width="92" height="15" rx="3" fill="url(#heroGold)"/>
+                <rect x="418" y="307" width="76" height="15" rx="3" fill="#ffffff" opacity="0.85"/>
+                <rect x="426" y="292" width="60" height="15" rx="3" fill="url(#heroGold)" opacity="0.75"/>
+
+                <!-- graduation cap -->
+                <path d="M300 108l56 22-56 22-56-22z" fill="url(#heroGold)"/>
+                <path d="M272 138v20c0 8 22 12 28 12s28-4 28-12v-20l-28 11z" fill="#f4d477"/>
+                <line x1="356" y1="130" x2="356" y2="158" stroke="url(#heroGold)" stroke-width="3"/>
+            </svg>
+            <div class="hero-chip chip-1"><i class="fas fa-brain"></i> AI &amp; ChatGPT</div>
+            <div class="hero-chip chip-2"><i class="fas fa-chart-line"></i> Forex Trading</div>
+            <div class="hero-chip chip-3"><i class="fas fa-book"></i> Books from K100</div>
+        </div>
     </div>
-</div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="section-head center">
+            <span class="eyebrow">By the numbers</span>
+            <h2 class="section-title">Growing with our learning community</h2>
+        </div>
+        <div class="stats">
+            {% for stat in platform_stats %}
+            <div class="stat"><b>{{ stat.value }}</b><span>{{ stat.label }}</span></div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <div class="section-head center">
+            <span class="eyebrow">Explore What We Offer</span>
+            <h2 class="section-title">One institution for training, tuition, books and technology</h2>
+            <p class="section-sub">From short certificate programmes to curriculum books, computers and complete school solutions — ADOM Institute supports learning at every level.</p>
+        </div>
+
+        <div class="grid grid-3">
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-robot"></i></div>
+                <h3>AI &amp; Digital Skills</h3>
+                <p>Practical, hands-on training in artificial intelligence, ChatGPT, prompt engineering and modern digital office tools.</p>
+                <a class="link" href="{% url 'public_courses' %}#ai">View courses <i class="fas fa-arrow-right"></i></a>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+                <h3>Finance &amp; Forex</h3>
+                <p>Forex trading, investment fundamentals, financial literacy, budgeting and business finance for everyday decision-making.</p>
+                <a class="link" href="{% url 'public_courses' %}#finance">View courses <i class="fas fa-arrow-right"></i></a>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-graduation-cap"></i></div>
+                <h3>Tuition &amp; Books</h3>
+                <p>New Zambian Curriculum tuition classes and a full range of curriculum-aligned educational books and learning materials.</p>
+                <a class="link" href="{% url 'public_tuition' %}">Learn more <i class="fas fa-arrow-right"></i></a>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-laptop"></i></div>
+                <h3>Computers &amp; ICT</h3>
+                <p>Desktops, Dell and HP laptops, Canon printers and ICT accessories for students, offices and institutions.</p>
+                <a class="link" href="{% url 'public_ict' %}">Shop ICT <i class="fas fa-arrow-right"></i></a>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-school"></i></div>
+                <h3>School Solutions</h3>
+                <p>Computer laboratories, library development, bulk supply, installation and teacher training for schools and institutions.</p>
+                <a class="link" href="{% url 'public_school_solutions' %}">Request a quote <i class="fas fa-arrow-right"></i></a>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-briefcase"></i></div>
+                <h3>Business Training</h3>
+                <p>Startup, bookkeeping, accounting software, payroll and small-business financial management for professionals.</p>
+                <a class="link" href="{% url 'public_courses' %}#accounting">View programmes <i class="fas fa-arrow-right"></i></a>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="section-head">
+            <span class="eyebrow">Featured Programmes</span>
+            <h2 class="section-title">Start with a five-day certificate</h2>
+            <p class="section-sub">Short, focused programmes designed to build practical skills you can apply immediately.</p>
+        </div>
+
+        <div class="grid grid-2">
+            <article class="prog">
+                <div class="prog-head">
+                    <span class="prog-badge">Certificate Programme</span>
+                    <h3>Artificial Intelligence &amp; ChatGPT</h3>
+                </div>
+                <div class="prog-body">
+                    <p class="product-spec">An introduction to AI and ChatGPT for beginners, teachers, business people and professionals.</p>
+                    <div class="prog-meta">
+                        <div>Duration<strong>5 Days</strong></div>
+                        <div>Mode<strong>In-person</strong></div>
+                        <div>Award<strong>Certificate</strong></div>
+                    </div>
+                    <div class="prog-price">K750</div>
+                    <a class="btn btn-green" href="{% url 'public_admissions' %}">Enrol Now <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </article>
+            <article class="prog">
+                <div class="prog-head">
+                    <span class="prog-badge">Certificate Programme</span>
+                    <h3>Forex Trading for Beginners</h3>
+                </div>
+                <div class="prog-body">
+                    <p class="product-spec">Learn forex fundamentals, risk awareness and trading discipline in a structured five-day course.</p>
+                    <div class="prog-meta">
+                        <div>Duration<strong>5 Days</strong></div>
+                        <div>Mode<strong>In-person</strong></div>
+                        <div>Award<strong>Certificate</strong></div>
+                    </div>
+                    <div class="prog-price">K750</div>
+                    <a class="btn btn-green" href="{% url 'public_admissions' %}">Enrol Now <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section tint">
+    <div class="wrap">
+        <div class="section-head">
+            <span class="eyebrow">Why ADOM Institute</span>
+            <h2 class="section-title">Practical skills, quality resources and real support</h2>
+        </div>
+        <div class="grid grid-3">
+            <div class="feature-row">
+                <div class="ico"><i class="fas fa-hands-on"></i></div>
+                <div><h3>Practical, hands-on learning</h3><p>Courses are built around exercises, real examples and tools you will actually use at work or in business.</p></div>
+            </div>
+            <div class="feature-row">
+                <div class="ico"><i class="fas fa-book-open"></i></div>
+                <div><h3>Curriculum-aligned resources</h3><p>Educational books and materials matched to the Zambian curriculum from early childhood through secondary school.</p></div>
+            </div>
+            <div class="feature-row">
+                <div class="ico"><i class="fas fa-handshake"></i></div>
+                <div><h3>Support for schools and business</h3><p>Bulk supply, laboratory setup, library development and customised quotations for institutions of every size.</p></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="cta">
+            <div>
+                <h2>Ready to learn, supply or equip your school?</h2>
+                <p>Enrol in a course, order educational products or request a quotation for your institution. We are here to help.</p>
+            </div>
+            <div class="cta-actions">
+                <a class="btn btn-gold btn-lg" href="{% url 'public_admissions' %}">Enrol or Request a Quotation</a>
+                <a class="btn btn-outline btn-lg" href="{% url 'public_contact' %}">Contact Us</a>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}

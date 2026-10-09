@@ -1,0 +1,95 @@
+{% extends 'public/base_public.html' %}
+
+{% block title %}Admissions & Enrolment | ADOM Institute{% endblock %}
+{% block description %}How to enrol at ADOM Institute: choose a course, confirm your intake, complete registration and start learning. Enrol by WhatsApp or phone.{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="wrap">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="{% url 'home' %}">Home</a> <i class="fas fa-chevron-right"></i> <span>Admissions</span>
+        </nav>
+        <span class="eyebrow">Admissions &amp; Enrolment</span>
+        <h1>Enrol in four simple steps</h1>
+        <p>Whether you are a learner, a professional or a school, the enrolment process is designed to be quick and clear.</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="section-head">
+            <span class="eyebrow">How to enrol</span>
+            <h2 class="section-title">From enquiry to first class</h2>
+        </div>
+        <div class="grid grid-4">
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-magnifying-glass"></i></div>
+                <h3>1. Choose a course</h3>
+                <p>Review the schools and programmes to find the course that matches your goals.</p>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-calendar-days"></i></div>
+                <h3>2. Confirm your intake</h3>
+                <p>Contact us to check the next intake, schedule and current fees for your course.</p>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-clipboard-check"></i></div>
+                <h3>3. Complete registration</h3>
+                <p>Provide your details, choose your mode of study and complete registration.</p>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-graduation-cap"></i></div>
+                <h3>4. Start learning</h3>
+                <p>Attend classes, complete practical work and receive your certificate on completion.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <div class="grid grid-2" style="align-items:start;gap:44px">
+            <div>
+                <div class="section-head" style="margin-bottom:22px">
+                    <span class="eyebrow">Good to know</span>
+                    <h2 class="section-title">Entry requirements &amp; fees</h2>
+                </div>
+                <div class="grid" style="gap:16px">
+                    <div class="feature-row"><div class="ico"><i class="fas fa-id-card"></i></div><div><h3>Simple entry requirements</h3><p>Most short courses are open to beginners. Relevant requirements are listed on each programme and confirmed at enrolment.</p></div></div>
+                    <div class="feature-row"><div class="ico"><i class="fas fa-money-bill-wave"></i></div><div><h3>Transparent fees</h3><p>Course fees are confirmed at enrolment. Featured five-day certificate programmes are advertised at K750.</p></div></div>
+                    <div class="feature-row"><div class="ico"><i class="fas fa-certificate"></i></div><div><h3>Certificates</h3><p>Certificate programmes are awarded on successful completion of the course.</p></div></div>
+                    <div class="feature-row"><div class="ico"><i class="fas fa-location-dot"></i></div><div><h3>Two locations</h3><p>Training is available at Liberty Mall, Lusaka and Mitengo, Ndola.</p></div></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="font-size:24px;margin-bottom:6px">Ready to enrol?</h3>
+                <p style="color:var(--muted);font-size:14.5px">Reach us on WhatsApp or phone and our team will guide you through the next intake.</p>
+                <div style="display:flex;flex-direction:column;gap:12px;margin-top:22px">
+                    <a class="btn btn-wa btn-lg" href="https://wa.me/260967920605?text=Hello%20ADOM%20Institute%2C%20I%20would%20like%20to%20enrol" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> Enrol via WhatsApp</a>
+                    <a class="btn btn-outline btn-lg" href="tel:+260967920605"><i class="fas fa-phone"></i> Call 0967 920 605</a>
+                </div>
+                <div style="border-top:1px solid var(--line);margin-top:24px;padding-top:20px;display:flex;flex-direction:column;gap:12px">
+                    <p style="font-size:13.5px;color:var(--muted)">Setting up an institution or registering on the platform?</p>
+                    <a class="btn btn-navy btn-block" href="{% url 'accounts:institution_register' %}">Register your institution</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="cta">
+            <div>
+                <h2>Explore the schools &amp; courses first</h2>
+                <p>Not sure where to start? Browse our programme schools and featured five-day certificates.</p>
+            </div>
+            <div class="cta-actions">
+                <a class="btn btn-gold btn-lg" href="{% url 'public_courses' %}">Explore Courses</a>
+                <a class="btn btn-outline btn-lg" href="{% url 'public_contact' %}">Contact Us</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

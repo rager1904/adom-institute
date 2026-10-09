@@ -1,0 +1,118 @@
+{% extends 'public/base_public.html' %}
+
+{% block title %}Shop / Order Online | ADOM Institute{% endblock %}
+{% block description %}Order educational books, computers, laptops, printers and school supplies from ADOM Institute. Place an order online or request delivery.{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="wrap">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="{% url 'home' %}">Home</a> <i class="fas fa-chevron-right"></i> <span>Shop / Order Online</span>
+        </nav>
+        <span class="eyebrow">Shop / Order Online</span>
+        <h1>Order educational products with ease</h1>
+        <p>Books, computers, printers and school supplies — order for one learner or the whole institution, with delivery or collection arranged for you.</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="section-head">
+            <span class="eyebrow">Start your order</span>
+            <h2 class="section-title">Choose what you would like to order</h2>
+        </div>
+        <div class="grid grid-3">
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-book"></i></div>
+                <h3>Educational Books</h3>
+                <p>Early childhood, primary and secondary titles, plus school stationery.</p>
+                <a class="link" href="{% url 'public_books' %}">Browse books <i class="fas fa-arrow-right"></i></a>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-laptop"></i></div>
+                <h3>Computers &amp; ICT</h3>
+                <p>Desktops, Dell and HP laptops, Canon printers and accessories.</p>
+                <a class="link" href="{% url 'public_ict' %}">Browse ICT <i class="fas fa-arrow-right"></i></a>
+            </article>
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-school"></i></div>
+                <h3>School Bulk Orders</h3>
+                <p>Large orders and customised quotations for schools and institutions.</p>
+                <a class="link" href="{% url 'public_school_solutions' %}#quote">Request a quote <i class="fas fa-arrow-right"></i></a>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <div class="grid grid-2" style="align-items:start;gap:44px">
+            <div>
+                <div class="section-head" style="margin-bottom:20px">
+                    <span class="eyebrow">Place an order</span>
+                    <h2 class="section-title">Tell us what you need</h2>
+                    <p class="section-sub">Complete the form and it will open a WhatsApp message with your order details ready to send. We will confirm stock, price and delivery.</p>
+                </div>
+                <div class="grid" style="gap:16px">
+                    <div class="feature-row"><div class="ico"><i class="fas fa-magnifying-glass"></i></div><div><h3>Filter and select</h3><p>Browse by grade, subject, title and availability, then choose your quantities.</p></div></div>
+                    <div class="feature-row"><div class="ico"><i class="fas fa-truck"></i></div><div><h3>Delivery or collection</h3><p>Arrange delivery or collect from Liberty Mall, Lusaka or Mitengo, Ndola.</p></div></div>
+                    <div class="feature-row"><div class="ico"><i class="fas fa-shield-halved"></i></div><div><h3>Clear payment instructions</h3><p>We share secure payment instructions and a receipt with every confirmed order.</p></div></div>
+                </div>
+            </div>
+
+            <form class="card" id="orderForm" novalidate>
+                <div style="display:grid;gap:16px">
+                    <label style="font-size:13px;font-weight:600;color:var(--navy)">Your name
+                        <input type="text" id="oName" required placeholder="Full name" style="width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d8ded8;border-radius:10px;font:inherit;">
+                    </label>
+                    <div class="grid grid-2" style="gap:14px">
+                        <label style="font-size:13px;font-weight:600;color:var(--navy)">Phone
+                            <input type="tel" id="oPhone" required placeholder="0970 000 000" style="width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d8ded8;border-radius:10px;font:inherit;">
+                        </label>
+                        <label style="font-size:13px;font-weight:600;color:var(--navy)">Delivery location
+                            <input type="text" id="oLocation" placeholder="Town / city" style="width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d8ded8;border-radius:10px;font:inherit;">
+                        </label>
+                    </div>
+                    <label style="font-size:13px;font-weight:600;color:var(--navy)">Products &amp; quantities
+                        <textarea id="oItems" rows="4" required placeholder="e.g. Form 1 Mathematics x10; HP 255 Laptop x1" style="width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d8ded8;border-radius:10px;font:inherit;resize:vertical;"></textarea>
+                    </label>
+                    <button class="btn btn-green btn-lg btn-block" type="submit"><i class="fab fa-whatsapp"></i> Send Order Request</button>
+                    <p style="font-size:12px;color:var(--muted);text-align:center;margin:0">All orders are confirmed by our team before payment and delivery.</p>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        var form = document.getElementById('orderForm');
+        if (!form) return;
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            var name = document.getElementById('oName').value.trim();
+            var phone = document.getElementById('oPhone').value.trim();
+            var location = document.getElementById('oLocation').value.trim();
+            var items = document.getElementById('oItems').value.trim();
+
+            if (!name || !phone || !items) {
+                alert('Please add your name, phone number and the products you need.');
+                return;
+            }
+
+            var lines = [
+                'NEW ORDER',
+                'Name: ' + name,
+                'Phone: ' + phone
+            ];
+            if (location) { lines.push('Delivery location: ' + location); }
+            lines.push('Items: ' + items);
+
+            var url = 'https://wa.me/260967920605?text=' + encodeURIComponent(lines.join('\n'));
+            window.open(url, '_blank', 'noopener');
+        });
+    })();
+</script>
+{% endblock %}

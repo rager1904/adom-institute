@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import TemplateView
 from adom.protected_media import serve_public_media
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
@@ -56,6 +57,16 @@ urlpatterns = [
     path('privacy/', PublicPageView.as_view(), {'page': 'privacy'}, name='public_privacy'),
     path('terms/', PublicPageView.as_view(), {'page': 'terms'}, name='public_terms'),
     path('contact/', PublicPageView.as_view(), {'page': 'contact'}, name='public_contact'),
+
+    # Public website pages (templates only, no models or dashboard logic)
+    path('courses/', TemplateView.as_view(template_name='public/courses.html'), name='public_courses'),
+    path('tuition/', TemplateView.as_view(template_name='public/tuition.html'), name='public_tuition'),
+    path('books/', TemplateView.as_view(template_name='public/books.html'), name='public_books'),
+    path('computers-ict/', TemplateView.as_view(template_name='public/ict.html'), name='public_ict'),
+    path('school-solutions/', TemplateView.as_view(template_name='public/school_solutions.html'), name='public_school_solutions'),
+    path('shop/', TemplateView.as_view(template_name='public/shop.html'), name='public_shop'),
+    path('admissions/', TemplateView.as_view(template_name='public/admissions.html'), name='public_admissions'),
+
     path('admin/', admin.site.urls),
     
     # API Documentation

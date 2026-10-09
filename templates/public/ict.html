@@ -1,0 +1,138 @@
+{% extends 'public/base_public.html' %}
+
+{% block title %}Computers, Laptops & ICT Products | ADOM Institute{% endblock %}
+{% block description %}Buy desktop computers, Dell and HP laptops, Canon printers and ICT accessories from ADOM Institute for students, offices and schools in Zambia.{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="wrap">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="{% url 'home' %}">Home</a> <i class="fas fa-chevron-right"></i> <span>Computers &amp; ICT</span>
+        </nav>
+        <span class="eyebrow">Computers &amp; ICT Products</span>
+        <h1>Reliable technology for learning and work</h1>
+        <p>Desktops, laptops, printers and accessories for students, professionals and institutions — supplied, installed and supported by ADOM Institute.</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="section-head">
+            <span class="eyebrow">Shop by category</span>
+            <h2 class="section-title">What we supply</h2>
+        </div>
+        <div class="grid grid-4" id="desktops">
+            <article class="card">
+                <div class="card-icon"><i class="fas fa-desktop"></i></div>
+                <h3>Desktop Computers</h3>
+                <p>Complete sets, monitors, CPUs and accessories for offices, labs and home study.</p>
+            </article>
+            <article class="card" id="laptops">
+                <div class="card-icon"><i class="fas fa-laptop"></i></div>
+                <h3>Laptops</h3>
+                <p>Dell and HP laptops suited to students, professionals and office teams.</p>
+            </article>
+            <article class="card" id="printers">
+                <div class="card-icon"><i class="fas fa-print"></i></div>
+                <h3>Printers</h3>
+                <p>Canon PIXMA printers and printing accessories for schools and businesses.</p>
+            </article>
+            <article class="card" id="accessories">
+                <div class="card-icon"><i class="fas fa-hard-drive"></i></div>
+                <h3>ICT Accessories</h3>
+                <p>Tablets, storage devices, monitors and everyday computing accessories.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <div class="section-head">
+            <span class="eyebrow">Featured products</span>
+            <h2 class="section-title">Popular choices our customers ask for</h2>
+            <p class="section-sub">Specifications, condition and availability are confirmed at the time of order.</p>
+        </div>
+
+        <div class="grid grid-3">
+            <article class="product">
+                <div class="product-media"><i class="fas fa-desktop"></i></div>
+                <div class="product-body">
+                    <span class="cond">Desktop</span>
+                    <h3>Dell Desktop Full Set</h3>
+                    <p class="product-spec">Core i3 • 4GB RAM • 500GB HDD • complete set</p>
+                    <div class="product-price">K4,500</div>
+                    <div class="product-foot"><a class="btn btn-green btn-sm" href="{% url 'public_shop' %}">Enquire</a></div>
+                </div>
+            </article>
+            <article class="product">
+                <div class="product-media"><i class="fas fa-laptop"></i></div>
+                <div class="product-body">
+                    <span class="cond">Laptop</span>
+                    <h3>Dell Laptop</h3>
+                    <p class="product-spec">4GB RAM • 128GB SSD</p>
+                    <div class="product-price">K4,500</div>
+                    <div class="product-foot"><a class="btn btn-green btn-sm" href="{% url 'public_shop' %}">Enquire</a></div>
+                </div>
+            </article>
+            <article class="product">
+                <div class="product-media"><i class="fas fa-laptop"></i></div>
+                <div class="product-body">
+                    <span class="cond">Laptop</span>
+                    <h3>HP 255 Laptop</h3>
+                    <p class="product-spec">4GB RAM • 500GB HDD</p>
+                    <div class="product-price">K5,000</div>
+                    <div class="product-foot"><a class="btn btn-green btn-sm" href="{% url 'public_shop' %}">Enquire</a></div>
+                </div>
+            </article>
+            <article class="product">
+                <div class="product-media"><i class="fas fa-laptop"></i></div>
+                <div class="product-body">
+                    <span class="cond">Laptop</span>
+                    <h3>HP Core i5 8th Gen</h3>
+                    <p class="product-spec">8GB RAM • 256GB SSD</p>
+                    <div class="product-price">K8,000</div>
+                    <div class="product-foot"><a class="btn btn-green btn-sm" href="{% url 'public_shop' %}">Enquire</a></div>
+                </div>
+            </article>
+            <article class="product">
+                <div class="product-media"><i class="fas fa-print"></i></div>
+                <div class="product-body">
+                    <span class="cond">Printer</span>
+                    <h3>Canon PIXMA G3410 Printer</h3>
+                    <p class="product-spec">Wireless all-in-one inkjet printer with refillable ink tanks.</p>
+                    <div class="product-price">K5,500</div>
+                    <div class="product-foot"><a class="btn btn-green btn-sm" href="{% url 'public_shop' %}">Enquire</a></div>
+                </div>
+            </article>
+            <article class="product">
+                <div class="product-media"><i class="fas fa-tablet-screen-button"></i></div>
+                <div class="product-body">
+                    <span class="cond">Accessories</span>
+                    <h3>Tablets &amp; Storage</h3>
+                    <p class="product-spec">Tablets, external storage, monitors and everyday ICT accessories.</p>
+                    <div class="product-price" style="color:var(--navy);font-size:20px">Request quote</div>
+                    <div class="product-foot"><a class="btn btn-green btn-sm" href="{% url 'public_shop' %}">Enquire</a></div>
+                </div>
+            </article>
+        </div>
+
+        <div class="price-note" style="margin-top:26px"><i class="fas fa-triangle-exclamation"></i><span>These are previously advertised prices and are reviewed before going live. Each product listing shows specifications, condition (new or used), warranty, price and delivery arrangements. Prices are confirmed at the time of order.</span></div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="cta">
+            <div>
+                <h2>Equipping a lab, office or school?</h2>
+                <p>We supply, install and support computers and ICT equipment — with bulk pricing for institutions.</p>
+            </div>
+            <div class="cta-actions">
+                <a class="btn btn-gold btn-lg" href="{% url 'public_school_solutions' %}#quote">Request a Quotation</a>
+                <a class="btn btn-outline btn-lg" href="{% url 'public_shop' %}">Place an Order</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
