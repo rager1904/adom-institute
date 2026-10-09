@@ -101,15 +101,15 @@ body.public-site {
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--line);
 }
-.header-inner { display: flex; align-items: center; gap: 24px; min-height: 76px; }
+.header-inner { display: flex; align-items: center; gap: 24px; min-height: 112px; }
 .site-header .header-inner { max-width: 1400px; }
 
 .site-brand { display: flex; align-items: center; text-decoration: none; flex: 0 0 auto; }
 .site-mark {
-    width: 52px; height: 48px; display: grid; place-items: center; flex: 0 0 auto;
-    overflow: hidden; border-radius: 8px;
+    width: 100px; height: 100px; display: grid; place-items: center; flex: 0 0 auto;
+    overflow: hidden; border-radius: 10px;
 }
-.site-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.site-mark img { width: 100%; height: 100%; object-fit: contain; display: block; mix-blend-mode: multiply; }
 .site-brand-text { display: flex; flex-direction: column; font-size: 22px; letter-spacing: -.6px; color: var(--navy); line-height: 1.05; }
 .site-brand-text strong { font-weight: 700; }
 .site-brand-motto {
@@ -120,12 +120,12 @@ body.public-site {
 .site-nav { background: transparent; flex: 1 1 auto; min-width: 0; }
 .nav-list {
     display: flex; align-items: center; justify-content: center;
-    flex-wrap: nowrap; gap: 12px; list-style: none; margin: 0; padding: 0;
+    flex-wrap: nowrap; gap: 8px; list-style: none; margin: 0; padding: 0;
 }
 .nav-list > li { position: relative; flex: 0 0 auto; }
 .nav-list > li > a {
     display: inline-flex; align-items: center; gap: 5px;
-    height: 60px; padding: 0 12px; font-size: 13px; font-weight: 500;
+    height: 56px; padding: 0 10px; font-size: 13px; font-weight: 500;
     color: #33455c; text-decoration: none; border-radius: 8px; transition: .18s;
     white-space: nowrap; line-height: 1;
 }
@@ -388,6 +388,8 @@ table.price td strong { color: var(--navy); }
     .hero-media { min-height: 500px; }
     .hero-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     .grid-3 { grid-template-columns: repeat(2, 1fr); }
+    .header-inner { gap: 16px; min-height: 100px; }
+    .site-mark { width: 92px; height: 92px; }
     .mobile-toggle { display: inline-grid; place-items: center; }
     .site-nav {
         position: absolute; top: 100%; left: 0; right: 0; flex: none;
