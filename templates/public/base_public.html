@@ -27,26 +27,16 @@
     <header class="site-header">
         <div class="wrap header-inner">
             <a class="site-brand" href="{% url 'home' %}" aria-label="ADOM Institute home">
-                <span class="site-mark">A</span>
-                <span class="site-brand-text"><span><strong>ADOM</strong> Institute</span><span class="site-brand-motto">Learn Today • Lead Tomorrow</span></span>
+                <span class="site-mark"><img src="{% static 'images/adom_logo.png' %}" alt="ADOM Institute logo"></span>
             </a>
-
-            <div class="nav-actions">
-                <a class="btn btn-wa btn-sm" href="https://wa.me/260967920605?text=Hello%20ADOM%20Institute%2C%20I%20would%20like%20to%20enquire" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> WhatsApp</a>
-            </div>
-
-            <button class="mobile-toggle" type="button" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
 
         {% with current=request.resolver_match.url_name %}
         <nav class="site-nav" id="siteNav" aria-label="Main navigation">
             <ul class="nav-list">
                 <li><a href="{% url 'home' %}" {% if current == 'home' %}class="active"{% endif %}>Home</a></li>
-                <li><a href="{% url 'public_about' %}" {% if current == 'public_about' %}class="active"{% endif %}>About Us</a></li>
+                <li><a href="{% url 'public_about' %}" {% if current == 'public_about' %}class="active"{% endif %}>About</a></li>
                 <li class="has-drop">
-                    <a href="{% url 'public_courses' %}" {% if current == 'public_courses' %}class="active"{% endif %}>Schools &amp; Courses <i class="fas fa-chevron-down"></i></a>
+                    <a href="{% url 'public_courses' %}" {% if current == 'public_courses' %}class="active"{% endif %}>Courses <i class="fas fa-chevron-down"></i></a>
                     <div class="drop">
                         <a href="{% url 'public_courses' %}#ai">School of AI &amp; Digital Skills</a>
                         <a href="{% url 'public_courses' %}#finance">School of Finance, Investment &amp; Business</a>
@@ -56,10 +46,10 @@
                         <a href="{% url 'public_courses' %}">View all programmes <span>Durations, fees and outlines</span></a>
                     </div>
                 </li>
-                <li><a href="{% url 'public_tuition' %}" {% if current == 'public_tuition' %}class="active"{% endif %}>Tuition Classes</a></li>
-                <li><a href="{% url 'public_books' %}" {% if current == 'public_books' %}class="active"{% endif %}>Educational Books</a></li>
+                <li><a href="{% url 'public_tuition' %}" {% if current == 'public_tuition' %}class="active"{% endif %}>Tuition</a></li>
+                <li><a href="{% url 'public_books' %}" {% if current == 'public_books' %}class="active"{% endif %}>Books</a></li>
                 <li class="has-drop">
-                    <a href="{% url 'public_ict' %}" {% if current == 'public_ict' %}class="active"{% endif %}>Computers &amp; ICT <i class="fas fa-chevron-down"></i></a>
+                    <a href="{% url 'public_ict' %}" {% if current == 'public_ict' %}class="active"{% endif %}>ICT <i class="fas fa-chevron-down"></i></a>
                     <div class="drop">
                         <a href="{% url 'public_ict' %}#desktops">Desktop Computers</a>
                         <a href="{% url 'public_ict' %}#laptops">Laptops</a>
@@ -70,7 +60,7 @@
                 </li>
                 <li><a href="{% url 'public_school_solutions' %}" {% if current == 'public_school_solutions' %}class="active"{% endif %}>School Solutions</a></li>
                 <li class="has-drop">
-                    <a href="{% url 'public_shop' %}" {% if current == 'public_shop' %}class="active"{% endif %}>Shop / Order Online <i class="fas fa-chevron-down"></i></a>
+                    <a href="{% url 'public_shop' %}" {% if current == 'public_shop' %}class="active"{% endif %}>Shop <i class="fas fa-chevron-down"></i></a>
                     <div class="drop">
                         <a href="{% url 'public_books' %}">Educational Books <span>Grade 1–4, Form 1–2 and more</span></a>
                         <a href="{% url 'public_ict' %}">Computers &amp; ICT Products <span>Laptops, desktops, printers</span></a>
@@ -79,10 +69,19 @@
                     </div>
                 </li>
                 <li><a href="{% url 'public_admissions' %}" {% if current == 'public_admissions' %}class="active"{% endif %}>Admissions</a></li>
-                <li><a href="{% url 'public_contact' %}" {% if current == 'public_contact' %}class="active"{% endif %}>Contact Us</a></li>
+                <li><a href="{% url 'public_contact' %}" {% if current == 'public_contact' %}class="active"{% endif %}>Contact</a></li>
             </ul>
         </nav>
         {% endwith %}
+
+            <div class="nav-actions">
+                <a class="btn btn-wa btn-sm" href="https://wa.me/260967920605?text=Hello%20ADOM%20Institute%2C%20I%20would%20like%20to%20enquire" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i><span class="wa-label"> WhatsApp</span></a>
+            </div>
+
+            <button class="mobile-toggle" type="button" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
     </header>
 
     <main>
@@ -94,8 +93,7 @@
             <div class="footer-grid">
                 <div>
                     <div class="footer-brand">
-                        <span class="site-mark">A</span>
-                        <span class="site-brand-text"><span><strong>ADOM</strong> Institute</span><span class="site-brand-motto">Learn Today • Lead Tomorrow</span></span>
+                        <span class="site-mark"><img src="{% static 'images/adom_logo.png' %}" alt="ADOM Institute logo"></span>
                     </div>
                     <p>An education, training and educational supplies institution empowering learners, professionals and businesses through practical education, digital skills, financial training and quality educational resources.</p>
                 </div>

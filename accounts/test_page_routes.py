@@ -80,9 +80,9 @@ class ADOMInstitutePageRouteTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'ADOM Institute')
-        self.assertContains(response, 'Active institutions')
-        self.assertContains(response, 'Active students')
-        self.assertContains(response, 'Active teachers')
+        self.assertContains(response, 'Empowering Education')
+        self.assertContains(response, 'Explore Our Courses')
+        self.assertContains(response, 'Shop Educational Products')
 
     def test_ai_hub_page_exists_for_authenticated_users(self):
         AgentTask.objects.create(

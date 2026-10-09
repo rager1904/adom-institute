@@ -6,89 +6,28 @@
 
 {% block content %}
 <section class="hero">
-    <div class="wrap hero-grid">
+    <div class="hero-media">
+        <img src="{% static 'images/adom_hero.png' %}" alt="ADOM Institute learners and trainers in a modern classroom" loading="eager">
+        <span class="hero-shade"></span>
+    </div>
+
+    <div class="wrap hero-content">
         <div class="hero-intro">
             <span class="eyebrow">Education • Training • Educational Supplies</span>
-            <h1 class="hero-title">Your Future Starts With Learning</h1>
+            <h1 class="hero-title">Empowering Education, Skills &amp; Innovation for a Brighter Future</h1>
             <span class="hero-motto">Learn Today • Lead Tomorrow</span>
-            <p class="hero-lede">Empowering learners, professionals and businesses through practical education, digital skills, financial training and quality educational resources.</p>
+            <p class="hero-lede">Practical courses, academic tuition, curriculum books, ICT equipment and school solutions — everything you need to learn, grow and succeed.</p>
             <div class="hero-cta">
-                <a class="btn btn-green btn-lg" href="{% url 'public_courses' %}">Explore Courses <i class="fas fa-arrow-right"></i></a>
+                <a class="btn btn-green btn-lg" href="{% url 'public_courses' %}">Explore Our Courses <i class="fas fa-arrow-right"></i></a>
                 <a class="btn btn-gold btn-lg" href="{% url 'public_shop' %}"><i class="fas fa-bag-shopping"></i> Shop Educational Products</a>
+                <a class="btn btn-outline btn-lg" href="{% url 'public_school_solutions' %}#quote">Request a School Quotation</a>
             </div>
             <div class="hero-tags">
-                <span class="hero-tag"><i class="fas fa-chalkboard-user"></i> Practical Training</span>
-                <span class="hero-tag"><i class="fas fa-graduation-cap"></i> Tuition Classes</span>
-                <span class="hero-tag"><i class="fas fa-book"></i> Curriculum Books</span>
-                <span class="hero-tag"><i class="fas fa-laptop"></i> Computers &amp; ICT</span>
+                <span class="hero-tag"><i class="fas fa-circle-check"></i> Quality Education</span>
+                <span class="hero-tag"><i class="fas fa-circle-check"></i> Practical Skills</span>
+                <span class="hero-tag"><i class="fas fa-circle-check"></i> Affordable Learning Resources</span>
+                <span class="hero-tag"><i class="fas fa-circle-check"></i> Technology for Growth</span>
             </div>
-        </div>
-
-        <div class="hero-art">
-            <svg viewBox="0 0 560 440" role="img" aria-label="Learner using a laptop surrounded by books and technology">
-                <defs>
-                    <linearGradient id="heroBg" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0" stop-color="#0c2340"/>
-                        <stop offset="1" stop-color="#145c37"/>
-                    </linearGradient>
-                    <linearGradient id="heroGold" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0" stop-color="#f4d477"/>
-                        <stop offset="1" stop-color="#e2b84c"/>
-                    </linearGradient>
-                </defs>
-                <rect width="560" height="440" rx="26" fill="url(#heroBg)"/>
-                <circle cx="470" cy="60" r="130" fill="#ffffff" opacity="0.05"/>
-                <circle cx="70" cy="400" r="150" fill="#ffffff" opacity="0.05"/>
-                <circle cx="300" cy="40" r="8" fill="url(#heroGold)" opacity="0.9"/>
-                <circle cx="500" cy="250" r="6" fill="#ffffff" opacity="0.5"/>
-                <circle cx="60" cy="120" r="5" fill="url(#heroGold)" opacity="0.8"/>
-
-                <!-- desk -->
-                <rect x="66" y="352" width="428" height="12" rx="6" fill="#ffffff" opacity="0.22"/>
-
-                <!-- laptop -->
-                <rect x="198" y="188" width="214" height="152" rx="12" fill="#f2f4f1"/>
-                <rect x="210" y="200" width="190" height="128" rx="8" fill="#0c2340"/>
-                <rect x="228" y="248" width="26" height="62" rx="4" fill="#1c7a4a"/>
-                <rect x="266" y="228" width="26" height="82" rx="4" fill="#2f9a63"/>
-                <rect x="304" y="262" width="26" height="48" rx="4" fill="#e2b84c"/>
-                <rect x="342" y="212" width="26" height="98" rx="4" fill="#2f9a63"/>
-                <rect x="222" y="216" width="60" height="8" rx="4" fill="#ffffff" opacity="0.5"/>
-                <rect x="180" y="338" width="250" height="14" rx="7" fill="#cfd6dd"/>
-
-                <!-- person -->
-                <circle cx="120" cy="230" r="30" fill="#ffd9a8"/>
-                <path d="M90 232c0-30 14-46 30-46s30 16 30 46c-10 6-20-6-30-6s-18 10-30 6z" fill="#3a2b22"/>
-                <path d="M68 352c6-52 30-72 52-72s46 20 52 72z" fill="#1c7a4a"/>
-                <path d="M150 300c22 4 34 16 44 30" stroke="#1c7a4a" stroke-width="18" stroke-linecap="round" fill="none"/>
-
-                <!-- books -->
-                <rect x="410" y="322" width="92" height="15" rx="3" fill="url(#heroGold)"/>
-                <rect x="418" y="307" width="76" height="15" rx="3" fill="#ffffff" opacity="0.85"/>
-                <rect x="426" y="292" width="60" height="15" rx="3" fill="url(#heroGold)" opacity="0.75"/>
-
-                <!-- graduation cap -->
-                <path d="M300 108l56 22-56 22-56-22z" fill="url(#heroGold)"/>
-                <path d="M272 138v20c0 8 22 12 28 12s28-4 28-12v-20l-28 11z" fill="#f4d477"/>
-                <line x1="356" y1="130" x2="356" y2="158" stroke="url(#heroGold)" stroke-width="3"/>
-            </svg>
-            <div class="hero-chip chip-1"><i class="fas fa-brain"></i> AI &amp; ChatGPT</div>
-            <div class="hero-chip chip-2"><i class="fas fa-chart-line"></i> Forex Trading</div>
-            <div class="hero-chip chip-3"><i class="fas fa-book"></i> Books from K100</div>
-        </div>
-    </div>
-</section>
-
-<section class="section">
-    <div class="wrap">
-        <div class="section-head center">
-            <span class="eyebrow">By the numbers</span>
-            <h2 class="section-title">Growing with our learning community</h2>
-        </div>
-        <div class="stats">
-            {% for stat in platform_stats %}
-            <div class="stat"><b>{{ stat.value }}</b><span>{{ stat.label }}</span></div>
-            {% endfor %}
         </div>
     </div>
 </section>
@@ -103,39 +42,39 @@
 
         <div class="grid grid-3">
             <article class="card">
-                <div class="card-icon"><i class="fas fa-robot"></i></div>
-                <h3>AI &amp; Digital Skills</h3>
-                <p>Practical, hands-on training in artificial intelligence, ChatGPT, prompt engineering and modern digital office tools.</p>
+                <div class="card-icon"><i class="fas fa-chalkboard-user"></i></div>
+                <h3>Professional Training</h3>
+                <p>AI, finance, forex, accounting and business skills delivered through practical, hands-on short courses.</p>
                 <a class="link" href="{% url 'public_courses' %}#ai">View courses <i class="fas fa-arrow-right"></i></a>
             </article>
             <article class="card">
-                <div class="card-icon"><i class="fas fa-chart-line"></i></div>
-                <h3>Finance &amp; Forex</h3>
-                <p>Forex trading, investment fundamentals, financial literacy, budgeting and business finance for everyday decision-making.</p>
-                <a class="link" href="{% url 'public_courses' %}#finance">View courses <i class="fas fa-arrow-right"></i></a>
+                <div class="card-icon"><i class="fas fa-graduation-cap"></i></div>
+                <h3>Tuition &amp; Academic Support</h3>
+                <p>New Zambian Curriculum tuition and exam preparation for learners at primary and secondary level.</p>
+                <a class="link" href="{% url 'public_tuition' %}">Learn more <i class="fas fa-arrow-right"></i></a>
             </article>
             <article class="card">
-                <div class="card-icon"><i class="fas fa-graduation-cap"></i></div>
-                <h3>Tuition &amp; Books</h3>
-                <p>New Zambian Curriculum tuition classes and a full range of curriculum-aligned educational books and learning materials.</p>
-                <a class="link" href="{% url 'public_tuition' %}">Learn more <i class="fas fa-arrow-right"></i></a>
+                <div class="card-icon"><i class="fas fa-book-open"></i></div>
+                <h3>Educational Books</h3>
+                <p>ECE, primary and secondary curriculum materials — individual copies or bulk school supply.</p>
+                <a class="link" href="{% url 'public_books' %}">Browse books <i class="fas fa-arrow-right"></i></a>
             </article>
             <article class="card">
                 <div class="card-icon"><i class="fas fa-laptop"></i></div>
                 <h3>Computers &amp; ICT</h3>
-                <p>Desktops, Dell and HP laptops, Canon printers and ICT accessories for students, offices and institutions.</p>
+                <p>Laptops, desktops, printers and accessories for students, offices and institutions.</p>
                 <a class="link" href="{% url 'public_ict' %}">Shop ICT <i class="fas fa-arrow-right"></i></a>
             </article>
             <article class="card">
                 <div class="card-icon"><i class="fas fa-school"></i></div>
-                <h3>School Solutions</h3>
-                <p>Computer laboratories, library development, bulk supply, installation and teacher training for schools and institutions.</p>
-                <a class="link" href="{% url 'public_school_solutions' %}">Request a quote <i class="fas fa-arrow-right"></i></a>
+                <h3>School Solutions &amp; Dashboard</h3>
+                <p>Computer laboratories, libraries and bulk supplies, plus the ADOM education management dashboard — one connected workspace for your school.</p>
+                <a class="link" href="{% url 'public_school_solutions' %}#dashboard">Explore solutions <i class="fas fa-arrow-right"></i></a>
             </article>
             <article class="card">
                 <div class="card-icon"><i class="fas fa-briefcase"></i></div>
-                <h3>Business Training</h3>
-                <p>Startup, bookkeeping, accounting software, payroll and small-business financial management for professionals.</p>
+                <h3>Business Development</h3>
+                <p>Practical entrepreneurship and business software training for professionals and small businesses.</p>
                 <a class="link" href="{% url 'public_courses' %}#accounting">View programmes <i class="fas fa-arrow-right"></i></a>
             </article>
         </div>
@@ -145,9 +84,9 @@
 <section class="section">
     <div class="wrap">
         <div class="section-head">
-            <span class="eyebrow">Featured Programmes</span>
+            <span class="eyebrow">Featured Courses</span>
             <h2 class="section-title">Start with a five-day certificate</h2>
-            <p class="section-sub">Short, focused programmes designed to build practical skills you can apply immediately.</p>
+            <p class="section-sub">Short, focused courses designed to build practical skills you can apply immediately.</p>
         </div>
 
         <div class="grid grid-2">
@@ -190,6 +129,56 @@
 <section class="section tint">
     <div class="wrap">
         <div class="section-head">
+            <span class="eyebrow">Featured Products</span>
+            <h2 class="section-title">Books, computers and learning supplies</h2>
+            <p class="section-sub">A sample of our curriculum-aligned educational books and quality ICT equipment. Buy single items or order in bulk for a school.</p>
+        </div>
+
+        <div class="book-grid">
+            <article class="book">
+                <a class="book-cover" href="{% url 'public_books' %}#books-3-4"><img src="{% static 'images/books/3-4-years/pre-mathematics-and-science-for-early-childhood-education.jpeg' %}" alt="Pre-Mathematics and Science For Early Childhood Education cover" loading="lazy"></a>
+                <div class="book-body">
+                    <span class="cond">Educational Book</span>
+                    <h3>Pre-Mathematics &amp; Science (3–4 Years)</h3>
+                    <div class="book-price">K100<small>Confirm at order</small></div>
+                </div>
+            </article>
+            <article class="book">
+                <a class="book-cover" href="{% url 'public_books' %}#books-grade-1"><img src="{% static 'images/books/grade-1/creative-and-technology-studies-for-primary-schools.jpeg' %}" alt="Creative and Technology Studies For Primary Schools cover" loading="lazy"></a>
+                <div class="book-body">
+                    <span class="cond">Educational Book</span>
+                    <h3>Creative &amp; Technology Studies (Grade 1)</h3>
+                    <div class="book-price">K100<small>Confirm at order</small></div>
+                </div>
+            </article>
+            <article class="book">
+                <a class="book-cover" href="{% url 'public_books' %}#books-form-1"><img src="{% static 'images/books/form-1/physics-for-secondary-schools.jpeg' %}" alt="Physics for Secondary Schools cover" loading="lazy"></a>
+                <div class="book-body">
+                    <span class="cond">Educational Book</span>
+                    <h3>Physics for Secondary Schools (Form 1)</h3>
+                    <div class="book-price">K120<small>Confirm at order</small></div>
+                </div>
+            </article>
+            <article class="book">
+                <a class="book-cover" href="{% url 'public_ict' %}" style="display:grid;place-items:center;font-size:54px;color:var(--navy)"><i class="fas fa-laptop"></i></a>
+                <div class="book-body">
+                    <span class="cond">Computers &amp; ICT</span>
+                    <h3>Laptops, desktops, printers &amp; accessories</h3>
+                    <div class="book-price">Request quote<small>Stock confirmed at order</small></div>
+                </div>
+            </article>
+        </div>
+
+        <div class="cta-actions" style="margin-top:26px">
+            <a class="btn btn-green" href="{% url 'public_shop' %}">Shop All Products <i class="fas fa-arrow-right"></i></a>
+            <a class="btn btn-outline" href="{% url 'public_books' %}">Browse Educational Books</a>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <div class="section-head">
             <span class="eyebrow">Why ADOM Institute</span>
             <h2 class="section-title">Practical skills, quality resources and real support</h2>
         </div>
@@ -214,12 +203,13 @@
     <div class="wrap">
         <div class="cta">
             <div>
-                <h2>Ready to learn, supply or equip your school?</h2>
-                <p>Enrol in a course, order educational products or request a quotation for your institution. We are here to help.</p>
+                <h2>Your Journey to Knowledge and Success Starts Here</h2>
+                <p>Whether you want to acquire new skills, improve academic performance, purchase educational materials or equip your school with modern technology, Adom Institute is ready to support you.</p>
+                <p style="color:#d5e2da;margin-top:14px;font-weight:600">Contact ADOM Institute — Liberty Mall, Lusaka • Mitengo, Ndola • Call/WhatsApp: 0967 920 605</p>
             </div>
             <div class="cta-actions">
-                <a class="btn btn-gold btn-lg" href="{% url 'public_admissions' %}">Enrol or Request a Quotation</a>
-                <a class="btn btn-outline btn-lg" href="{% url 'public_contact' %}">Contact Us</a>
+                <a class="btn btn-gold btn-lg" href="{% url 'public_courses' %}">Explore Our Courses</a>
+                <a class="btn btn-outline btn-lg" href="{% url 'public_school_solutions' %}#quote">Request a Quotation</a>
             </div>
         </div>
     </div>

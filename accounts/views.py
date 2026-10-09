@@ -195,13 +195,16 @@ class PublicPageView(TemplateView):
     PAGES = {
         'about': {
             'title': 'About ADOM Institute',
-            'eyebrow': 'Built for real schools',
-            'intro': 'A clearer picture of every school day.',
-            'summary': 'ADOM Institute brings the daily work of a school into one shared workspace, helping school teams spend less time chasing information and more time supporting learners.',
+            'eyebrow': 'Education • Training • Educational Supplies',
+            'intro': 'Empowering education, skills and innovation.',
+            'summary': 'Adom Institute is a Zambian education, training and educational supplies institution committed to empowering learners, professionals, entrepreneurs and schools through accessible education and practical skills development.',
             'sections': [
-                ('One connected school workspace', 'Keep learner records, classes, attendance, assessments, fees, library resources, timetables, and school communication together in a role-aware platform.'),
-                ('Designed around the people in a school', 'Administrators get a school-wide view, teachers can focus on their classes, and families can stay informed through the parts of the platform made available to them.'),
-                ('Technology that can grow with you', 'ADOM is built as a modular education platform. Institutions can shape their workflows over time and use optional AI-supported tools where they are appropriate.'),
+                ('Who we are', 'We offer professional and vocational short courses, academic tuition, educational books, computers, ICT equipment and customised solutions for schools and businesses.'),
+                ('What we teach', "Our programmes focus on developing practical knowledge in artificial intelligence, information technology, finance, accounting, entrepreneurship and other essential skills for today's changing world."),
+                ('Supporting institutions', 'We also support educational institutions through the supply of curriculum-aligned learning materials, computer laboratory development, school library resources and ICT solutions, as well as the ADOM education management dashboard that brings learner records, classes, attendance, assessments, fees, communication and library resources into one connected workspace.'),
+                ('Our Vision', 'To become a trusted centre of excellence in practical education, digital innovation and educational resources in Zambia and beyond.'),
+                ('Our Mission', 'To empower individuals and institutions through quality learning, relevant skills, accessible educational materials and innovative technology solutions.'),
+                ('Our Motto', 'Learn Today • Lead Tomorrow.'),
             ],
         },
         'privacy': {

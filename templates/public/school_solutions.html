@@ -36,8 +36,8 @@
             </article>
             <article class="card">
                 <div class="card-icon"><i class="fas fa-boxes-stacked"></i></div>
-                <h3>Bulk supply</h3>
-                <p>Supply of educational materials, computers, printers and stationery in the quantities your institution needs.</p>
+                <h3>Bulk supply &amp; procurement</h3>
+                <p>Supply of educational materials, computers, printers and stationery, with customised quotations for planned budgets and purchases.</p>
             </article>
             <article class="card">
                 <div class="card-icon"><i class="fas fa-screwdriver-wrench"></i></div>
@@ -45,15 +45,40 @@
                 <p>ICT equipment installation and user training so staff and learners get the most from every device.</p>
             </article>
             <article class="card">
-                <div class="card-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-                <h3>Bulk procurement &amp; quotations</h3>
-                <p>Customised school quotations and procurement support for planned budgets and purchases.</p>
+                <div class="card-icon"><i class="fas fa-display-code"></i></div>
+                <h3>Education management dashboard</h3>
+                <p>The ADOM educational platform — a connected school workspace for learner records, classes, attendance, assessments, fees, communication, library resources and AI-supported tools.</p>
+                <a class="link" href="{% url 'accounts:login' %}">Log in to your dashboard <i class="fas fa-arrow-right"></i></a>
             </article>
             <article class="card">
                 <div class="card-icon"><i class="fas fa-chalkboard-user"></i></div>
                 <h3>Teacher training</h3>
                 <p>Teacher training in AI, ICT and digital teaching tools to strengthen classroom delivery.</p>
             </article>
+        </div>
+    </div>
+</section>
+
+<section class="section tint" id="dashboard">
+    <div class="wrap">
+        <div class="grid grid-2" style="align-items:center;gap:44px">
+            <div>
+                <div class="section-head" style="margin-bottom:20px">
+                    <span class="eyebrow">Education Management Dashboard</span>
+                    <h2 class="section-title">One connected workspace for your school</h2>
+                    <p class="section-sub">The ADOM educational platform brings the daily work of a school into one secure dashboard — so school teams spend less time chasing information and more time supporting learners.</p>
+                </div>
+                <div class="cta-actions">
+                    <a class="btn btn-green btn-lg" href="{% url 'accounts:login' %}">Log in to your dashboard</a>
+                    <a class="btn btn-outline btn-lg" href="{% url 'accounts:institution_register' %}">Register your institution</a>
+                </div>
+            </div>
+            <div class="grid" style="gap:16px">
+                <div class="feature-row"><div class="ico"><i class="fas fa-user-graduate"></i></div><div><h3>Learner &amp; staff records</h3><p>Admissions, profiles, parents, classes and academic records in one place.</p></div></div>
+                <div class="feature-row"><div class="ico"><i class="fas fa-clipboard-check"></i></div><div><h3>Attendance &amp; fees</h3><p>Daily attendance and fee records that keep the whole school in sync.</p></div></div>
+                <div class="feature-row"><div class="ico"><i class="fas fa-book-open-reader"></i></div><div><h3>Assessments &amp; communication</h3><p>Exams, assignments, messaging and notifications for staff and families.</p></div></div>
+                <div class="feature-row"><div class="ico"><i class="fas fa-robot"></i></div><div><h3>Library &amp; AI-supported tools</h3><p>Library resources, timetables, analytics and optional open-source AI tools.</p></div></div>
+            </div>
         </div>
     </div>
 </section>
