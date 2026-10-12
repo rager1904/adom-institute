@@ -198,7 +198,7 @@ class PublicPageView(TemplateView):
             'title': 'About ADOM Institute',
             'eyebrow': 'Education • Training • Educational Supplies',
             'intro': 'Empowering education, skills and innovation.',
-            'summary': 'Adom Institute is a Zambian education, training and educational supplies institution committed to empowering learners, professionals, entrepreneurs and schools through accessible education and practical skills development.',
+            'summary': 'ADOM Institute is a Zambian education, training and educational supplies institution committed to empowering learners, professionals, entrepreneurs and schools through accessible education and practical skills development.',
             'sections': [
                 ('Who we are', 'We offer professional and vocational short courses, academic tuition, educational books, computers, ICT equipment and customised solutions for schools and businesses.'),
                 ('What we teach', "Our programmes focus on developing practical knowledge in artificial intelligence, information technology, finance, accounting, entrepreneurship and other essential skills for today's changing world."),
