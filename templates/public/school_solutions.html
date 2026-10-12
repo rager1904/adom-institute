@@ -3,16 +3,7 @@
 {% block seo %}{% include "seo/meta.html" with title="School Solutions & Institutional Services | ADOM Institute" description="Computer laboratory setup, library development, bulk educational supply, ICT installation and teacher training for schools and institutions across Zambia." %}{% endblock %}
 
 {% block content %}
-<section class="page-hero">
-    <div class="wrap">
-        <nav class="crumbs" aria-label="Breadcrumb">
-            <a href="{% url 'home' %}">Home</a> <i class="fas fa-chevron-right"></i> <span>School Solutions</span>
-        </nav>
-        <span class="eyebrow">School Solutions &amp; Institutional Services</span>
-        <h1>Complete solutions for schools and institutions</h1>
-        <p>From computer laboratories and libraries to bulk supply and teacher training — ADOM Institute helps institutions equip, upgrade and support learning environments.</p>
-    </div>
-</section>
+{% include "public/_page_hero.html" with hero_image="images/school solutions.png" hero_alt="School solutions and institutional services by ADOM Institute" crumb="School Solutions" eyebrow="School Solutions &amp; Institutional Services" title="Complete solutions for schools and institutions" lede="From computer laboratories and libraries to bulk supply and teacher training — ADOM Institute helps institutions equip, upgrade and support learning environments." %}
 
 <section class="section">
     <div class="wrap">

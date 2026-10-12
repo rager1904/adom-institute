@@ -1,0 +1,20 @@
+{% load static %}
+<section class="hero">
+    <div class="hero-media">
+        <img src="{% static hero_image %}" alt="{{ hero_alt }}" loading="eager">
+        <span class="hero-shade"></span>
+    </div>
+
+    <div class="wrap hero-content">
+        <div class="hero-intro">
+            <nav class="crumbs" aria-label="Breadcrumb">
+                <a href="{% url 'home' %}">Home</a> <i class="fas fa-chevron-right"></i>
+                {% if crumb_parent %}<a href="{{ crumb_parent_url }}">{{ crumb_parent }}</a> <i class="fas fa-chevron-right"></i>{% endif %}
+                <span>{{ crumb }}</span>
+            </nav>
+            <span class="eyebrow">{{ eyebrow }}</span>
+            <h1 class="hero-title">{{ title }}</h1>
+            <p class="hero-lede">{{ lede }}</p>
+        </div>
+    </div>
+</section>

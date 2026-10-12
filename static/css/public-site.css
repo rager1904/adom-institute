@@ -461,6 +461,9 @@ table.price td strong { color: var(--navy); }
     .hero-intro .hero-title { color: var(--navy); }
     .hero-intro .hero-motto { color: var(--green); }
     .hero-intro .hero-lede { color: var(--muted); }
+    .hero-intro .crumbs { color: var(--muted); }
+    .hero-intro .crumbs a { color: var(--navy); }
+    .hero-intro .crumbs a:hover { color: var(--green); }
     .cta { padding: 32px 24px; }
     .footer-grid { grid-template-columns: 1fr; }
     .topbar-inner { justify-content: center; text-align: center; }

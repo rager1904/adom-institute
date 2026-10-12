@@ -19,16 +19,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="page-hero">
-    <div class="wrap">
-        <nav class="crumbs" aria-label="Breadcrumb">
-            <a href="{% url 'home' %}">Home</a> <i class="fas fa-chevron-right"></i> <span>Schools &amp; Courses</span>
-        </nav>
-        <span class="eyebrow">Schools &amp; Courses</span>
-        <h1>Practical programmes that build real skills</h1>
-        <p>Each school below offers structured training with clear durations, fees and outlines. Every course ends with a practical, applied outcome you can use immediately.</p>
-    </div>
-</section>
+{% include "public/_page_hero.html" with hero_image="images/courses.png" hero_alt="ADOM Institute training courses and programmes" crumb="Schools &amp; Courses" eyebrow="Schools &amp; Courses" title="Practical programmes that build real skills" lede="Each school below offers structured training with clear durations, fees and outlines. Every course ends with a practical, applied outcome you can use immediately." %}
 
 <section class="section">
     <div class="wrap">

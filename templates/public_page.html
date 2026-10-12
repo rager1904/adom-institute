@@ -3,16 +3,13 @@
 {% block seo %}{% include "seo/meta.html" with title=seo_title description=page.summary %}{% endblock %}
 
 {% block content %}
-<section class="page-hero">
-    <div class="wrap">
-        <nav class="crumbs" aria-label="Breadcrumb">
-            <a href="{% url 'home' %}">Home</a> <i class="fas fa-chevron-right"></i> <span>{{ page.title }}</span>
-        </nav>
-        <span class="eyebrow">{{ page.eyebrow }}</span>
-        <h1>{{ page.intro }}</h1>
-        <p>{{ page.summary }}</p>
-    </div>
-</section>
+{% if page_key == 'contact' %}
+{% include "public/_page_hero.html" with hero_image="images/contact.png" hero_alt="Contact ADOM Institute" crumb=page.title eyebrow=page.eyebrow title=page.intro lede=page.summary %}
+{% elif page_key == 'about' %}
+{% include "public/_page_hero.html" with hero_image="images/about.png" hero_alt="About ADOM Institute" crumb=page.title eyebrow=page.eyebrow title=page.intro lede=page.summary %}
+{% else %}
+{% include "public/_page_hero.html" with hero_image="images/adom_hero.png" hero_alt="ADOM Institute" crumb=page.title eyebrow=page.eyebrow title=page.intro lede=page.summary %}
+{% endif %}
 
 <section class="section">
     <div class="wrap">
