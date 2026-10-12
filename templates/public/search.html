@@ -20,10 +20,11 @@
 
 <section class="section">
     <div class="wrap">
-        {% if books %}
+        {% if books or pages %}
+            {% if books %}
             <div class="section-head" style="margin-bottom:24px">
                 <span class="eyebrow">Educational Books</span>
-                <h2 class="section-title">{{ books|length }} result{{ books|length|pluralize }} for "{{ query }}"</h2>
+                <h2 class="section-title">{{ books|length }} book{{ books|length|pluralize }} for "{{ query }}"</h2>
             </div>
             <div class="grid grid-2" style="gap:16px">
                 {% for book in books %}
@@ -37,6 +38,23 @@
                 </article>
                 {% endfor %}
             </div>
+            {% endif %}
+
+            {% if pages %}
+            <div class="section-head" style="margin-bottom:24px{% if books %};margin-top:38px{% endif %}">
+                <span class="eyebrow">Pages &amp; Programmes</span>
+                <h2 class="section-title">{{ pages|length }} page{{ pages|length|pluralize }} for "{{ query }}"</h2>
+            </div>
+            <div class="grid grid-2" style="gap:16px">
+                {% for page in pages %}
+                <article class="card" style="padding:20px 24px">
+                    <h3 style="font-size:18px">{{ page.title }}</h3>
+                    <p style="margin-top:6px">{{ page.description }}</p>
+                    <a class="link" href="{% url page.url_name %}{{ page.anchor }}">Open this page <i class="fas fa-arrow-right"></i></a>
+                </article>
+                {% endfor %}
+            </div>
+            {% endif %}
         {% elif query %}
             <div class="section-head" style="margin-bottom:24px">
                 <span class="eyebrow">No exact matches</span>

@@ -430,8 +430,9 @@ class ProfileView(UpdateView):
 
 def public_search(request):
     from library.models import Book
-    q = (request.GET.get('q') or '').strip()
+    q = (request.GET.get('q') or '').strip().lower()
     books = []
+    pages = []
     if q:
         books = (
             Book.objects
@@ -444,6 +445,59 @@ def public_search(request):
                 | Q(category__name__icontains=q)
             )
             .select_related('category')
-            .order_by('title')[:30]
+            .order_by('title')[:20]
         )
-    return render(request, 'public/search.html', {'query': q, 'books': books})
+        # Static index over the public marketing pages so common queries
+        # return useful results even when the database has no book records.
+        index = [
+            (
+                'AI & ChatGPT courses', 'public_courses', '#ai',
+                'School of AI & Digital Skills: artificial intelligence, ChatGPT and digital skills short courses.',
+                'ai artificial intelligence chatgpt digital skills machine learning prompt',
+            ),
+            (
+                'Finance & Forex courses', 'public_courses', '#finance',
+                'School of Finance, Investment & Business: forex trading, financial literacy and investment programmes.',
+                'forex trading finance investment business stock market money',
+            ),
+            (
+                'Accounting & Taxation courses', 'public_courses', '#accounting',
+                'Accounting, taxation and business administration programmes for professionals and entrepreneurs.',
+                'accounting taxation bookkeeping business administration quickbooks audit',
+            ),
+            (
+                'Tuition & academic support', 'public_tuition', '',
+                'New Zambian Curriculum tuition, homework assistance, revision, exam preparation and holiday classes.',
+                'tuition academic support homework revision examinations tests math mathematics english science primary secondary school learner grade',
+            ),
+            (
+                'Educational books', 'public_books', '',
+                'Curriculum-aligned books for early childhood, primary and secondary, plus school stationery.',
+                'books textbook curriculum ece early childhood primary secondary form1 form2 grade stationery school supplies material',
+            ),
+            (
+                'Computers & ICT products', 'public_ict', '',
+                'Desktop computers, laptops, printers and ICT accessories for learners, offices and schools.',
+                'computer laptop desktop printer ict accessories hp dell canon hardware accessories',
+            ),
+            (
+                'School solutions', 'public_school_solutions', '',
+                'Computer labs, library development, bulk supply, ICT installation, teacher training and the education management dashboard.',
+                'school solution laboratory lab library bulk supply procurement installation teacher training dashboard institution management',
+            ),
+            (
+                'Shop & online orders', 'public_shop', '',
+                'Order educational books, computers, laptops, printers and school supplies online.',
+                'shop order buy delivery collection supplies products',
+            ),
+            (
+                'Admissions & enrolment', 'public_admissions', '',
+                'How to enrol: choose a course, confirm your intake, register and start learning.',
+                'admissions enrolment enrol apply enroll register course intake fees',
+            ),
+        ]
+        for title, url_name, anchor, description, keywords in index:
+            haystack = f'{title} {description} {keywords}'.lower()
+            if q in haystack:
+                pages.append({'title': title, 'description': description, 'url_name': url_name, 'anchor': anchor})
+    return render(request, 'public/search.html', {'query': q, 'books': books, 'pages': pages})
