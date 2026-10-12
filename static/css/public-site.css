@@ -148,6 +148,24 @@ body.public-site {
 .nav-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; flex: 0 0 auto; }
 .nav-actions .wa-label { display: none; }
 .nav-actions .btn-wa { padding: 10px 11px; }
+
+.nav-search { position: relative; flex: 0 0 auto; width: 44px; height: 40px; display: none; margin-left: 4px; }
+.nav-search i {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); font-size: 13px; pointer-events: none; z-index: 3;
+}
+.nav-search input {
+    position: absolute; right: 0; top: 0; height: 40px; width: 40px;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: var(--cream); padding: 0; font: inherit; font-size: 13px;
+    color: var(--ink); outline: none; cursor: pointer; z-index: 2;
+    box-sizing: border-box; transition: width .22s ease, padding .22s ease, background .22s ease, border-color .22s ease;
+}
+.nav-search input::placeholder { color: transparent; }
+.nav-search:hover input, .nav-search:focus-within input {
+    width: 230px; padding: 0 34px 0 14px; cursor: text; background: #fff; border-color: var(--green);
+}
+.nav-search:hover input::placeholder, .nav-search:focus-within input::placeholder { color: #8495a6; }
 .mobile-toggle {
     display: none; background: #fff; border: 1px solid var(--line); border-radius: 10px;
     width: 46px; height: 44px; font-size: 18px; color: var(--navy); cursor: pointer;
@@ -258,10 +276,10 @@ body.public-site {
 }
 .featured-note {
     display: inline-flex; align-items: center; gap: 10px; margin-top: 18px;
-    background: var(--gold-soft); border: 1px solid #f0dfae; color: #7a5c11;
+    background: #e9eff7; border: 1px solid #c6d4e6; color: #2c4460;
     padding: 12px 16px; border-radius: 12px; font-size: 13.5px; font-weight: 600;
 }
-.featured-note i { color: var(--gold-2); }
+.featured-note i { color: var(--navy); }
 
 /* ---------- Price table ---------- */
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
@@ -362,10 +380,10 @@ table.price td strong { color: var(--navy); }
 .contact-card a { color: var(--green); font-weight: 600; text-decoration: none; }
 
 .notice {
-    background: var(--gold-soft); border: 1px solid #f0dfae; border-radius: 12px;
-    padding: 16px 18px; font-size: 13.5px; color: #7a5c11; display: flex; gap: 12px; align-items: flex-start;
+    background: #e9eff7; border: 1px solid #c6d4e6; border-radius: 12px;
+    padding: 16px 18px; font-size: 13.5px; color: #2c4460; display: flex; gap: 12px; align-items: flex-start;
 }
-.notice i { color: var(--gold-2); margin-top: 3px; }
+.notice i { color: var(--navy); margin-top: 3px; }
 
 /* ---------- Footer ---------- */
 .site-footer { background: var(--navy-3); color: #aebdcb; padding: 56px 0 26px; margin-top: 0; }
@@ -374,7 +392,8 @@ table.price td strong { color: var(--navy); }
 .footer-brand .site-mark { color: var(--gold); }
 .footer-brand .site-brand-text { color: #fff; }
 .footer-brand .site-brand-motto { color: var(--gold); }
-.site-footer .site-mark { width: 44px; height: 40px; }
+.site-footer .site-mark { width: 112px; height: 112px; background: #fff; border-radius: 12px; }
+.site-footer .site-mark img { mix-blend-mode: normal; }
 .site-footer p { font-size: 13.5px; line-height: 1.8; }
 .site-footer h4 { color: #fff; font-size: 15px; font-family: 'DM Sans', sans-serif; font-weight: 700; letter-spacing: .4px; margin-bottom: 14px; }
 .site-footer ul { list-style: none; margin: 0; padding: 0; }
@@ -384,12 +403,20 @@ table.price td strong { color: var(--navy); }
 .footer-bottom { border-top: 1px solid rgba(255,255,255,.12); margin-top: 40px; padding-top: 20px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 12.5px; }
 
 /* ---------- Mobile ---------- */
+@media (min-width: 1241px) {
+    .nav-search { display: block; }
+}
+
 @media (max-width: 1240px) {
     .hero-media { min-height: 500px; }
     .hero-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     .grid-3 { grid-template-columns: repeat(2, 1fr); }
     .header-inner { gap: 16px; min-height: 100px; }
     .site-mark { width: 92px; height: 92px; }
+    .nav-search { display: block; width: auto; margin-left: 0; padding: 12px 28px 2px; }
+    .nav-search input { position: static; width: 100%; height: 44px; cursor: text; padding: 0 14px; background: #fff; }
+    .nav-search input::placeholder { color: #8495a6; }
+    .nav-search i { right: calc(28px + 14px); }
     .mobile-toggle { display: inline-grid; place-items: center; }
     .site-nav {
         position: absolute; top: 100%; left: 0; right: 0; flex: none;

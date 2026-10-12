@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    'django.contrib.sitemaps',
     
     # Third party apps
     'rest_framework',
@@ -104,6 +105,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'accounts.context_processors.role_ui',
+                'adom.context_processors.seo',
             ],
             'builtins': [
                 'accounts.templatetags.adom_filters',
@@ -194,6 +196,22 @@ AUTH_USER_MODEL = 'accounts.User'
 
 # Site ID for django.contrib.sites
 SITE_ID = 1
+
+# Public site identity used for SEO (canonical URLs, sitemap, Open Graph).
+# SITE_BASE_URL must be the single canonical origin without a trailing slash;
+# the sites-framework domain is kept in sync with it by a data migration.
+SITE_NAME = config('SITE_NAME', default='ADOM Institute')
+SITE_BASE_URL = config('SITE_BASE_URL', default='https://adominstitute.com').rstrip('/')
+SITE_DESCRIPTION = config(
+    'SITE_DESCRIPTION',
+    default=(
+        'ADOM Institute is an education, training and educational supplies '
+        'institution in Zambia offering practical courses, academic tuition, '
+        'curriculum books, ICT equipment and school solutions.'
+    ),
+)
+# Google Search Console verification token (value of the meta tag), optional.
+GOOGLE_SITE_VERIFICATION = config('GOOGLE_SITE_VERIFICATION', default='')
 
 # Django REST Framework
 REST_FRAMEWORK = {

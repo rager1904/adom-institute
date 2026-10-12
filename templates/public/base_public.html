@@ -4,14 +4,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}ADOM Institute | Learn Today • Lead Tomorrow{% endblock %}</title>
-    <meta name="description" content="{% block description %}ADOM Institute empowers learners, professionals and businesses through practical education, digital skills, financial training and quality educational resources.{% endblock %}">
+    {% block seo %}{% include "seo/meta.html" %}{% endblock %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{% static 'css/public-site.css' %}">
     {% block extra_css %}{% endblock %}
+
+    {% comment %}Site-wide structured data: the organisation, its branches and a
+    sitelinks search box. Page-specific schema (Course, Article, BreadcrumbList)
+    is appended via the json_ld block.{% endcomment %}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "EducationalOrganization",
+          "@id": "{{ site_base_url }}/#organization",
+          "name": "{{ site_name }}",
+          "url": "{{ site_base_url }}/",
+          "logo": "{{ site_base_url }}{% static 'images/adom_logo.png' %}",
+          "description": "{{ site_default_description }}",
+          "email": "noreply@adominstitute.com",
+          "telephone": "+260967920605",
+          "sameAs": ["https://wa.me/260967920605"],
+          "address": [
+            {
+              "@type": "PostalAddress",
+              "streetAddress": "Liberty Mall",
+              "addressLocality": "Lusaka",
+              "addressCountry": "ZM"
+            },
+            {
+              "@type": "PostalAddress",
+              "streetAddress": "Mitengo",
+              "addressLocality": "Ndola",
+              "addressCountry": "ZM"
+            }
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "{{ site_base_url }}/#website",
+          "url": "{{ site_base_url }}/",
+          "name": "{{ site_name }}",
+          "publisher": {"@id": "{{ site_base_url }}/#organization"},
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "{{ site_base_url }}/search/?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
+    {% block json_ld %}{% endblock %}
 </head>
 <body class="public-site">
     <div class="topbar">
@@ -73,6 +121,11 @@
             </ul>
         </nav>
         {% endwith %}
+
+            <form class="nav-search" action="{% url 'public_search' %}" method="get" role="search">
+                <i class="fas fa-search"></i>
+                <input type="search" name="q" placeholder="Search books…" aria-label="Search ADOM public site" autocomplete="off">
+            </form>
 
             <div class="nav-actions">
                 <a class="btn btn-wa btn-sm" href="https://wa.me/260967920605?text=Hello%20ADOM%20Institute%2C%20I%20would%20like%20to%20enquire" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i><span class="wa-label"> WhatsApp</span></a>

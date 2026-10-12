@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.db.models import Q
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -246,9 +247,14 @@ class PublicPageView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        page = self.kwargs['page']
-        context['page'] = self.PAGES[page]
-        context['page_key'] = page
+        page_key = self.kwargs['page']
+        page = self.PAGES[page_key]
+        title = page['title']
+        if 'ADOM Institute' not in title:
+            title = f'{title} | ADOM Institute'
+        context['page'] = page
+        context['page_key'] = page_key
+        context['seo_title'] = title
         return context
 
 
@@ -420,3 +426,24 @@ class ProfileView(UpdateView):
         response = super().form_valid(form)
         messages.success(self.request, 'Profile updated successfully!')
         return response
+
+
+def public_search(request):
+    from library.models import Book
+    q = (request.GET.get('q') or '').strip()
+    books = []
+    if q:
+        books = (
+            Book.objects
+            .filter(is_active=True)
+            .filter(
+                Q(title__icontains=q)
+                | Q(author__icontains=q)
+                | Q(publisher__icontains=q)
+                | Q(description__icontains=q)
+                | Q(category__name__icontains=q)
+            )
+            .select_related('category')
+            .order_by('title')[:30]
+        )
+    return render(request, 'public/search.html', {'query': q, 'books': books})

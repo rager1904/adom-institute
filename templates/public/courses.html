@@ -1,7 +1,22 @@
 {% extends 'public/base_public.html' %}
 
-{% block title %}Schools & Courses | ADOM Institute{% endblock %}
-{% block description %}Explore schools and training programmes at ADOM Institute: AI and digital skills, finance and forex, accounting and taxation, tuition and academic support, and computer and ICT skills.{% endblock %}
+{% block seo %}{% include "seo/meta.html" with title="Schools & Courses | ADOM Institute" description="Explore schools and training programmes at ADOM Institute: AI and digital skills, finance and forex, accounting and taxation, tuition and academic support, and computer and ICT skills." %}{% endblock %}
+
+{% block json_ld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "item": {"@type": "Course", "name": "AI & Digital Skills", "description": "Practical artificial intelligence and digital skills training.", "provider": {"@type": "EducationalOrganization", "name": "ADOM Institute", "sameAs": "{{ site_base_url }}/"}}},
+    {"@type": "ListItem", "position": 2, "item": {"@type": "Course", "name": "Finance, Investment & Forex", "description": "Finance, investment and forex trading programmes.", "provider": {"@type": "EducationalOrganization", "name": "ADOM Institute", "sameAs": "{{ site_base_url }}/"}}},
+    {"@type": "ListItem", "position": 3, "item": {"@type": "Course", "name": "Accounting, Taxation & Business Administration", "description": "Accounting, taxation and business administration training.", "provider": {"@type": "EducationalOrganization", "name": "ADOM Institute", "sameAs": "{{ site_base_url }}/"}}},
+    {"@type": "ListItem", "position": 4, "item": {"@type": "Course", "name": "Tuition & Academic Support", "description": "New Zambian Curriculum tuition and exam preparation.", "provider": {"@type": "EducationalOrganization", "name": "ADOM Institute", "sameAs": "{{ site_base_url }}/"}}},
+    {"@type": "ListItem", "position": 5, "item": {"@type": "Course", "name": "Computer & ICT Skills", "description": "Computer and ICT skills training.", "provider": {"@type": "EducationalOrganization", "name": "ADOM Institute", "sameAs": "{{ site_base_url }}/"}}}
+  ]
+}
+</script>
+{% endblock %}
 
 {% block content %}
 <section class="page-hero">

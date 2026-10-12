@@ -1,7 +1,6 @@
 {% extends 'public/base_public.html' %}
 
-{% block title %}{{ page.title }} | ADOM Institute{% endblock %}
-{% block description %}{{ page.summary }}{% endblock %}
+{% block seo %}{% include "seo/meta.html" with title=seo_title description=page.summary %}{% endblock %}
 
 {% block content %}
 <section class="page-hero">

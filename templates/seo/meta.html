@@ -1,0 +1,36 @@
+{% load static %}
+{% comment %}
+Reusable SEO head include. Pages pass only the values that differ from the
+site defaults surfaced by the `adom.context_processors.seo` context processor.
+
+Expected (optional) parameters:
+  title        - <title> and og:title / twitter:title
+  description  - meta description and og/twitter description
+  image        - STATIC-relative path to the social share image
+  og_type      - og:type (default "website"; use "article" for blog posts)
+  robots       - robots meta value (default "index, follow")
+  canonical    - path to use as the canonical URL (default request.path)
+
+Article/blog pages can also add their own {% block json_ld %} with an
+Article/Schema.org block.
+{% endcomment %}
+<title>{% if title %}{{ title }}{% else %}{{ site_name }} | Learn Today • Lead Tomorrow{% endif %}</title>
+<meta name="description" content="{% if description %}{{ description }}{% else %}{{ site_default_description }}{% endif %}">
+<meta name="robots" content="{{ robots|default:'index, follow' }}">
+<link rel="canonical" href="{{ site_base_url }}{{ canonical|default:request.path }}">
+
+{% with share_title=title|default:site_name share_description=description|default:site_default_description %}
+<meta property="og:site_name" content="{{ site_name }}">
+<meta property="og:type" content="{{ og_type|default:'website' }}">
+<meta property="og:title" content="{{ share_title }}">
+<meta property="og:description" content="{{ share_description }}">
+<meta property="og:url" content="{{ site_base_url }}{{ canonical|default:request.path }}">
+<meta property="og:locale" content="en_ZM">
+{% with image_path=image|default:'images/adom_hero.png' %}{% static image_path as share_image %}<meta property="og:image" content="{% if share_image|slice:':4' == 'http' %}{{ share_image }}{% else %}{{ site_base_url }}{{ share_image }}{% endif %}">{% endwith %}
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ share_title }}">
+<meta name="twitter:description" content="{{ share_description }}">
+{% with image_path=image|default:'images/adom_hero.png' %}{% static image_path as share_image %}<meta name="twitter:image" content="{% if share_image|slice:':4' == 'http' %}{{ share_image }}{% else %}{{ site_base_url }}{{ share_image }}{% endif %}">{% endwith %}
+{% endwith %}
+{% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}

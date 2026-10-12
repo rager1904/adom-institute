@@ -15,16 +15,18 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from adom.protected_media import serve_public_media
+from adom.sitemaps import PublicStaticSitemap
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from accounts.views import HomeView, PublicPageView
-from adom.views import health_check
+from accounts.views import HomeView, PublicPageView, public_search
+from adom.views import health_check, robots_txt
 from academics.urls import router as academics_router
 from accounts.urls import router as accounts_router
 from analytics.urls import router as analytics_router
@@ -50,8 +52,16 @@ schema_view = get_schema_view(
     permission_classes=(permissions.AllowAny,),
 )
 
+# Crawlability: robots.txt + sitemap.xml. Add new Sitemap subclasses here as
+# content types (e.g. blog articles) are introduced.
+sitemaps = {
+    'static': PublicStaticSitemap,
+}
+
 urlpatterns = [
     path('health/', health_check, name='health'),
+    path('robots.txt', robots_txt, name='robots_txt'),
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
     path('', HomeView.as_view(), name='home'),
     path('about/', PublicPageView.as_view(), {'page': 'about'}, name='public_about'),
     path('privacy/', PublicPageView.as_view(), {'page': 'privacy'}, name='public_privacy'),
@@ -66,6 +76,7 @@ urlpatterns = [
     path('school-solutions/', TemplateView.as_view(template_name='public/school_solutions.html'), name='public_school_solutions'),
     path('shop/', TemplateView.as_view(template_name='public/shop.html'), name='public_shop'),
     path('admissions/', TemplateView.as_view(template_name='public/admissions.html'), name='public_admissions'),
+    path('search/', public_search, name='public_search'),
 
     path('admin/', admin.site.urls),
     
