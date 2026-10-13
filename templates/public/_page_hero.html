@@ -1,4 +1,6 @@
 {% load static %}
+{% url 'public_admissions' as hero_enrol_url %}
+{% url 'accounts:institution_register' as hero_register_url %}
 <section class="hero">
     <div class="hero-media">
         <img src="{% static hero_image %}" alt="{{ hero_alt }}" loading="eager">
@@ -15,6 +17,14 @@
             <span class="eyebrow">{{ eyebrow }}</span>
             <h1 class="hero-title">{{ title }}</h1>
             <p class="hero-lede">{{ lede }}</p>
+            <div class="hero-cta">
+                {% if not hide_cta1 %}
+                <a class="btn btn-green btn-lg" href="{{ cta1_href|default:hero_enrol_url }}">{{ cta1_label|default:"Enrol Now" }} <i class="{{ cta1_icon|default:'fas fa-arrow-right' }}"></i></a>
+                {% endif %}
+                {% if not hide_cta2 %}
+                <a class="btn btn-outline btn-lg" href="{{ cta2_href|default:hero_register_url }}">{{ cta2_label|default:"Register" }}{% if cta2_icon %} <i class="{{ cta2_icon }}"></i>{% endif %}</a>
+                {% endif %}
+            </div>
         </div>
     </div>
 </section>

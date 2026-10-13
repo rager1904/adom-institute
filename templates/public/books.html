@@ -4,7 +4,9 @@
 {% block seo %}{% include "seo/meta.html" with title="Educational Books & Supplies | ADOM Institute" description="Curriculum-aligned educational books and learning materials from ADOM Institute: early childhood 3-5 years, primary school Grade 1-4, Form 1 and Form 2 titles, plus school stationery." %}{% endblock %}
 
 {% block content %}
-{% include "public/_page_hero.html" with hero_image="images/books.png" hero_alt="Educational books and learning materials at ADOM Institute" crumb="Educational Books" eyebrow="Educational Books &amp; Supplies" title="Quality learning materials for every grade" lede="Curriculum-aligned books and stationery for schools, parents and learners — available for individual purchase or bulk school orders." %}
+{% url 'public_shop' as shop_url %}
+{% url 'public_contact' as contact_url %}
+{% include "public/_page_hero.html" with hero_image="images/books.png" hero_alt="Educational books and learning materials at ADOM Institute" crumb="Educational Books" eyebrow="Educational Books &amp; Supplies" title="Quality learning materials for every grade" lede="Curriculum-aligned books and stationery for schools, parents and learners — available for individual purchase or bulk school orders." cta1_label="Buy Now" cta1_href=shop_url cta1_icon="fas fa-bag-shopping" cta2_label="Borrow" cta2_href=contact_url %}
 
 <section class="section">
     <div class="wrap">

@@ -4,7 +4,7 @@
 
 {% block content %}
 {% if page_key == 'contact' %}
-{% include "public/_page_hero.html" with hero_image="images/contact.png" hero_alt="Contact ADOM Institute" crumb=page.title eyebrow=page.eyebrow title=page.intro lede=page.summary %}
+{% include "public/_page_hero.html" with hero_image="images/contact.png" hero_alt="Contact ADOM Institute" crumb=page.title eyebrow=page.eyebrow title=page.intro lede=page.summary cta1_label="Enquire" cta1_href="https://wa.me/260967920605" cta1_icon="fab fa-whatsapp" cta2_label="Call Us" cta2_href="tel:+260967920605" cta2_icon="fas fa-phone" %}
 {% elif page_key == 'about' %}
 {% include "public/_page_hero.html" with hero_image="images/about.png" hero_alt="About ADOM Institute" crumb=page.title eyebrow=page.eyebrow title=page.intro lede=page.summary %}
 {% else %}
