@@ -118,6 +118,13 @@
                 </li>
                 <li><a href="{% url 'public_admissions' %}" {% if current == 'public_admissions' %}class="active"{% endif %}>Admissions</a></li>
                 <li><a href="{% url 'public_contact' %}" {% if current == 'public_contact' %}class="active"{% endif %}>Contact</a></li>
+                <li class="nav-auth-mobile">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'accounts:dashboard' %}"><i class="fas fa-gauge-high"></i> Dashboard</a>
+                    {% else %}
+                        <a href="{% url 'accounts:login' %}"><i class="fas fa-right-to-bracket"></i> Login</a>
+                    {% endif %}
+                </li>
             </ul>
         </nav>
         {% endwith %}
@@ -128,6 +135,11 @@
             </form>
 
             <div class="nav-actions">
+                {% if user.is_authenticated %}
+                    <a class="btn btn-outline btn-sm" href="{% url 'accounts:dashboard' %}"><i class="fas fa-gauge-high"></i> Dashboard</a>
+                {% else %}
+                    <a class="btn btn-outline btn-sm" href="{% url 'accounts:login' %}"><i class="fas fa-right-to-bracket"></i> Login</a>
+                {% endif %}
                 <a class="btn btn-wa btn-sm" href="https://wa.me/260967920605?text=Hello%20ADOM%20Institute%2C%20I%20would%20like%20to%20enquire" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i><span class="wa-label"> WhatsApp</span></a>
             </div>
 

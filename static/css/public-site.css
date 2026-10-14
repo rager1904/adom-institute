@@ -149,6 +149,10 @@ body.public-site {
 .nav-actions .wa-label { display: none; }
 .nav-actions .btn-wa { padding: 10px 11px; }
 
+/* Login/Dashboard entry is shown in the mobile dropdown only; on desktop it
+   lives in .nav-actions as a button. */
+.nav-auth-mobile { display: none; }
+
 .nav-search { position: relative; flex: 0 0 auto; width: 44px; height: 40px; display: none; margin-left: 4px; }
 .nav-search i {
     position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
@@ -423,6 +427,7 @@ table.price td strong { color: var(--navy); }
     .header-inner { flex-wrap: nowrap; align-items: center; gap: 10px; min-height: 0; padding-top: 10px; padding-bottom: 12px; }
     .site-brand { order: 1; }
     .nav-actions { display: none; } /* remove WhatsApp button from mobile nav */
+    .nav-auth-mobile { display: block; } /* surface Login/Dashboard in the mobile menu */
 
     .nav-search { order: 2; display: block; flex: 1 1 auto; width: auto; min-width: 0; height: 44px; margin: 0; padding: 0; }
     .nav-search input { position: static; width: 100%; height: 44px; cursor: text; padding: 0 38px 0 14px; background: #fff; border-radius: 999px; }
