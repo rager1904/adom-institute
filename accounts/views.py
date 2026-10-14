@@ -153,11 +153,6 @@ class CustomAuthToken(ObtainAuthToken):
 class HomeView(TemplateView):
     template_name = 'home.html'
 
-    def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated:
-            return redirect('accounts:dashboard')
-        return super().dispatch(request, *args, **kwargs)
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         agent_count = len(list_agent_definitions())
@@ -426,7 +421,7 @@ class LogoutView(TemplateView):
     def get(self, request, *args, **kwargs):
         logout(request)
         messages.success(request, 'You have been logged out successfully.')
-        return redirect('accounts:login')
+        return redirect('home')
 
 
 class RegisterView(CreateView):
