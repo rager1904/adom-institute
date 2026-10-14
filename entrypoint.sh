@@ -47,4 +47,13 @@ fi
 echo "[entrypoint] collecting static files"
 python manage.py collectstatic --noinput --verbosity 0
 
+# Apply database migrations. Railway/containers do not run them automatically,
+# so a deploy with new migrations would otherwise serve 500s against the old
+# schema. Idempotent, so it is safe to run on every start. Set
+# RUN_MIGRATIONS=0 to skip (e.g. on extra worker/beat services).
+if [ "${RUN_MIGRATIONS:-1}" != "0" ]; then
+  echo "[entrypoint] applying database migrations"
+  python manage.py migrate --noinput --verbosity 1
+fi
+
 exec "$@"
