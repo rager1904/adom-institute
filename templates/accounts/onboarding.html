@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Getting started - ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="mb-1"><i class="fas fa-rocket me-3 text-primary"></i>Getting started</h2>
+    <p class="text-muted mb-0">Set up {{ institution.name }} step by step. You can revisit any step at any time.</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-semibold">Setup progress</span>
+                    <span class="text-muted">{{ progress.completed }}/{{ progress.total }}</span>
+                </div>
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress.percent }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="list-group list-group-flush">
+                {% for item in steps %}
+                    {% if item.key != 'done' %}
+                    <a href="{% url 'accounts:onboarding' %}?step={{ item.key }}"
+                       class="list-group-item list-group-item-action d-flex align-items-center gap-3 {% if item.active %}active{% endif %}">
+                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center
+                            {% if item.complete %}bg-success text-white{% elif item.active %}bg-white text-primary{% else %}bg-light text-muted{% endif %}"
+                            style="width:28px;height:28px;">
+                            {% if item.complete %}<i class="fas fa-check"></i>{% else %}{{ forloop.counter }}{% endif %}
+                        </span>
+                        <span class="{% if item.active %}text-white{% else %}text-body{% endif %}">{{ item.title }}</span>
+                    </a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-bolt me-2 text-warning"></i>Quick actions</h6>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{% url 'students:academic_year_create' %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3">
+                    <i class="fas fa-calendar-plus text-primary"></i><span>Add academic year</span>
+                </a>
+                <a href="{% url 'students:class_create' %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3">
+                    <i class="fas fa-chalkboard text-primary"></i><span>Add class</span>
+                </a>
+                <a href="{% url 'students:student_create' %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3">
+                    <i class="fas fa-user-plus text-primary"></i><span>Add student</span>
+                </a>
+                <a href="{% url 'teachers:teacher_create' %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3">
+                    <i class="fas fa-chalkboard-user text-primary"></i><span>Add teacher</span>
+                </a>
+                <a href="{% url 'fees:fee_category_create' %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3">
+                    <i class="fas fa-tags text-primary"></i><span>Add fee category</span>
+                </a>
+                <a href="{% url 'fees:fee_structure_create' %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3">
+                    <i class="fas fa-layer-group text-primary"></i><span>Add fee structure</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    {% if step == 'done' %}
+                        <i class="fas fa-circle-check me-2 text-success"></i>You're all set
+                    {% else %}
+                        <i class="fas fa-pen-to-square me-2 text-primary"></i>{{ step_title }}
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if step == 'done' %}
+                    <p class="text-muted">
+                        You have completed the essential setup for {{ institution.name }}.
+                        You can now manage students, teachers and fees from the dashboard.
+                    </p>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{% url 'accounts:dashboard' %}" class="btn btn-primary">
+                            <i class="fas fa-gauge-high me-2"></i>Go to dashboard
+                        </a>
+                        <a href="{% url 'fees:fee_structure_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-layer-group me-2"></i>Manage fee structures
+                        </a>
+                        <a href="{% url 'accounts:onboarding' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-rotate me-2"></i>Review setup
+                        </a>
+                    </div>
+                {% else %}
+                    {% if step == 'class' and not institution.academic_years.exists %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-triangle-exclamation me-2"></i>
+                        Create an academic year before adding classes.
+                        <a href="{% url 'accounts:onboarding' %}?step=academic_year" class="alert-link">Go to academic year</a>.
+                    </div>
+                    {% endif %}
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        <input type="hidden" name="step" value="{{ step }}">
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">{{ form.non_field_errors.0 }}</div>
+                        {% endif %}
+
+                        {% for field in form %}
+                        <div class="mb-3">
+                            {% if field.field.widget.input_type == 'checkbox' %}
+                                <div class="form-check">
+                                    {{ field }}
+                                    <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                </div>
+                            {% else %}
+                                <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            {% endif %}
+                            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                            {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        </div>
+                        {% endfor %}
+
+                        <div class="d-flex justify-content-between mt-4">
+                            {% if step == 'profile' %}
+                                <a href="{% url 'accounts:dashboard' %}" class="btn btn-outline-secondary">Skip to dashboard</a>
+                            {% else %}
+                                <a href="{% url 'accounts:onboarding' %}" class="btn btn-outline-secondary">Back to overview</a>
+                            {% endif %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-arrow-right me-2"></i>Save & continue
+                            </button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

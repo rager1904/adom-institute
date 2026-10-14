@@ -63,18 +63,18 @@
                     
                     <div class="col-md-4">
                         <label class="form-label fw-semibold text-muted">Total Amount</label>
-                        <div class="h5 text-primary mb-0">₹{{ student_fee.amount }}</div>
+                        <div class="h5 text-primary mb-0">K{{ student_fee.amount }}</div>
                     </div>
                     
                     <div class="col-md-4">
                         <label class="form-label fw-semibold text-muted">Paid Amount</label>
-                        <div class="h5 text-success mb-0">₹{{ student_fee.paid_amount }}</div>
+                        <div class="h5 text-success mb-0">K{{ student_fee.paid_amount }}</div>
                     </div>
                     
                     <div class="col-md-4">
                         <label class="form-label fw-semibold text-muted">Balance Amount</label>
                         <div class="h5 {% if student_fee.balance_amount == 0 %}text-success{% elif student_fee.balance_amount < 0 %}text-danger{% else %}text-warning{% endif %} mb-0">
-                            ₹{{ student_fee.balance_amount }}
+                            K{{ student_fee.balance_amount }}
                         </div>
                     </div>
                     
@@ -145,7 +145,7 @@
                                     <small class="text-muted">{{ payment.payment_date|date:"H:i" }}</small>
                                 </td>
                                 <td>
-                                    <span class="fw-semibold text-success">₹{{ payment.amount }}</span>
+                                    <span class="fw-semibold text-success">K{{ payment.amount }}</span>
                                 </td>
                                 <td>
                                     <span class="badge bg-light text-dark">{{ payment.get_payment_method_display }}</span>
@@ -238,13 +238,13 @@
                 <div class="row text-center">
                     <div class="col-6">
                         <div class="border-end">
-                            <div class="h5 text-success mb-1">₹{{ student_fee.paid_amount }}</div>
+                            <div class="h5 text-success mb-1">K{{ student_fee.paid_amount }}</div>
                             <small class="text-muted">Paid</small>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="h5 {% if student_fee.balance_amount == 0 %}text-success{% elif student_fee.balance_amount < 0 %}text-danger{% else %}text-warning{% endif %} mb-1">
-                            ₹{{ student_fee.balance_amount }}
+                            K{{ student_fee.balance_amount }}
                         </div>
                         <small class="text-muted">Balance</small>
                     </div>

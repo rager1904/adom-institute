@@ -26,8 +26,13 @@
                 <nav class="edu-nav" aria-label="Primary navigation">
                     <div class="edu-nav-section">Operations</div>
                     <a class="edu-nav-link" href="{% url 'accounts:dashboard' %}"><i class="fas fa-gauge-high"></i><span>Dashboard</span></a>
+                    {% if user.user_type == 'administrator' %}
+                        <a class="edu-nav-link" href="{% url 'accounts:onboarding' %}"><i class="fas fa-rocket"></i><span>Getting Started</span></a>
+                    {% endif %}
                     {% if user.user_type == 'super_admin' or user.user_type == 'administrator' %}
                         <a class="edu-nav-link" href="{% url 'students:student_list' %}"><i class="fas fa-user-graduate"></i><span>Students</span></a>
+                        <a class="edu-nav-link" href="{% url 'students:class_list' %}"><i class="fas fa-chalkboard"></i><span>Classes</span></a>
+                        <a class="edu-nav-link" href="{% url 'students:academic_year_list' %}"><i class="fas fa-calendar-alt"></i><span>Academic Years</span></a>
                         <a class="edu-nav-link" href="{% url 'teachers:teacher_list' %}"><i class="fas fa-chalkboard-user"></i><span>Teachers</span></a>
                     {% elif user.user_type == 'teacher' %}
                         <a class="edu-nav-link" href="{% url 'students:student_list' %}"><i class="fas fa-user-graduate"></i><span>My Students</span></a>
@@ -46,6 +51,7 @@
                     {% endif %}
                     {% if user.user_type == 'super_admin' or user.user_type == 'administrator' or user.user_type == 'accountant' %}
                         <a class="edu-nav-link" href="{% url 'fees:dashboard' %}"><i class="fas fa-credit-card"></i><span>Fees</span></a>
+                        <a class="edu-nav-link" href="{% url 'fees:fee_structure_list' %}"><i class="fas fa-layer-group"></i><span>Fee Structures</span></a>
                     {% elif user.user_type == 'student' or user.user_type == 'parent' %}
                         <a class="edu-nav-link" href="{% url 'fees:my_fees' %}"><i class="fas fa-credit-card"></i><span>My Fees</span></a>
                     {% endif %}
@@ -66,6 +72,11 @@
                     {% endif %}
                     {% if user.user_type == 'super_admin' or user.user_type == 'administrator' or user.user_type == 'teacher' or user.user_type == 'student' %}
                         <a class="edu-nav-link" href="{% url 'adom_institute:dashboard' %}"><i class="fas fa-robot"></i><span>ADOM Institute</span></a>
+                    {% endif %}
+
+                    {% if user.user_type == 'super_admin' or user.is_staff %}
+                        <div class="edu-nav-section">Administration</div>
+                        <a class="edu-nav-link" href="{% url 'accounts:institution_list' %}"><i class="fas fa-building-columns"></i><span>Institutions</span></a>
                     {% endif %}
                 </nav>
 
@@ -90,7 +101,55 @@
                     </div>
 
                     <div class="edu-topbar-actions">
-                        <a class="edu-icon-button" href="{% url 'communication:notification_list' %}" aria-label="Notifications"><i class="fas fa-bell"></i></a>
+                        <div class="dropdown">
+                            <a class="edu-icon-button position-relative" href="#" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Notifications">
+                                <i class="fas fa-bell"></i>
+                                {% if nav_notification_count %}
+                                    <span class="badge rounded-pill bg-danger notification-count" style="position:absolute;top:-4px;right:-4px;font-size:.65rem;">{{ nav_notification_count }}</span>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:340px;max-width:380px;">
+                                <li class="dropdown-header d-flex justify-content-between align-items-center">
+                                    <span class="fw-semibold">Notifications</span>
+                                    {% if nav_notification_count %}
+                                    <form method="post" action="{% url 'communication:notifications_mark_all_read' %}" class="m-0">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none">Mark all read</button>
+                                    </form>
+                                    {% endif %}
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% for notification in nav_notifications %}
+                                    <li>
+                                        <a class="dropdown-item d-flex gap-2 py-2 text-wrap" href="{% url 'communication:notification_go' notification.pk %}">
+                                            <span class="mt-1">
+                                                {% if notification.notification_type == 'approval' %}
+                                                    <i class="fas fa-user-check text-warning"></i>
+                                                {% elif notification.notification_type == 'fee' %}
+                                                    <i class="fas fa-credit-card text-success"></i>
+                                                {% elif notification.notification_type == 'message' %}
+                                                    <i class="fas fa-comment text-info"></i>
+                                                {% else %}
+                                                    <i class="fas fa-bell text-primary"></i>
+                                                {% endif %}
+                                            </span>
+                                            <span class="flex-grow-1">
+                                                <span class="d-block fw-semibold small">{{ notification.title }}</span>
+                                                <span class="d-block text-muted small">{{ notification.message|truncatechars:90 }}</span>
+                                                <span class="d-block text-muted" style="font-size:.72rem;">{{ notification.created_at|timesince }} ago</span>
+                                            </span>
+                                            {% if notification.action_label %}
+                                                <span class="badge bg-primary align-self-center">{{ notification.action_label }}</span>
+                                            {% endif %}
+                                        </a>
+                                    </li>
+                                {% empty %}
+                                    <li><span class="dropdown-item-text text-muted small">You're all caught up. No unread notifications.</span></li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-center small" href="{% url 'communication:notification_list' %}">View all notifications</a></li>
+                            </ul>
+                        </div>
                         {% if user.user_type == 'super_admin' or user.user_type == 'administrator' %}
                             <a class="edu-icon-button" href="{% url 'analytics:dashboard' %}" aria-label="Analytics"><i class="fas fa-chart-simple"></i></a>
                         {% endif %}

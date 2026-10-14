@@ -59,6 +59,12 @@ class Class(models.Model):
     def __str__(self):
         return f"{self.display_name} ({self.academic_year.name})"
 
+    @property
+    def capacity_utilization(self):
+        if not self.capacity:
+            return 0
+        return round((self.students.count() / self.capacity) * 100)
+
 
 class Student(models.Model):
     class Gender(models.TextChoices):

@@ -65,11 +65,11 @@ class StudentFeeAdmin(admin.ModelAdmin):
     def balance_display(self, obj):
         balance = obj.balance_amount
         if balance == 0:
-            return format_html('<span style="color: green;">₹{}</span>', balance)
+            return format_html('<span style="color: green;">K{}</span>', balance)
         elif balance < 0:
-            return format_html('<span style="color: red;">₹{}</span>', balance)
+            return format_html('<span style="color: red;">K{}</span>', balance)
         else:
-            return format_html('<span style="color: orange;">₹{}</span>', balance)
+            return format_html('<span style="color: orange;">K{}</span>', balance)
     balance_display.short_description = 'Balance'
     
     def is_overdue_display(self, obj):

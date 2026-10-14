@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Academic Years{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-calendar-alt text-primary"></i> Academic Years
+        </h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'students:academic_year_create' %}" class="btn btn-success">
+                <i class="fas fa-plus"></i> Add Academic Year
+            </a>
+            <a href="{% url 'students:class_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-chalkboard"></i> Classes
+            </a>
+            <a href="{% url 'students:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-table"></i> Academic Years ({{ academic_years.count }})
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if academic_years %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Classes</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for year in academic_years %}
+                                <tr>
+                                    <td><strong>{{ year.name }}</strong></td>
+                                    <td>{{ year.start_date|date:"d M Y" }}</td>
+                                    <td>{{ year.end_date|date:"d M Y" }}</td>
+                                    <td><span class="badge bg-info">{{ year.class_count }}</span></td>
+                                    <td>
+                                        <span class="badge bg-{% if year.is_active %}success{% else %}secondary{% endif %}">
+                                            {% if year.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'students:academic_year_update' year.pk %}" class="btn btn-sm btn-outline-warning">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'students:academic_year_delete' year.pk %}" class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if is_paginated %}
+                    <nav aria-label="Academic years pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+                            {% endif %}
+                            <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+                            {% if page_obj.has_next %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i></i>
+                    <h5 class="text-muted">No academic years yet</h5>
+                    <p class="text-muted">Create an academic year first, then you can add classes to it.</p>
+                    <a href="{% url 'students:academic_year_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add First Academic Year
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

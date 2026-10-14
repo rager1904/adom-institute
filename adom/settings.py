@@ -105,6 +105,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'accounts.context_processors.role_ui',
+                'communication.context_processors.nav_notifications',
                 'adom.context_processors.seo',
             ],
             'builtins': [

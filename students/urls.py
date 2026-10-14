@@ -19,6 +19,12 @@ urlpatterns = [
     path('', views.DashboardView.as_view(), name='dashboard'),
     path('portal/', views.StudentPortalView.as_view(), name='student_portal'),
     
+    # Academic Year URLs
+    path('academic-years/', views.AcademicYearListView.as_view(), name='academic_year_list'),
+    path('academic-years/create/', views.AcademicYearCreateView.as_view(), name='academic_year_create'),
+    path('academic-years/<int:pk>/edit/', views.AcademicYearUpdateView.as_view(), name='academic_year_update'),
+    path('academic-years/<int:pk>/delete/', views.AcademicYearDeleteView.as_view(), name='academic_year_delete'),
+
     # Student URLs
     path('students/', views.StudentListView.as_view(), name='student_list'),
     path('students/create/', views.StudentCreateView.as_view(), name='student_create'),

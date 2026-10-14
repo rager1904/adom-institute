@@ -31,7 +31,9 @@ urlpatterns = [
     
     # Notifications
     path('notifications/', views.NotificationListView.as_view(), name='notification_list'),
+    path('notifications/mark-all-read/', views.notifications_mark_all_read, name='notifications_mark_all_read'),
     path('notifications/<int:pk>/', views.NotificationDetailView.as_view(), name='notification_detail'),
+    path('notifications/<int:pk>/go/', views.notification_go, name='notification_go'),
     path('notifications/<int:pk>/update/', views.NotificationUpdateView.as_view(), name='notification_update'),
 
     # Templates and logs

@@ -1,11 +1,16 @@
-from django.shortcuts import render, redirect
-from django.db.models import Q
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Q, Count
+from django.utils import timezone
 from django.contrib.auth import login, logout, authenticate
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.utils.decorators import method_decorator
-from django.views.generic import TemplateView, CreateView, UpdateView
+from django.views.decorators.http import require_POST
+from django.views.generic import (
+    TemplateView, CreateView, UpdateView, ListView, DetailView,
+)
 from django.contrib import messages
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -24,15 +29,18 @@ from .serializers import (
 )
 from .forms import (
     InstitutionRegistrationForm, TeacherRegistrationForm, UserRegistrationForm,
-    UserProfileForm
+    UserProfileForm, InstitutionProfileForm, InstitutionSearchForm,
+    OnboardingAcademicYearForm, OnboardingClassForm, OnboardingFeeCategoryForm,
+    OnboardingFeeStructureForm,
 )
 from .dashboard_services import build_dashboard_context
 from adom_institute.agents import list_agent_definitions
 from adom_institute.models import AIConversation, AIUsageLedger, AgentTask, KnowledgeDocument
 from adom_institute.rag import get_rag_blueprint
 from adom_institute.registry import get_ai_runtime_config, list_supported_model_profiles
-from students.models import Class, Student
+from students.models import AcademicYear, Class, Student
 from teachers.models import Teacher
+from fees.models import FeeCategory, FeeStructure
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -325,18 +333,62 @@ class AIHubView(TemplateView):
         return context
 
 
+def institution_pending_gate(user):
+    """Return the institution blocking access for an admin whose tenant is not
+    yet approved, or ``None`` when the user may proceed normally."""
+    if not user or not user.is_authenticated:
+        return None
+    if is_platform_admin(user) or user.is_superuser:
+        return None
+    memberships = user.institution_memberships.filter(
+        is_active=True,
+    ).select_related('institution')
+    admin_roles = {
+        InstitutionMembership.MembershipRole.OWNER,
+        InstitutionMembership.MembershipRole.ADMINISTRATOR,
+    }
+    has_admin_membership = (
+        user.user_type == 'administrator'
+        or memberships.filter(role__in=admin_roles).exists()
+    )
+    if not has_admin_membership:
+        return None
+    if memberships.filter(
+        institution__status=Institution.Status.APPROVED,
+        institution__is_active=True,
+    ).exists():
+        return None
+    blocking = memberships.exclude(
+        institution__status=Institution.Status.APPROVED,
+    ).first()
+    return blocking.institution if blocking else None
+
+
+class PlatformAdminRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return is_platform_admin(self.request.user)
+
+
 class DashboardView(TemplateView):
     template_name = 'accounts/dashboard.html'
     
     @method_decorator(login_required)
     def dispatch(self, *args, **kwargs):
+        blocking_institution = institution_pending_gate(self.request.user)
+        if blocking_institution is not None:
+            return redirect('accounts:institution_status')
         return super().dispatch(*args, **kwargs)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
         context['dashboard'] = build_dashboard_context(user)
-        
+
+        if is_platform_admin(user):
+            context['pending_institutions'] = Institution.objects.filter(
+                status=Institution.Status.PENDING
+            ).order_by('-created_at')[:10]
+
         # Add user-specific data based on user type
         if user.is_student:
             context['student_data'] = getattr(user, 'student_profile', None)
@@ -402,12 +454,324 @@ class TeacherRegisterView(CreateView):
 class InstitutionRegisterView(CreateView):
     template_name = 'accounts/register_institution.html'
     form_class = InstitutionRegistrationForm
-    success_url = reverse_lazy('accounts:login')
+    success_url = reverse_lazy('accounts:institution_submitted')
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        messages.success(self.request, 'Institution registration successful! Please log in as the owner account.')
+        institution = getattr(form, 'institution', None)
+        if institution is not None:
+            self.notify_admins(institution)
+        messages.success(
+            self.request,
+            'Institution registration submitted. We will review your application and email you once it is approved.',
+        )
         return response
+
+    @staticmethod
+    def notify_admins(institution):
+        from communication.notifications import notify_platform_admins
+
+        notify_platform_admins(
+            title='New institution awaiting approval',
+            message=f'{institution.name} submitted a registration and needs review.',
+            url=reverse('accounts:institution_detail', args=[institution.pk]),
+            action_label='Review',
+            is_urgent=True,
+        )
+
+
+class InstitutionSubmittedView(TemplateView):
+    template_name = 'accounts/institution_submitted.html'
+
+
+class InstitutionStatusView(LoginRequiredMixin, TemplateView):
+    template_name = 'accounts/institution_status.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.institution = None
+        if request.user.is_authenticated:
+            self.institution = institution_pending_gate(request.user)
+            if self.institution is None:
+                return redirect('accounts:dashboard')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['institution'] = self.institution
+        return context
+
+
+class PlatformInstitutionListView(PlatformAdminRequiredMixin, ListView):
+    model = Institution
+    template_name = 'accounts/institution_list.html'
+    context_object_name = 'institutions'
+    paginate_by = 20
+
+    def get_queryset(self):
+        queryset = Institution.objects.annotate(
+            member_count=Count('memberships', distinct=True),
+        )
+        self.search_form = InstitutionSearchForm(self.request.GET)
+        if self.search_form.is_valid():
+            q = (self.search_form.cleaned_data.get('q') or '').strip()
+            status_filter = self.search_form.cleaned_data.get('status')
+            if q:
+                queryset = queryset.filter(
+                    Q(name__icontains=q) | Q(code__icontains=q) | Q(email__icontains=q)
+                )
+            if status_filter:
+                queryset = queryset.filter(status=status_filter)
+        return queryset.order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_form'] = self.search_form
+        context['pending_count'] = Institution.objects.filter(
+            status=Institution.Status.PENDING
+        ).count()
+        context['status_choices'] = Institution.Status.choices
+        return context
+
+
+class PlatformInstitutionDetailView(PlatformAdminRequiredMixin, DetailView):
+    model = Institution
+    template_name = 'accounts/institution_detail.html'
+    context_object_name = 'institution'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        institution = self.object
+        context['memberships'] = institution.memberships.select_related('user').order_by('role', 'user__first_name')
+        context['academic_years'] = institution.academic_years.order_by('-start_date')
+        context['classes'] = Class.objects.filter(
+            academic_year__institution=institution
+        ).select_related('academic_year').order_by('display_name')[:50]
+        context['student_count'] = Student.objects.filter(
+            current_class__academic_year__institution=institution,
+            is_active=True,
+        ).count()
+        context['teacher_count'] = Teacher.objects.filter(
+            user__institution_memberships__institution=institution,
+        ).distinct().count()
+        context['fee_structure_count'] = FeeStructure.objects.filter(
+            academic_year__institution=institution,
+        ).count()
+        return context
+
+
+@login_required
+@user_passes_test(is_platform_admin, login_url='accounts:login')
+@require_POST
+def institution_approve(request, pk):
+    institution = get_object_or_404(Institution, pk=pk)
+    institution.approve(approved_by=request.user)
+    _notify_institution_decision(
+        institution,
+        title='Institution approved',
+        message=f'{institution.name} has been approved. You can now complete setup and start adding records.',
+        url=reverse('accounts:onboarding'),
+        action_label='Set up',
+    )
+    messages.success(request, f'{institution.name} has been approved.')
+    return redirect('accounts:institution_detail', pk=pk)
+
+
+@login_required
+@user_passes_test(is_platform_admin, login_url='accounts:login')
+@require_POST
+def institution_reject(request, pk):
+    institution = get_object_or_404(Institution, pk=pk)
+    reason = (request.POST.get('reason') or '').strip()
+    institution.reject(reason=reason, approved_by=request.user)
+    message = f'The registration for {institution.name} was not approved.'
+    if reason:
+        message = f'{message} Reason: {reason}'
+    _notify_institution_decision(
+        institution,
+        title='Registration not approved',
+        message=message,
+        url=reverse('accounts:institution_status'),
+        action_label='View',
+        is_urgent=True,
+    )
+    messages.warning(request, f'{institution.name} has been rejected.')
+    return redirect('accounts:institution_detail', pk=pk)
+
+
+@login_required
+@user_passes_test(is_platform_admin, login_url='accounts:login')
+@require_POST
+def institution_suspend(request, pk):
+    institution = get_object_or_404(Institution, pk=pk)
+    institution.status = Institution.Status.SUSPENDED
+    institution.is_active = False
+    institution.save(update_fields=['status', 'is_active', 'updated_at'])
+    _notify_institution_decision(
+        institution,
+        title='Institution suspended',
+        message=f'Access for {institution.name} has been suspended. Contact support for more information.',
+        url=reverse('accounts:institution_status'),
+        action_label='View',
+        is_urgent=True,
+    )
+    messages.warning(request, f'{institution.name} has been suspended.')
+    return redirect('accounts:institution_detail', pk=pk)
+
+
+@login_required
+@user_passes_test(is_platform_admin, login_url='accounts:login')
+@require_POST
+def institution_reactivate(request, pk):
+    institution = get_object_or_404(Institution, pk=pk)
+    institution.approve(approved_by=request.user)
+    _notify_institution_decision(
+        institution,
+        title='Institution reactivated',
+        message=f'Access for {institution.name} has been restored.',
+        url=reverse('accounts:dashboard'),
+        action_label='Open',
+    )
+    messages.success(request, f'{institution.name} has been reactivated.')
+    return redirect('accounts:institution_detail', pk=pk)
+
+
+def _notify_institution_decision(institution, *, title, message, url='', action_label='', is_urgent=False):
+    """Notify an institution's administrators about an approval decision."""
+    from communication.notifications import notify_institution_admins
+
+    notify_institution_admins(
+        institution,
+        title=title,
+        message=message,
+        url=url,
+        action_label=action_label,
+        is_urgent=is_urgent,
+    )
+
+
+class InstitutionOnboardingView(LoginRequiredMixin, TemplateView):
+    template_name = 'accounts/onboarding.html'
+    STEPS = ['profile', 'academic_year', 'class', 'fee_category', 'fee_structure', 'done']
+    STEP_TITLES = {
+        'profile': 'School profile',
+        'academic_year': 'Academic year',
+        'class': 'Classes',
+        'fee_category': 'Fee categories',
+        'fee_structure': 'Fee structure',
+        'done': 'Finish',
+    }
+
+    def get_institution(self):
+        memberships = self.request.user.institution_memberships.select_related('institution')
+        admin_roles = {
+            InstitutionMembership.MembershipRole.OWNER,
+            InstitutionMembership.MembershipRole.ADMINISTRATOR,
+        }
+        membership = (
+            memberships.filter(role__in=admin_roles).first()
+            or memberships.first()
+        )
+        return membership.institution if membership else None
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        self.institution = self.get_institution()
+        if self.institution is None:
+            messages.info(request, 'You are not linked to an institution to set up.')
+            return redirect('accounts:dashboard')
+        if self.institution.status != Institution.Status.APPROVED:
+            return redirect('accounts:institution_status')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_step(self):
+        step = self.request.POST.get('step') or self.request.GET.get('step') or 'profile'
+        if step not in self.STEPS:
+            step = 'profile'
+        return step
+
+    def get_form(self, step):
+        institution = self.institution
+        data = self.request.POST or None
+        if step == 'profile':
+            return InstitutionProfileForm(data, instance=institution)
+        if step == 'academic_year':
+            return OnboardingAcademicYearForm(data)
+        if step == 'class':
+            year = institution.academic_years.order_by('-start_date').first()
+            return OnboardingClassForm(data, academic_year=year)
+        if step == 'fee_category':
+            return OnboardingFeeCategoryForm(data)
+        if step == 'fee_structure':
+            return OnboardingFeeStructureForm(data, institution=institution)
+        return None
+
+    def post(self, request, *args, **kwargs):
+        step = self.get_step()
+        form = self.get_form(step)
+        if form is None:
+            return redirect(f"{reverse_lazy('accounts:onboarding')}?step=done")
+        if form.is_valid():
+            self.save_step(step, form)
+            messages.success(request, f'{self.STEP_TITLES.get(step, step)} saved.')
+            next_index = self.STEPS.index(step) + 1
+            next_step = self.STEPS[min(next_index, len(self.STEPS) - 1)]
+            if next_step == 'done':
+                self.institution.onboarding_completed = True
+                self.institution.save(update_fields=['onboarding_completed', 'updated_at'])
+            return redirect(f"{reverse_lazy('accounts:onboarding')}?step={next_step}")
+        return self.render_to_response(self.get_context_data(step=step, form=form))
+
+    def save_step(self, step, form):
+        if step == 'academic_year':
+            academic_year = form.save(commit=False)
+            academic_year.institution = self.institution
+            academic_year.save()
+        else:
+            form.save()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        step = kwargs.get('step') or self.get_step()
+        context['institution'] = self.institution
+        context['step'] = step
+        context['step_title'] = self.STEP_TITLES.get(step, step)
+        context['form'] = kwargs.get('form') or self.get_form(step)
+        context['steps'] = [
+            {
+                'key': key,
+                'title': self.STEP_TITLES[key],
+                'complete': self.step_complete(key),
+                'active': key == step,
+            }
+            for key in self.STEPS
+        ]
+        context['progress'] = self.step_progress()
+        return context
+
+    def step_complete(self, key):
+        institution = self.institution
+        if key == 'profile':
+            return bool(institution.address or institution.phone_number or institution.province)
+        if key == 'academic_year':
+            return institution.academic_years.exists()
+        if key == 'class':
+            return Class.objects.filter(academic_year__institution=institution).exists()
+        if key == 'fee_category':
+            return FeeCategory.objects.exists()
+        if key == 'fee_structure':
+            return FeeStructure.objects.filter(academic_year__institution=institution).exists()
+        return False
+
+    def step_progress(self):
+        trackable = [key for key in self.STEPS if key != 'done']
+        completed = sum(1 for key in trackable if self.step_complete(key))
+        total = len(trackable)
+        return {
+            'completed': completed,
+            'total': total,
+            'percent': int(round((completed / total) * 100)) if total else 0,
+        }
 
 
 class ProfileView(UpdateView):

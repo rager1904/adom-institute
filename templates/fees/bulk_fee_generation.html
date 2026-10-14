@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (data.success) {
                             let html = '<h6>Fee Categories:</h6><ul class="list-unstyled small">';
                             data.details.forEach(detail => {
-                                html += `<li><i class="fas fa-tag me-2"></i>${detail.category_name}: ₹${detail.amount}</li>`;
+                                html += `<li><i class="fas fa-tag me-2"></i>${detail.category_name}: K${detail.amount}</li>`;
                             });
                             html += '</ul>';
                             previewDiv.innerHTML = html;

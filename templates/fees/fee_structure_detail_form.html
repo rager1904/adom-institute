@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit fee item{% else %}Add fee item{% endif %} - ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">
+            <i class="fas fa-list me-3 text-primary"></i>
+            {% if form.instance.pk %}Edit fee item{% else %}Add fee item{% endif %}
+        </h2>
+        <p class="text-muted mb-0">{{ fee_structure.name }} &middot; {{ fee_structure.class_obj.display_name }}</p>
+    </div>
+    <a href="{% url 'fees:fee_structure_detail' fee_structure.pk %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to structure
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors.0 }}</div>
+                    {% endif %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        {% if field.field.widget.input_type == 'checkbox' %}
+                            <div class="form-check">
+                                {{ field }}
+                                <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            </div>
+                        {% else %}
+                            <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                        {% endif %}
+                        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                        {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    {% endfor %}
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'fees:fee_structure_detail' fee_structure.pk %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>{% if form.instance.pk %}Update{% else %}Add{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm bg-light">
+            <div class="card-body">
+                <h6 class="fw-semibold"><i class="fas fa-circle-info me-2 text-primary"></i>Tip</h6>
+                <p class="text-muted mb-0">Create fee categories first if the category you need is not listed.</p>
+                <a href="{% url 'fees:fee_category_create' %}" class="btn btn-sm btn-outline-primary mt-3">
+                    <i class="fas fa-plus me-1"></i>New category
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

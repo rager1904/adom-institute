@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ fee_structure.name }} - ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+    <div>
+        <a href="{% url 'fees:fee_structure_list' %}" class="text-muted small text-decoration-none">
+            <i class="fas fa-arrow-left me-1"></i>All fee structures
+        </a>
+        <h2 class="mb-1 mt-1"><i class="fas fa-layer-group me-2 text-primary"></i>{{ fee_structure.name }}</h2>
+        <p class="text-muted mb-0">
+            {{ fee_structure.class_obj.display_name }} &middot; {{ fee_structure.academic_year.name }} &middot; {{ fee_structure.get_fee_type_display }}
+            {% if fee_structure.is_active %}
+                <span class="badge bg-success ms-2">Active</span>
+            {% else %}
+                <span class="badge bg-secondary ms-2">Inactive</span>
+            {% endif %}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'fees:student_fee_list' %}" class="btn btn-outline-primary">
+            <i class="fas fa-file-invoice-dollar me-2"></i>Student fees
+        </a>
+        {% if role_ui.can_manage_finance %}
+        <a href="{% url 'fees:fee_structure_update' fee_structure.pk %}" class="btn btn-outline-warning">
+            <i class="fas fa-edit me-2"></i>Edit structure
+        </a>
+        <a href="{% url 'fees:fee_structure_line_create' fee_structure.pk %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add fee item
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>Fee items</h5>
+        <span class="fw-semibold">Total: {{ total_amount }}</span>
+    </div>
+    <div class="card-body p-0">
+        {% if details %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Optional</th>
+                        <th>Due date</th>
+                        {% if role_ui.can_manage_finance %}<th class="text-end">Actions</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for detail in details %}
+                    <tr>
+                        <td class="fw-semibold">{{ detail.fee_category.name }}</td>
+                        <td>{{ detail.amount }}</td>
+                        <td>
+                            {% if detail.is_optional %}
+                                <span class="badge bg-info text-dark">Optional</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark">Required</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ detail.due_date|date:"d M Y"|default:"-" }}</td>
+                        {% if role_ui.can_manage_finance %}
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <a href="{% url 'fees:fee_structure_line_update' detail.pk %}" class="btn btn-sm btn-outline-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'fees:fee_structure_line_delete' detail.pk %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-list fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No fee items yet</h5>
+            <p class="text-muted">Add categories and amounts to this structure.</p>
+            {% if role_ui.can_manage_finance %}
+            <a href="{% url 'fees:fee_structure_line_create' fee_structure.pk %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add first fee item
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

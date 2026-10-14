@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Institution status - ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-5">
+                    <h2 class="mb-1">
+                        <i class="fas fa-building-columns me-2 text-primary"></i>{{ institution.name }}
+                    </h2>
+                    <p class="text-muted">{{ institution.code }} &middot; {{ institution.get_institution_type_display }}</p>
+
+                    {% if institution.status == 'pending' %}
+                        <div class="alert alert-warning d-flex align-items-start">
+                            <i class="fas fa-hourglass-half fa-2x me-3"></i>
+                            <div>
+                                <h5 class="alert-heading mb-1">Awaiting approval</h5>
+                                <p class="mb-0">Your institution registration is being reviewed. You will be able to use the dashboard once an administrator approves your account.</p>
+                            </div>
+                        </div>
+                    {% elif institution.status == 'rejected' %}
+                        <div class="alert alert-danger d-flex align-items-start">
+                            <i class="fas fa-circle-xmark fa-2x me-3"></i>
+                            <div>
+                                <h5 class="alert-heading mb-1">Registration not approved</h5>
+                                <p class="mb-1">Unfortunately your institution registration was not approved.</p>
+                                {% if institution.rejection_reason %}
+                                    <p class="mb-0"><strong>Reason:</strong> {{ institution.rejection_reason }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% elif institution.status == 'suspended' %}
+                        <div class="alert alert-secondary d-flex align-items-start">
+                            <i class="fas fa-ban fa-2x me-3"></i>
+                            <div>
+                                <h5 class="alert-heading mb-1">Account suspended</h5>
+                                <p class="mb-0">Access to this institution has been suspended. Please contact ADOM Institute support for assistance.</p>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <p class="text-muted mb-4">
+                        If you believe this is an error or need further assistance, please
+                        <a href="{% url 'public_contact' %}">contact us</a>.
+                    </p>
+
+                    <a href="{% url 'accounts:logout' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-right-from-bracket me-2"></i>Sign out
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

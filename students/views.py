@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.http import JsonResponse
@@ -41,6 +41,22 @@ def scope_students_for_request(request, queryset):
 
 def scope_institution_for_request(request, queryset, lookup):
     return InstitutionAccessMixin.scope_institution_queryset(type('Scoped', (), {'request': request})(), queryset, lookup)
+
+
+def get_primary_institution(user):
+    """Return the institution the user administers (or is a member of)."""
+    from accounts.models import InstitutionMembership
+
+    memberships = user.institution_memberships.select_related('institution')
+    admin_roles = {
+        InstitutionMembership.MembershipRole.OWNER,
+        InstitutionMembership.MembershipRole.ADMINISTRATOR,
+    }
+    membership = (
+        memberships.filter(role__in=admin_roles).first()
+        or memberships.first()
+    )
+    return membership.institution if membership else None
 
 
 # API Viewsets
@@ -559,24 +575,37 @@ class StudentDetailView(LoginRequiredMixin, StudentAccessMixin, DetailView):
         )
 
 
-class StudentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class StudentCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
     model = Student
     form_class = StudentForm
     template_name = 'students/student_form.html'
-    permission_required = 'students.add_student'
     success_url = reverse_lazy('students:student_list')
-    
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['institution'] = get_primary_institution(self.request.user)
+        return kwargs
+
     def form_valid(self, form):
         messages.success(self.request, 'Student created successfully!')
         return super().form_valid(form)
 
 
-class StudentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class StudentUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
     model = Student
     form_class = StudentForm
     template_name = 'students/student_form.html'
-    permission_required = 'students.change_student'
-    
+
+    def get_queryset(self):
+        return self.scope_student_queryset(
+            Student.objects.select_related('user', 'current_class__academic_year__institution')
+        )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['institution'] = get_primary_institution(self.request.user)
+        return kwargs
+
     def get_success_url(self):
         return reverse('students:student_detail', kwargs={'pk': self.object.pk})
     
@@ -585,14 +614,87 @@ class StudentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
         return super().form_valid(form)
 
 
-class StudentDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class StudentDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
     model = Student
     template_name = 'students/student_confirm_delete.html'
-    permission_required = 'students.delete_student'
     success_url = reverse_lazy('students:student_list')
-    
+
+    def get_queryset(self):
+        return self.scope_student_queryset(
+            Student.objects.select_related('user', 'current_class__academic_year__institution')
+        )
+
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Student deleted successfully!')
+        return super().delete(request, *args, **kwargs)
+
+
+class AcademicYearListView(LoginRequiredMixin, InstitutionAccessMixin, ListView):
+    model = AcademicYear
+    template_name = 'students/academic_year_list.html'
+    context_object_name = 'academic_years'
+    paginate_by = 20
+
+    def get_queryset(self):
+        queryset = AcademicYear.objects.select_related('institution').annotate(
+            class_count=Count('classes')
+        )
+        return self.scope_institution_queryset(
+            queryset, 'institution_id'
+        ).order_by('-start_date')
+
+
+class AcademicYearCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
+    model = AcademicYear
+    form_class = AcademicYearForm
+    template_name = 'students/academic_year_form.html'
+    success_url = reverse_lazy('students:academic_year_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['institution'] = get_primary_institution(self.request.user)
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.institution = get_primary_institution(self.request.user)
+        messages.success(self.request, 'Academic year created successfully!')
+        return super().form_valid(form)
+
+
+class AcademicYearUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
+    model = AcademicYear
+    form_class = AcademicYearForm
+    template_name = 'students/academic_year_form.html'
+    success_url = reverse_lazy('students:academic_year_list')
+
+    def get_queryset(self):
+        return self.scope_institution_queryset(
+            AcademicYear.objects.select_related('institution'), 'institution_id'
+        )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['institution'] = get_primary_institution(self.request.user)
+        return kwargs
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Academic year updated successfully!')
+        return super().form_valid(form)
+
+
+class AcademicYearDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
+    model = AcademicYear
+    template_name = 'students/academic_year_confirm_delete.html'
+    context_object_name = 'academic_year'
+    success_url = reverse_lazy('students:academic_year_list')
+
+    def get_queryset(self):
+        return self.scope_institution_queryset(
+            AcademicYear.objects.select_related('institution'), 'institution_id'
+        )
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Academic year deleted successfully!')
         return super().delete(request, *args, **kwargs)
 
 
@@ -661,24 +763,38 @@ class ClassDetailView(LoginRequiredMixin, InstitutionAccessMixin, DetailView):
         return self.scope_institution_queryset(queryset, 'academic_year__institution_id')
 
 
-class ClassCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class ClassCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
     model = Class
     form_class = ClassForm
     template_name = 'students/class_form.html'
-    permission_required = 'students.add_class'
     success_url = reverse_lazy('students:class_list')
-    
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['institution'] = get_primary_institution(self.request.user)
+        return kwargs
+
     def form_valid(self, form):
         messages.success(self.request, 'Class created successfully!')
         return super().form_valid(form)
 
 
-class ClassUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class ClassUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
     model = Class
     form_class = ClassForm
     template_name = 'students/class_form.html'
-    permission_required = 'students.change_class'
-    
+
+    def get_queryset(self):
+        return self.scope_institution_queryset(
+            Class.objects.select_related('academic_year__institution'),
+            'academic_year__institution_id'
+        )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['institution'] = get_primary_institution(self.request.user)
+        return kwargs
+
     def get_success_url(self):
         return reverse('students:class_detail', kwargs={'pk': self.object.pk})
     
@@ -687,10 +803,9 @@ class ClassUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class ClassDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class ClassDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
     model = Class
     template_name = 'students/class_confirm_delete.html'
-    permission_required = 'students.delete_class'
     context_object_name = 'class_obj'
     success_url = reverse_lazy('students:class_list')
     
@@ -805,11 +920,10 @@ class ParentDetailView(LoginRequiredMixin, InstitutionAccessMixin, DetailView):
         return queryset.none()
 
 
-class ParentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class ParentCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
     model = Parent
     form_class = ParentForm
     template_name = 'students/parent_form.html'
-    permission_required = 'students.add_parent'
     success_url = reverse_lazy('students:parent_list')
     
     def form_valid(self, form):
@@ -817,11 +931,10 @@ class ParentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ParentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class ParentUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
     model = Parent
     form_class = ParentForm
     template_name = 'students/parent_form.html'
-    permission_required = 'students.change_parent'
     
     def get_success_url(self):
         return reverse('students:parent_detail', kwargs={'pk': self.object.pk})
@@ -831,10 +944,9 @@ class ParentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class ParentDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class ParentDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
     model = Parent
     template_name = 'students/parent_confirm_delete.html'
-    permission_required = 'students.delete_parent'
     success_url = reverse_lazy('students:parent_list')
     
     def delete(self, request, *args, **kwargs):

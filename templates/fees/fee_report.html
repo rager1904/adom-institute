@@ -73,7 +73,7 @@
     <div class="col-md-3">
         <div class="card border-0 shadow-sm text-center">
             <div class="card-body bg-primary text-white">
-                <div class="h3 mb-1" id="totalAmount">₹0</div>
+                <div class="h3 mb-1" id="totalAmount">K0</div>
                 <div class="small">Total Amount</div>
             </div>
         </div>
@@ -81,7 +81,7 @@
     <div class="col-md-3">
         <div class="card border-0 shadow-sm text-center">
             <div class="card-body bg-success text-white">
-                <div class="h3 mb-1" id="collectedAmount">₹0</div>
+                <div class="h3 mb-1" id="collectedAmount">K0</div>
                 <div class="small">Collected Amount</div>
             </div>
         </div>
@@ -89,7 +89,7 @@
     <div class="col-md-3">
         <div class="card border-0 shadow-sm text-center">
             <div class="card-body bg-warning text-white">
-                <div class="h3 mb-1" id="outstandingAmount">₹0</div>
+                <div class="h3 mb-1" id="outstandingAmount">K0</div>
                 <div class="small">Outstanding Amount</div>
             </div>
         </div>
@@ -158,7 +158,7 @@
                                 <span class="badge bg-light text-dark">{{ payment.student_fee.fee_structure_detail.fee_category.name }}</span>
                             </td>
                             <td>
-                                <span class="fw-semibold text-success">₹{{ payment.amount }}</span>
+                                <span class="fw-semibold text-success">K{{ payment.amount }}</span>
                             </td>
                             <td>
                                 <span class="badge bg-light text-dark">{{ payment.get_payment_method_display }}</span>
@@ -215,13 +215,13 @@
                                 <span class="badge bg-light text-dark">{{ fee.fee_structure_detail.fee_category.name }}</span>
                             </td>
                             <td>
-                                <span class="fw-semibold">₹{{ fee.amount }}</span>
+                                <span class="fw-semibold">K{{ fee.amount }}</span>
                             </td>
                             <td>
-                                <span class="text-success">₹{{ fee.paid_amount }}</span>
+                                <span class="text-success">K{{ fee.paid_amount }}</span>
                             </td>
                             <td>
-                                <span class="text-danger fw-semibold">₹{{ fee.balance_amount }}</span>
+                                <span class="text-danger fw-semibold">K{{ fee.balance_amount }}</span>
                             </td>
                             <td>
                                 <small class="text-muted">{{ fee.due_date|date:"M d, Y" }}</small>
@@ -249,9 +249,9 @@
                     <div class="col-md-6">
                         <h6>Summary Statistics</h6>
                         <ul class="list-unstyled">
-                            <li><strong>Total Collection:</strong> ₹{{ report_data.total_collection }}</li>
-                            <li><strong>Total Outstanding:</strong> ₹{{ report_data.total_outstanding }}</li>
-                            <li><strong>Total Discounts:</strong> ₹{{ report_data.total_discounts }}</li>
+                            <li><strong>Total Collection:</strong> K{{ report_data.total_collection }}</li>
+                            <li><strong>Total Outstanding:</strong> K{{ report_data.total_outstanding }}</li>
+                            <li><strong>Total Discounts:</strong> K{{ report_data.total_discounts }}</li>
                         </ul>
                     </div>
                     <div class="col-md-6">
@@ -336,9 +336,9 @@ document.addEventListener('DOMContentLoaded', function() {
         collectedAmount = totalAmount - outstandingAmount;
     {% endif %}
     
-    document.getElementById('totalAmount').textContent = '₹' + totalAmount.toLocaleString();
-    document.getElementById('collectedAmount').textContent = '₹' + collectedAmount.toLocaleString();
-    document.getElementById('outstandingAmount').textContent = '₹' + outstandingAmount.toLocaleString();
+    document.getElementById('totalAmount').textContent = 'K' + totalAmount.toLocaleString();
+    document.getElementById('collectedAmount').textContent = 'K' + collectedAmount.toLocaleString();
+    document.getElementById('outstandingAmount').textContent = 'K' + outstandingAmount.toLocaleString();
     
     const collectionPercentage = totalAmount > 0 ? ((collectedAmount / totalAmount) * 100).toFixed(1) : 0;
     document.getElementById('collectionPercentage').textContent = collectionPercentage + '%';

@@ -108,18 +108,18 @@
                             <span class="badge bg-light text-dark">{{ fee.fee_structure_detail.fee_category.name }}</span>
                         </td>
                         <td>
-                            <span class="fw-semibold">₹{{ fee.amount }}</span>
+                            <span class="fw-semibold">K{{ fee.amount }}</span>
                         </td>
                         <td>
-                            <span class="text-success">₹{{ fee.paid_amount }}</span>
+                            <span class="text-success">K{{ fee.paid_amount }}</span>
                         </td>
                         <td>
                             {% if fee.balance_amount == 0 %}
-                                <span class="text-success fw-semibold">₹{{ fee.balance_amount }}</span>
+                                <span class="text-success fw-semibold">K{{ fee.balance_amount }}</span>
                             {% elif fee.balance_amount < 0 %}
-                                <span class="text-danger fw-semibold">₹{{ fee.balance_amount }}</span>
+                                <span class="text-danger fw-semibold">K{{ fee.balance_amount }}</span>
                             {% else %}
-                                <span class="text-warning fw-semibold">₹{{ fee.balance_amount }}</span>
+                                <span class="text-warning fw-semibold">K{{ fee.balance_amount }}</span>
                             {% endif %}
                         </td>
                         <td>

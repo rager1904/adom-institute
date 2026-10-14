@@ -29,7 +29,7 @@
     <div class="col-md-3">
         <div class="card border-0 shadow-sm text-center">
             <div class="card-body bg-primary text-white">
-                <div class="h3 mb-1">₹{{ total_collection|floatformat:0 }}</div>
+                <div class="h3 mb-1">K{{ total_collection|floatformat:0 }}</div>
                 <div class="small">Total Collection</div>
             </div>
         </div>
@@ -45,7 +45,7 @@
     <div class="col-md-3">
         <div class="card border-0 shadow-sm text-center">
             <div class="card-body bg-warning text-white">
-                <div class="h3 mb-1">₹{{ pending_amount|floatformat:0 }}</div>
+                <div class="h3 mb-1">K{{ pending_amount|floatformat:0 }}</div>
                 <div class="small">Pending Amount</div>
             </div>
         </div>
@@ -53,7 +53,7 @@
     <div class="col-md-3">
         <div class="card border-0 shadow-sm text-center">
             <div class="card-body bg-danger text-white">
-                <div class="h3 mb-1">₹{{ overdue_amount|floatformat:0 }}</div>
+                <div class="h3 mb-1">K{{ overdue_amount|floatformat:0 }}</div>
                 <div class="small">Overdue Amount</div>
             </div>
         </div>
@@ -142,7 +142,7 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="fw-semibold text-success">₹{{ payment.amount }}</span>
+                                    <span class="fw-semibold text-success">K{{ payment.amount }}</span>
                                 </td>
                                 <td>
                                     <span class="badge bg-light text-dark">{{ payment.get_payment_method_display }}</span>
@@ -197,7 +197,7 @@
                                 <small class="text-muted">{{ fee.fee_structure_detail.fee_category.name }}</small>
                             </div>
                             <div class="text-end">
-                                <div class="fw-semibold text-danger">₹{{ fee.balance_amount }}</div>
+                                <div class="fw-semibold text-danger">K{{ fee.balance_amount }}</div>
                                 <small class="text-muted">{{ fee.due_date|date:"M d" }}</small>
                             </div>
                         </div>

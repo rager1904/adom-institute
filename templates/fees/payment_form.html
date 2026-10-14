@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const enteredAmount = parseFloat(this.value);
                 
                 if (enteredAmount > balanceAmount) {
-                    this.setCustomValidity(`Amount cannot exceed balance (₹${balanceAmount})`);
+                    this.setCustomValidity(`Amount cannot exceed balance (K${balanceAmount})`);
                 } else {
                     this.setCustomValidity('');
                 }

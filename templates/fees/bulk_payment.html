@@ -180,13 +180,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedOptions.forEach(option => {
                     const feeData = option.dataset;
                     if (feeData.studentName && feeData.feeCategory && feeData.balanceAmount) {
-                        html += `<li><i class="fas fa-tag me-2"></i>${feeData.studentName} - ${feeData.feeCategory}: ₹${feeData.balanceAmount}</li>`;
+                        html += `<li><i class="fas fa-tag me-2"></i>${feeData.studentName} - ${feeData.feeCategory}: K${feeData.balanceAmount}</li>`;
                         totalAmount += parseFloat(feeData.balanceAmount);
                     }
                 });
                 
                 html += '</ul>';
-                html += `<div class="mt-2 p-2 bg-light rounded"><strong>Total Amount:</strong> ₹${totalAmount.toFixed(2)}</div>`;
+                html += `<div class="mt-2 p-2 bg-light rounded"><strong>Total Amount:</strong> K${totalAmount.toFixed(2)}</div>`;
                 previewDiv.innerHTML = html;
             } else {
                 previewDiv.innerHTML = '<p class="text-muted small">Select student fees to see their details</p>';

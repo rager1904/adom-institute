@@ -158,6 +158,7 @@ class Notification(models.Model):
         EXAM = 'exam', _('Exam')
         FEE = 'fee', _('Fee')
         ASSIGNMENT = 'assignment', _('Assignment')
+        APPROVAL = 'approval', _('Approval Request')
         SYSTEM = 'system', _('System')
     
     class NotificationStatus(models.TextChoices):
@@ -176,7 +177,11 @@ class Notification(models.Model):
     # Related objects
     related_message = models.ForeignKey(Message, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
     related_announcement = models.ForeignKey(Announcement, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
-    
+
+    # Where the notification points to, and an optional quick-action label
+    url = models.CharField(max_length=500, blank=True, help_text='Page to open when the notification is selected')
+    action_label = models.CharField(max_length=50, blank=True, help_text="Optional action button label, e.g. 'Review'")
+
     # Notification status
     status = models.CharField(max_length=20, choices=NotificationStatus.choices, default=NotificationStatus.PENDING)
     sent_at = models.DateTimeField(blank=True, null=True)

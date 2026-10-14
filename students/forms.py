@@ -9,12 +9,16 @@ class AcademicYearForm(forms.ModelForm):
         model = AcademicYear
         fields = ['name', 'start_date', 'end_date', 'is_active']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., 2024-2025'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., 2026'}),
             'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
-    
+
+    def __init__(self, *args, institution=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.institution = institution
+
     def clean(self):
         cleaned_data = super().clean()
         start_date = cleaned_data.get('start_date')
@@ -30,6 +34,8 @@ class AcademicYearForm(forms.ModelForm):
                     start_date__lte=end_date,
                     end_date__gte=start_date
                 )
+                if self.institution is not None:
+                    overlapping = overlapping.filter(institution=self.institution)
                 if overlapping.exists():
                     raise forms.ValidationError("This academic year overlaps with an existing one.")
         
@@ -48,7 +54,15 @@ class ClassForm(forms.ModelForm):
             'capacity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '100'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
-    
+
+    def __init__(self, *args, institution=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.institution = institution
+        if institution is not None:
+            self.fields['academic_year'].queryset = AcademicYear.objects.filter(
+                institution=institution
+            ).order_by('-start_date')
+
     def clean(self):
         cleaned_data = super().clean()
         name = cleaned_data.get('name')
@@ -93,8 +107,13 @@ class StudentForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, institution=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.institution = institution
+        if institution is not None:
+            self.fields['current_class'].queryset = Class.objects.filter(
+                academic_year__institution=institution, is_active=True
+            ).select_related('academic_year').order_by('-academic_year__start_date', 'name')
         if self.instance.pk and self.instance.user:
             self.fields['first_name'].initial = self.instance.user.first_name
             self.fields['last_name'].initial = self.instance.user.last_name

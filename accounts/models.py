@@ -16,6 +16,12 @@ class Institution(models.Model):
         TRAINING_CENTER = 'training_center', _('Training Center')
         OTHER = 'other', _('Other')
 
+    class Status(models.TextChoices):
+        PENDING = 'pending', _('Pending approval')
+        APPROVED = 'approved', _('Approved')
+        REJECTED = 'rejected', _('Rejected')
+        SUSPENDED = 'suspended', _('Suspended')
+
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=50, unique=True)
     institution_type = models.CharField(
@@ -31,6 +37,21 @@ class Institution(models.Model):
     email = models.EmailField(blank=True, null=True)
     website = models.URLField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    rejection_reason = models.TextField(blank=True, null=True)
+    approved_at = models.DateTimeField(blank=True, null=True)
+    approved_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_institutions',
+    )
+    onboarding_completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -40,6 +61,37 @@ class Institution(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_approved(self):
+        return self.status == self.Status.APPROVED
+
+    @property
+    def is_pending(self):
+        return self.status == self.Status.PENDING
+
+    def approve(self, approved_by=None):
+        from django.utils import timezone as _timezone
+        self.status = self.Status.APPROVED
+        self.is_active = True
+        self.rejection_reason = None
+        self.approved_at = _timezone.now()
+        if approved_by is not None:
+            self.approved_by = approved_by
+        self.save(update_fields=[
+            'status', 'is_active', 'rejection_reason', 'approved_at',
+            'approved_by', 'updated_at',
+        ])
+
+    def reject(self, reason='', approved_by=None):
+        self.status = self.Status.REJECTED
+        self.is_active = False
+        self.rejection_reason = reason or ''
+        if approved_by is not None:
+            self.approved_by = approved_by
+        self.save(update_fields=[
+            'status', 'is_active', 'rejection_reason', 'approved_by', 'updated_at',
+        ])
 
 
 class UserManager(BaseUserManager):

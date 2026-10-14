@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Institutions - ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-building-columns me-3 text-primary"></i>Institutions
+        </h2>
+        <p class="text-muted mb-0">Review, approve and manage registered institutions.</p>
+    </div>
+    {% if pending_count %}
+    <span class="badge bg-warning text-dark fs-6">
+        <i class="fas fa-hourglass-half me-1"></i>{{ pending_count }} pending
+    </span>
+    {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-8">
+                <label class="form-label fw-semibold">Search</label>
+                {{ search_form.q }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Status</label>
+                {{ search_form.status }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if institutions %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Institution</th>
+                        <th>Type</th>
+                        <th>Location</th>
+                        <th>Members</th>
+                        <th>Status</th>
+                        <th>Registered</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for institution in institutions %}
+                    <tr>
+                        <td>
+                            <h6 class="mb-0">{{ institution.name }}</h6>
+                            <small class="text-muted">{{ institution.code }}</small>
+                        </td>
+                        <td>{{ institution.get_institution_type_display }}</td>
+                        <td>
+                            {% if institution.district or institution.province %}
+                                {{ institution.district }}{% if institution.district and institution.province %}, {% endif %}{{ institution.province }}
+                            {% else %}
+                                <span class="text-muted">{{ institution.country }}</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-light text-dark">{{ institution.member_count }}</span></td>
+                        <td>
+                            {% if institution.status == 'approved' %}
+                                <span class="badge bg-success">Approved</span>
+                            {% elif institution.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif institution.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Suspended</span>
+                            {% endif %}
+                        </td>
+                        <td><small class="text-muted">{{ institution.created_at|date:"d M Y" }}</small></td>
+                        <td class="text-end">
+                            <a href="{% url 'accounts:institution_detail' institution.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-building-columns fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No institutions found</h5>
+            <p class="text-muted mb-0">Try adjusting your search or filters.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if is_paginated %}
+<nav class="mt-4" aria-label="Institutions pagination">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">&laquo;</a>
+            </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">&raquo;</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

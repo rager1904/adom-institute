@@ -5,8 +5,9 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import Institution, InstitutionMembership, User, UserProfile
-from students.models import Class, Student
+from students.models import AcademicYear, Class, Student
 from teachers.models import Teacher
+from fees.models import FeeCategory, FeeStructure
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -64,10 +65,13 @@ class UserRegistrationForm(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['institution'].queryset = Institution.objects.filter(is_active=True).order_by('name')
+        self.fields['institution'].queryset = Institution.objects.filter(
+            is_active=True, status=Institution.Status.APPROVED
+        ).order_by('name')
         self.fields['current_class'].queryset = Class.objects.filter(
             is_active=True,
             academic_year__institution__is_active=True,
+            academic_year__institution__status=Institution.Status.APPROVED,
         ).select_related('academic_year', 'academic_year__institution').order_by(
             'academic_year__institution__name',
             'display_name',
@@ -266,7 +270,9 @@ class TeacherRegistrationForm(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['institution'].queryset = Institution.objects.filter(is_active=True).order_by('name')
+        self.fields['institution'].queryset = Institution.objects.filter(
+            is_active=True, status=Institution.Status.APPROVED
+        ).order_by('name')
         self.fields['password1'].widget.attrs.update({'class': 'form-control', 'autocomplete': 'new-password'})
         self.fields['password2'].widget.attrs.update({'class': 'form-control', 'autocomplete': 'new-password'})
 
@@ -454,6 +460,7 @@ class InstitutionRegistrationForm(UserCreationForm):
                     email=self.cleaned_data.get('institution_email') or '',
                     website=self.cleaned_data.get('website') or '',
                     is_active=True,
+                    status=Institution.Status.PENDING,
                 )
                 user.save()
                 UserProfile.objects.get_or_create(user=user)
@@ -462,6 +469,7 @@ class InstitutionRegistrationForm(UserCreationForm):
                     user=user,
                     role=InstitutionMembership.MembershipRole.OWNER,
                 )
+                self.institution = institution
         return user
 
 
@@ -548,3 +556,137 @@ class TwoFactorSetupForm(forms.Form):
         
         self.user.save()
         return self.user
+
+
+class InstitutionProfileForm(forms.ModelForm):
+    class Meta:
+        model = Institution
+        fields = [
+            'institution_type', 'country', 'province', 'district',
+            'address', 'phone_number', 'email', 'website',
+        ]
+        widgets = {
+            'institution_type': forms.Select(attrs={'class': 'form-select'}),
+            'country': forms.TextInput(attrs={'class': 'form-control'}),
+            'province': forms.TextInput(attrs={'class': 'form-control'}),
+            'district': forms.TextInput(attrs={'class': 'form-control'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'website': forms.URLInput(attrs={'class': 'form-control'}),
+        }
+
+
+class InstitutionSearchForm(forms.Form):
+    q = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Search by name, code or email',
+        }),
+    )
+    status = forms.ChoiceField(
+        required=False,
+        choices=[('', 'All statuses')] + list(Institution.Status.choices),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+
+
+class OnboardingAcademicYearForm(forms.ModelForm):
+    class Meta:
+        model = AcademicYear
+        fields = ['name', 'start_date', 'end_date', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def clean_name(self):
+        name = (self.cleaned_data.get('name') or '').strip()
+        if name and AcademicYear.objects.filter(name__iexact=name).exists():
+            raise ValidationError('An academic year with this name already exists.')
+        return name
+
+
+class OnboardingClassForm(forms.ModelForm):
+    class Meta:
+        model = Class
+        fields = ['name', 'display_name', 'section', 'capacity', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'display_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'section': forms.TextInput(attrs={'class': 'form-control'}),
+            'capacity': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, academic_year=None, **kwargs):
+        self.academic_year = academic_year
+        super().__init__(*args, **kwargs)
+
+    def clean_name(self):
+        name = (self.cleaned_data.get('name') or '').strip()
+        if name and Class.objects.filter(name__iexact=name).exists():
+            raise ValidationError('A class with this name already exists.')
+        return name
+
+    def save(self, commit=True):
+        class_obj = super().save(commit=False)
+        if self.academic_year is not None:
+            class_obj.academic_year = self.academic_year
+        if commit:
+            class_obj.save()
+        return class_obj
+
+
+class OnboardingFeeCategoryForm(forms.ModelForm):
+    class Meta:
+        model = FeeCategory
+        fields = ['name', 'description', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def clean_name(self):
+        name = (self.cleaned_data.get('name') or '').strip()
+        if name and FeeCategory.objects.filter(name__iexact=name).exists():
+            raise ValidationError('A fee category with this name already exists.')
+        return name
+
+
+class OnboardingFeeStructureForm(forms.ModelForm):
+    class Meta:
+        model = FeeStructure
+        fields = ['name', 'academic_year', 'class_obj', 'fee_type', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'academic_year': forms.Select(attrs={'class': 'form-select'}),
+            'class_obj': forms.Select(attrs={'class': 'form-select'}),
+            'fee_type': forms.Select(attrs={'class': 'form-select'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, institution=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if institution is not None:
+            self.fields['academic_year'].queryset = AcademicYear.objects.filter(
+                institution=institution,
+            ).order_by('-start_date')
+            self.fields['class_obj'].queryset = Class.objects.filter(
+                academic_year__institution=institution,
+            ).select_related('academic_year').order_by('display_name')
+        else:
+            self.fields['academic_year'].queryset = AcademicYear.objects.none()
+            self.fields['class_obj'].queryset = Class.objects.none()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        academic_year = cleaned_data.get('academic_year')
+        class_obj = cleaned_data.get('class_obj')
+        if academic_year and class_obj and class_obj.academic_year_id != academic_year.id:
+            self.add_error('class_obj', 'Selected class does not belong to the selected academic year.')
+        return cleaned_data

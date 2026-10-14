@@ -4,7 +4,8 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
+from django.views.decorators.http import require_POST
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from django.core.paginator import Paginator
@@ -770,6 +771,30 @@ def get_message_count(request):
         is_read=False
     ).count()
     return JsonResponse({'count': count})
+
+
+@login_required
+def notification_go(request, pk):
+    """Mark a notification as read and follow it to its target page."""
+    notification = get_object_or_404(Notification, id=pk, recipient=request.user)
+    if notification.status != Notification.NotificationStatus.READ:
+        notification.status = Notification.NotificationStatus.READ
+        notification.read_at = timezone.now()
+        notification.save(update_fields=['status', 'read_at', 'updated_at'])
+    if notification.url:
+        return redirect(notification.url)
+    return redirect('communication:notification_detail', pk=notification.pk)
+
+
+@login_required
+@require_POST
+def notifications_mark_all_read(request):
+    """Mark every unread notification for the user as read."""
+    Notification.objects.filter(recipient=request.user).exclude(
+        status=Notification.NotificationStatus.READ
+    ).update(status=Notification.NotificationStatus.READ, read_at=timezone.now())
+    messages.success(request, 'All notifications marked as read.')
+    return redirect(request.META.get('HTTP_REFERER') or reverse('communication:notification_list'))
 
 # Report Views
 @login_required

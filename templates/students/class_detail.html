@@ -85,7 +85,7 @@
                             </h5>
                         </div>
                         <div class="card-body">
-                            {% with utilization=class_obj.students.count|div:class_obj.capacity|mul:100 %}
+                            {% with utilization=class_obj.capacity_utilization %}
                                 <div class="row">
                                     <div class="col-md-8">
                                         <div class="progress mb-3" style="height: 30px;">

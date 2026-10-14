@@ -43,6 +43,22 @@ urlpatterns = [
     path('bulk-fee-generation/', views.bulk_fee_generation, name='bulk_fee_generation'),
     path('bulk-payment/', views.bulk_payment, name='bulk_payment'),
     
+    # Fee Categories
+    path('fee-categories/', views.FeeCategoryListView.as_view(), name='fee_category_list'),
+    path('fee-categories/create/', views.FeeCategoryCreateView.as_view(), name='fee_category_create'),
+    path('fee-categories/<int:pk>/update/', views.FeeCategoryUpdateView.as_view(), name='fee_category_update'),
+    path('fee-categories/<int:pk>/delete/', views.FeeCategoryDeleteView.as_view(), name='fee_category_delete'),
+
+    # Fee Structures
+    path('fee-structures/', views.FeeStructureListView.as_view(), name='fee_structure_list'),
+    path('fee-structures/create/', views.FeeStructureCreateView.as_view(), name='fee_structure_create'),
+    path('fee-structures/<int:pk>/', views.FeeStructureDetailView.as_view(), name='fee_structure_detail'),
+    path('fee-structures/<int:pk>/update/', views.FeeStructureUpdateView.as_view(), name='fee_structure_update'),
+    path('fee-structures/<int:pk>/delete/', views.FeeStructureDeleteView.as_view(), name='fee_structure_delete'),
+    path('fee-structures/<int:pk>/lines/create/', views.FeeStructureLineCreateView.as_view(), name='fee_structure_line_create'),
+    path('fee-structure-lines/<int:pk>/update/', views.FeeStructureLineUpdateView.as_view(), name='fee_structure_line_update'),
+    path('fee-structure-lines/<int:pk>/delete/', views.FeeStructureLineDeleteView.as_view(), name='fee_structure_line_delete'),
+    
     # Reports
     path('reports/', views.fee_report, name='fee_report'),
     

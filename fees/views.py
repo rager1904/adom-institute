@@ -900,3 +900,257 @@ def get_student_fees(request):
         except Student.DoesNotExist:
             return JsonResponse({'error': 'Student not found'}, status=404)
     return JsonResponse({'error': 'Student ID required'}, status=400)
+
+
+# ---------------------------------------------------------------------------
+# Fee category & structure web management
+# ---------------------------------------------------------------------------
+class FeeCategoryListView(LoginRequiredMixin, FinanceRequiredMixin, ListView):
+    model = FeeCategory
+    template_name = 'fees/fee_category_list.html'
+    context_object_name = 'categories'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return FeeCategory.objects.annotate(
+            structure_count=Count('fee_structure_details', distinct=True),
+        ).order_by('name')
+
+
+class FeeCategoryCreateView(LoginRequiredMixin, FinanceRequiredMixin, CreateView):
+    model = FeeCategory
+    form_class = FeeCategoryForm
+    template_name = 'fees/fee_category_form.html'
+    success_url = reverse_lazy('fees:fee_category_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Fee category created successfully.')
+        return super().form_valid(form)
+
+
+class FeeCategoryUpdateView(LoginRequiredMixin, FinanceRequiredMixin, UpdateView):
+    model = FeeCategory
+    form_class = FeeCategoryForm
+    template_name = 'fees/fee_category_form.html'
+    success_url = reverse_lazy('fees:fee_category_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Fee category updated successfully.')
+        return super().form_valid(form)
+
+
+class FeeCategoryDeleteView(LoginRequiredMixin, FinanceRequiredMixin, DeleteView):
+    model = FeeCategory
+    template_name = 'fees/fee_confirm_delete.html'
+    success_url = reverse_lazy('fees:fee_category_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['object_type'] = 'fee category'
+        context['cancel_url'] = reverse_lazy('fees:fee_category_list')
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Fee category deleted.')
+        return super().form_valid(form)
+
+
+class FeeStructureListView(LoginRequiredMixin, FinanceRequiredMixin, InstitutionAccessMixin, ListView):
+    model = FeeStructure
+    template_name = 'fees/fee_structure_list.html'
+    context_object_name = 'fee_structures'
+    paginate_by = 20
+
+    def get_queryset(self):
+        queryset = FeeStructure.objects.select_related(
+            'academic_year__institution', 'class_obj',
+        ).annotate(lines=Count('fee_details', distinct=True))
+        queryset = self.scope_institution_queryset(
+            queryset, lookup='academic_year__institution_id',
+        )
+        return queryset.order_by('-created_at')
+
+
+class FeeStructureCreateView(LoginRequiredMixin, FinanceRequiredMixin, CreateView):
+    model = FeeStructure
+    form_class = FeeStructureForm
+    template_name = 'fees/fee_structure_form.html'
+    success_url = reverse_lazy('fees:fee_structure_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['institution_ids'] = user_institution_ids(self.request.user)
+        return kwargs
+
+    def form_valid(self, form):
+        institution_id = getattr(form.instance.academic_year, 'institution_id', None)
+        if not user_can_access_institution(self.request.user, institution_id):
+            messages.error(self.request, 'You cannot create a fee structure for that institution.')
+            return self.form_invalid(form)
+        messages.success(self.request, 'Fee structure created successfully.')
+        return super().form_valid(form)
+
+
+class FeeStructureUpdateView(LoginRequiredMixin, FinanceRequiredMixin, InstitutionAccessMixin, UpdateView):
+    model = FeeStructure
+    form_class = FeeStructureForm
+    template_name = 'fees/fee_structure_form.html'
+    success_url = reverse_lazy('fees:fee_structure_list')
+
+    def get_queryset(self):
+        queryset = FeeStructure.objects.select_related('academic_year__institution', 'class_obj')
+        return self.scope_institution_queryset(
+            queryset, lookup='academic_year__institution_id',
+        )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['institution_ids'] = user_institution_ids(self.request.user)
+        return kwargs
+
+    def form_valid(self, form):
+        institution_id = getattr(form.instance.academic_year, 'institution_id', None)
+        if not user_can_access_institution(self.request.user, institution_id):
+            messages.error(self.request, 'You cannot move a fee structure to that institution.')
+            return self.form_invalid(form)
+        messages.success(self.request, 'Fee structure updated successfully.')
+        return super().form_valid(form)
+
+
+class FeeStructureDetailView(LoginRequiredMixin, FinanceSelfServiceRequiredMixin, InstitutionAccessMixin, DetailView):
+    model = FeeStructure
+    template_name = 'fees/fee_structure_detail.html'
+    context_object_name = 'fee_structure'
+
+    def get_queryset(self):
+        queryset = FeeStructure.objects.select_related('academic_year__institution', 'class_obj')
+        return self.scope_institution_queryset(
+            queryset, lookup='academic_year__institution_id',
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        details = self.object.fee_details.select_related('fee_category').order_by('fee_category__name')
+        context['details'] = details
+        context['total_amount'] = details.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        context['can_manage_finance'] = is_accountant_user(self.request.user)
+        return context
+
+
+class FeeStructureDeleteView(LoginRequiredMixin, FinanceRequiredMixin, InstitutionAccessMixin, DeleteView):
+    model = FeeStructure
+    template_name = 'fees/fee_confirm_delete.html'
+    success_url = reverse_lazy('fees:fee_structure_list')
+
+    def get_queryset(self):
+        queryset = FeeStructure.objects.select_related('academic_year__institution')
+        return self.scope_institution_queryset(
+            queryset, lookup='academic_year__institution_id',
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['object_type'] = 'fee structure'
+        context['cancel_url'] = reverse_lazy('fees:fee_structure_list')
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Fee structure deleted.')
+        return super().form_valid(form)
+
+
+class FeeStructureLineCreateView(LoginRequiredMixin, FinanceRequiredMixin, CreateView):
+    model = FeeStructureDetail
+    form_class = FeeStructureDetailForm
+    template_name = 'fees/fee_structure_detail_form.html'
+
+    def get_fee_structure(self):
+        return get_object_or_404(
+            FeeStructure.objects.select_related('academic_year'),
+            pk=self.kwargs['pk'],
+        )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['fee_structure'] = self.get_fee_structure()
+        return kwargs
+
+    def form_valid(self, form):
+        fee_structure = self.get_fee_structure()
+        if not user_can_access_institution(
+            self.request.user,
+            getattr(fee_structure.academic_year, 'institution_id', None),
+        ):
+            messages.error(self.request, 'You cannot add fee items for that institution.')
+            return self.form_invalid(form)
+        messages.success(self.request, 'Fee item added successfully.')
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['fee_structure'] = self.get_fee_structure()
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy('fees:fee_structure_detail', args=[self.kwargs['pk']])
+
+
+class FeeStructureLineUpdateView(LoginRequiredMixin, FinanceRequiredMixin, UpdateView):
+    model = FeeStructureDetail
+    form_class = FeeStructureDetailForm
+    template_name = 'fees/fee_structure_detail_form.html'
+
+    def get_object(self, queryset=None):
+        return get_object_or_404(
+            FeeStructureDetail.objects.select_related(
+                'fee_structure__academic_year', 'fee_category',
+            ),
+            pk=self.kwargs['pk'],
+        )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['fee_structure'] = self.object.fee_structure
+        return kwargs
+
+    def form_valid(self, form):
+        if not user_can_access_institution(
+            self.request.user,
+            getattr(self.object.fee_structure.academic_year, 'institution_id', None),
+        ):
+            messages.error(self.request, 'You cannot edit fee items for that institution.')
+            return self.form_invalid(form)
+        messages.success(self.request, 'Fee item updated successfully.')
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['fee_structure'] = self.object.fee_structure
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy('fees:fee_structure_detail', args=[self.object.fee_structure_id])
+
+
+class FeeStructureLineDeleteView(LoginRequiredMixin, FinanceRequiredMixin, DeleteView):
+    model = FeeStructureDetail
+    template_name = 'fees/fee_confirm_delete.html'
+
+    def get_object(self, queryset=None):
+        return get_object_or_404(
+            FeeStructureDetail.objects.select_related('fee_structure__academic_year'),
+            pk=self.kwargs['pk'],
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['object_type'] = 'fee item'
+        context['cancel_url'] = reverse_lazy('fees:fee_structure_detail', args=[self.object.fee_structure_id])
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy('fees:fee_structure_detail', args=[self.object.fee_structure_id])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Fee item deleted.')
+        return super().form_valid(form)

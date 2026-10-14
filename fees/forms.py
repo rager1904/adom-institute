@@ -31,6 +31,25 @@ class FeeStructureForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
+    def __init__(self, *args, institution_ids=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if institution_ids is not None:
+            id_list = list(institution_ids)
+            self.fields['academic_year'].queryset = AcademicYear.objects.filter(
+                institution_id__in=id_list,
+            ).order_by('-start_date')
+            self.fields['class_obj'].queryset = Class.objects.filter(
+                academic_year__institution_id__in=id_list,
+            ).select_related('academic_year').order_by('display_name')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        academic_year = cleaned_data.get('academic_year')
+        class_obj = cleaned_data.get('class_obj')
+        if academic_year and class_obj and class_obj.academic_year_id != academic_year.id:
+            self.add_error('class_obj', 'Selected class does not belong to the selected academic year.')
+        return cleaned_data
+
 
 class FeeStructureDetailForm(forms.ModelForm):
     class Meta:
@@ -43,6 +62,17 @@ class FeeStructureDetailForm(forms.ModelForm):
             'is_optional': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }
+
+    def __init__(self, *args, institution_ids=None, fee_structure=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['fee_category'].queryset = FeeCategory.objects.filter(is_active=True).order_by('name')
+        if fee_structure is not None:
+            self.fields['fee_structure'].queryset = FeeStructure.objects.filter(pk=fee_structure.pk)
+            self.fields['fee_structure'].initial = fee_structure
+        elif institution_ids is not None:
+            self.fields['fee_structure'].queryset = FeeStructure.objects.filter(
+                academic_year__institution_id__in=list(institution_ids),
+            ).select_related('academic_year', 'class_obj').order_by('name')
 
 
 class StudentFeeForm(forms.ModelForm):
@@ -86,7 +116,7 @@ class PaymentForm(forms.ModelForm):
         
         if amount and student_fee:
             if amount > student_fee.balance_amount:
-                raise ValidationError(f"Payment amount cannot exceed balance amount (₹{student_fee.balance_amount})")
+                raise ValidationError(f"Payment amount cannot exceed balance amount (K{student_fee.balance_amount})")
         
         return amount
 
@@ -134,7 +164,7 @@ class StudentFeeDiscountForm(forms.ModelForm):
         
         if discount_amount and student_fee:
             if discount_amount > student_fee.balance_amount:
-                raise ValidationError(f"Discount amount cannot exceed balance amount (₹{student_fee.balance_amount})")
+                raise ValidationError(f"Discount amount cannot exceed balance amount (K{student_fee.balance_amount})")
         
         return discount_amount
 

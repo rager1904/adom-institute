@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Fee structures - ADOM Institute{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="mb-1"><i class="fas fa-layer-group me-3 text-primary"></i>Fee structures</h2>
+        <p class="text-muted mb-0">Define the fee items payable by each class for an academic year.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'fees:fee_category_list' %}" class="btn btn-outline-primary">
+            <i class="fas fa-tags me-2"></i>Categories
+        </a>
+        {% if role_ui.can_manage_finance %}
+        <a href="{% url 'fees:fee_structure_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add fee structure
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if fee_structures %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Class</th>
+                        <th>Academic year</th>
+                        <th>Type</th>
+                        <th>Items</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for structure in fee_structures %}
+                    <tr>
+                        <td class="fw-semibold">
+                            <a href="{% url 'fees:fee_structure_detail' structure.pk %}" class="text-decoration-none">{{ structure.name }}</a>
+                        </td>
+                        <td>{{ structure.class_obj.display_name }}</td>
+                        <td>{{ structure.academic_year.name }}</td>
+                        <td>{{ structure.get_fee_type_display }}</td>
+                        <td><span class="badge bg-light text-dark">{{ structure.lines }}</span></td>
+                        <td>
+                            {% if structure.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <a href="{% url 'fees:fee_structure_detail' structure.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if role_ui.can_manage_finance %}
+                                <a href="{% url 'fees:fee_structure_update' structure.pk %}" class="btn btn-sm btn-outline-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'fees:fee_structure_delete' structure.pk %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No fee structures yet</h5>
+            <p class="text-muted">Create a fee structure to start billing students.</p>
+            {% if role_ui.can_manage_finance %}
+            <a href="{% url 'fees:fee_structure_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add first fee structure
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if is_paginated %}
+<nav class="mt-4" aria-label="Fee structures pagination">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

@@ -115,7 +115,7 @@
                                             </td>
                                             <td>{{ class_obj.capacity }}</td>
                                             <td>
-                                                {% with utilization=class_obj.students.count|div:class_obj.capacity|mul:100 %}
+                                                {% with utilization=class_obj.capacity_utilization %}
                                                     <div class="progress" style="height: 20px;">
                                                         <div class="progress-bar bg-{% if utilization < 80 %}success{% elif utilization < 95 %}warning{% else %}danger{% endif %}" 
                                                              role="progressbar" 
