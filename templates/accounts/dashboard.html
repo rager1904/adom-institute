@@ -500,24 +500,6 @@
                     </a>
                 </div>
             </section>
-
-            <section class="panel">
-                <div class="panel-heading">
-                    <h2 class="panel-title">AI Configuration</h2>
-                </div>
-                <div class="ai-grid">
-                    <div class="ai-row"><span>Provider</span><strong>{{ dashboard.ai.provider }}</strong></div>
-                    <div class="ai-row"><span>Chat Model</span><strong>{{ dashboard.ai.chat_model }}</strong></div>
-                    <div class="ai-row"><span>Embeddings</span><strong>{{ dashboard.ai.embedding_model }}</strong></div>
-                    <div class="ai-row"><span>Vector Store</span><strong>{{ dashboard.ai.vector_store }}</strong></div>
-                    <div class="ai-row"><span>Agents</span><strong>{{ dashboard.ai.agent_count }}</strong></div>
-                </div>
-                <div class="agent-list">
-                    {% for agent in dashboard.ai.agents %}
-                        <span class="agent-chip">{{ agent }}</span>
-                    {% endfor %}
-                </div>
-            </section>
         </aside>
     </div>
 </div>
