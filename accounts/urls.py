@@ -19,7 +19,6 @@ urlpatterns = [
     
     # Web URLs
     path('', views.DashboardView.as_view(), name='dashboard'),
-    path('ai-hub/', views.AIHubView.as_view(), name='ai_hub'),
     path('login/', views.LoginView.as_view(), name='login'),
     path('logout/', views.LogoutView.as_view(), name='logout'),
     path('profile/', views.ProfileView.as_view(), name='profile'),

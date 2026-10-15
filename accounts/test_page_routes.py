@@ -9,7 +9,6 @@ from accounts.models import Institution, User
 from analytics.models import Report
 from attendance.models import Attendance, LeaveRequest
 from communication.models import CommunicationLog, EmailTemplate, Notification, SMSTemplate
-from adom_institute.models import AIUsageLedger, AgentTask
 from library.models import Book, BookCategory, DigitalResource
 from students.models import AcademicYear, Class, Parent, Student
 from teachers.models import Subject, Teacher
@@ -83,32 +82,6 @@ class ADOMInstitutePageRouteTests(TestCase):
         self.assertContains(response, 'Empowering Education')
         self.assertContains(response, 'Explore Our Courses')
         self.assertContains(response, 'Shop Educational Products')
-
-    def test_ai_hub_page_exists_for_authenticated_users(self):
-        AgentTask.objects.create(
-            institution=self.institution,
-            created_by=self.user,
-            agent_key='zambian_curriculum',
-            input_payload={'subject': 'Mathematics'},
-        )
-        AIUsageLedger.objects.create(
-            institution=self.institution,
-            user=self.user,
-            provider='ollama',
-            model_name='qwen2.5:7b-instruct',
-            prompt_tokens=10,
-            total_tokens=10,
-        )
-        self.client.force_login(self.user)
-
-        response = self.client.get(reverse('accounts:ai_hub'))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Open-Source AI Hub')
-        self.assertContains(response, 'Zambian Curriculum Agent')
-        self.assertContains(response, 'Knowledge Documents')
-        self.assertContains(response, 'Usage Entries')
-        self.assertContains(response, 'Recent Agent Tasks')
 
     def test_api_v1_mounts_direct_routers_not_web_urlconfs(self):
         self.client.force_login(self.user)

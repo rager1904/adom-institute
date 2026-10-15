@@ -35,9 +35,6 @@ from .forms import (
 )
 from .dashboard_services import build_dashboard_context
 from adom_institute.agents import list_agent_definitions
-from adom_institute.models import AIConversation, AIUsageLedger, AgentTask, KnowledgeDocument
-from adom_institute.rag import get_rag_blueprint
-from adom_institute.registry import get_ai_runtime_config, list_supported_model_profiles
 from students.models import AcademicYear, Class, Student
 from teachers.models import Teacher
 from fees.models import FeeCategory, FeeStructure
@@ -258,73 +255,6 @@ class PublicPageView(TemplateView):
         context['page'] = page
         context['page_key'] = page_key
         context['seo_title'] = title
-        return context
-
-
-class AIHubView(TemplateView):
-    template_name = 'accounts/ai_hub.html'
-
-    @method_decorator(login_required)
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        institution_ids = user_institution_ids(user)
-        knowledge_documents = KnowledgeDocument.objects.all()
-        conversations = AIConversation.objects.all()
-        agent_tasks = AgentTask.objects.select_related('institution', 'created_by')
-        usage_entries = AIUsageLedger.objects.all()
-
-        if not is_platform_admin(user):
-            if institution_ids:
-                knowledge_documents = knowledge_documents.filter(institution_id__in=institution_ids)
-                agent_tasks = agent_tasks.filter(institution_id__in=institution_ids)
-                conversations = conversations.filter(institution_id__in=institution_ids)
-                usage_entries = usage_entries.filter(institution_id__in=institution_ids)
-            else:
-                knowledge_documents = knowledge_documents.none()
-                agent_tasks = agent_tasks.filter(created_by=user)
-                conversations = conversations.filter(user=user)
-                usage_entries = usage_entries.filter(user=user)
-
-        if not has_institution_admin_role(user):
-            conversations = conversations.filter(user=user)
-            agent_tasks = agent_tasks.filter(created_by=user)
-            usage_entries = usage_entries.filter(user=user)
-
-        context['runtime'] = get_ai_runtime_config()
-        context['model_profiles'] = list_supported_model_profiles()
-        context['agents'] = list_agent_definitions()
-        context['rag'] = get_rag_blueprint()
-        context['ai_stats'] = [
-            {
-                'label': 'Knowledge Documents',
-                'value': knowledge_documents.count(),
-                'icon': 'fa-file-lines',
-                'detail': 'Institution-scoped RAG sources',
-            },
-            {
-                'label': 'Conversations',
-                'value': conversations.count(),
-                'icon': 'fa-comments',
-                'detail': 'ADOM Institute conversation records',
-            },
-            {
-                'label': 'Agent Tasks',
-                'value': agent_tasks.count(),
-                'icon': 'fa-diagram-project',
-                'detail': 'Queued and completed agent work',
-            },
-            {
-                'label': 'Usage Entries',
-                'value': usage_entries.count(),
-                'icon': 'fa-gauge-high',
-                'detail': 'Open-source model activity logs',
-            },
-        ]
-        context['recent_agent_tasks'] = agent_tasks.order_by('-created_at')[:5]
         return context
 
 
