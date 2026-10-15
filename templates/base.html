@@ -65,6 +65,10 @@
                     {% if user.user_type == 'super_admin' or user.user_type == 'administrator' or user.user_type == 'teacher' or user.user_type == 'student' or user.user_type == 'parent' %}
                         <a class="edu-nav-link" href="{% url 'timetable:my_schedule' %}"><i class="fas fa-clock"></i><span>Timetable</span></a>
                     {% endif %}
+                    {% if user.user_type == 'super_admin' or user.user_type == 'administrator' %}
+                        <a class="edu-nav-link" href="{% url 'timetable:room_list' %}"><i class="fas fa-door-open"></i><span>Rooms</span></a>
+                        <a class="edu-nav-link" href="{% url 'timetable:timeslot_list' %}"><i class="fas fa-business-time"></i><span>Time Slots</span></a>
+                    {% endif %}
 
                     <div class="edu-nav-section">Intelligence</div>
                     {% if user.user_type == 'super_admin' or user.user_type == 'administrator' %}
