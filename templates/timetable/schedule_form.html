@@ -109,21 +109,6 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="{{ form.academic_year.id_for_label }}" class="form-label">
-                                                {{ form.academic_year.label }} <span class="text-danger">*</span>
-                                            </label>
-                                            {{ form.academic_year }}
-                                            {% if form.academic_year.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {% for error in form.academic_year.errors %}
-                                                        {{ error }}
-                                                    {% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
                                             <div class="form-check">
                                                 {{ form.is_active }}
                                                 <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
@@ -133,21 +118,6 @@
                                             {% if form.is_active.errors %}
                                                 <div class="invalid-feedback d-block">
                                                     {% for error in form.is_active.errors %}
-                                                        {{ error }}
-                                                    {% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="mb-3">
-                                            <label for="{{ form.notes.id_for_label }}" class="form-label">
-                                                {{ form.notes.label }}
-                                            </label>
-                                            {{ form.notes }}
-                                            {% if form.notes.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {% for error in form.notes.errors %}
                                                         {{ error }}
                                                     {% endfor %}
                                                 </div>

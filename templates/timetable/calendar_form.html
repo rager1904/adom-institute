@@ -94,13 +94,13 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="{{ form.academic_year.id_for_label }}" class="form-label">
-                                                {{ form.academic_year.label }} <span class="text-danger">*</span>
+                                            <label for="{{ form.start_time.id_for_label }}" class="form-label">
+                                                {{ form.start_time.label }}
                                             </label>
-                                            {{ form.academic_year }}
-                                            {% if form.academic_year.errors %}
+                                            {{ form.start_time }}
+                                            {% if form.start_time.errors %}
                                                 <div class="invalid-feedback d-block">
-                                                    {% for error in form.academic_year.errors %}
+                                                    {% for error in form.start_time.errors %}
                                                         {{ error }}
                                                     {% endfor %}
                                                 </div>
@@ -109,15 +109,13 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <div class="form-check">
-                                                {{ form.is_active }}
-                                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                                                    {{ form.is_active.label }}
-                                                </label>
-                                            </div>
-                                            {% if form.is_active.errors %}
+                                            <label for="{{ form.end_time.id_for_label }}" class="form-label">
+                                                {{ form.end_time.label }}
+                                            </label>
+                                            {{ form.end_time }}
+                                            {% if form.end_time.errors %}
                                                 <div class="invalid-feedback d-block">
-                                                    {% for error in form.is_active.errors %}
+                                                    {% for error in form.end_time.errors %}
                                                         {{ error }}
                                                     {% endfor %}
                                                 </div>
@@ -139,15 +137,66 @@
                                             {% endif %}
                                         </div>
                                     </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.is_all_day }}
+                                                <label class="form-check-label" for="{{ form.is_all_day.id_for_label }}">
+                                                    {{ form.is_all_day.label }}
+                                                </label>
+                                            </div>
+                                            {% if form.is_all_day.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.is_all_day.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.is_school_holiday }}
+                                                <label class="form-check-label" for="{{ form.is_school_holiday.id_for_label }}">
+                                                    {{ form.is_school_holiday.label }}
+                                                </label>
+                                            </div>
+                                            {% if form.is_school_holiday.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.is_school_holiday.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.is_recurring }}
+                                                <label class="form-check-label" for="{{ form.is_recurring.id_for_label }}">
+                                                    {{ form.is_recurring.label }}
+                                                </label>
+                                            </div>
+                                            {% if form.is_recurring.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.is_recurring.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                     <div class="col-md-12">
                                         <div class="mb-3">
-                                            <label for="{{ form.notes.id_for_label }}" class="form-label">
-                                                {{ form.notes.label }}
+                                            <label for="{{ form.recurrence_pattern.id_for_label }}" class="form-label">
+                                                {{ form.recurrence_pattern.label }}
                                             </label>
-                                            {{ form.notes }}
-                                            {% if form.notes.errors %}
+                                            {{ form.recurrence_pattern }}
+                                            {% if form.recurrence_pattern.errors %}
                                                 <div class="invalid-feedback d-block">
-                                                    {% for error in form.notes.errors %}
+                                                    {% for error in form.recurrence_pattern.errors %}
                                                         {{ error }}
                                                     {% endfor %}
                                                 </div>
@@ -202,13 +251,13 @@
                             <p class="text-muted">Select the appropriate type for this event.</p>
                             
                             <h6><i class="fas fa-calendar-day"></i> Date Range</h6>
-                            <p class="text-muted">Set the start and end dates for this event. End date must be after start date.</p>
-                            
-                            <h6><i class="fas fa-calendar"></i> Academic Year</h6>
-                            <p class="text-muted">Select the academic year for this event.</p>
-                            
-                            <h6><i class="fas fa-toggle-on"></i> Active Status</h6>
-                            <p class="text-muted">Only active events will be displayed in the calendar.</p>
+                            <p class="text-muted">Set the start and end dates for this event. End date must be after or equal to start date.</p>
+
+                            <h6><i class="fas fa-clock"></i> All Day &amp; Times</h6>
+                            <p class="text-muted">Leave <strong>Is All Day</strong> ticked for full-day events, or untick it and set start and end times.</p>
+
+                            <h6><i class="fas fa-flag"></i> Holiday &amp; Recurring</h6>
+                            <p class="text-muted">Tick <strong>School Holiday</strong> for closures, or <strong>Recurring</strong> to repeat the event with a pattern.</p>
                         </div>
                     </div>
                 </div>
