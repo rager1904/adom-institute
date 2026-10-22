@@ -244,6 +244,27 @@ class LibraryUploadValidationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Dormant resource')
 
+    def test_resource_without_a_stored_file_answers_not_found(self):
+        admin = User.objects.create_user(
+            email='resource-missing-file@example.com',
+            password='password123',
+            first_name='Missing',
+            last_name='File',
+            user_type=User.UserType.ADMINISTRATOR,
+        )
+        resource = DigitalResource.objects.create(
+            title='Resource without a file',
+            resource_type='video',
+            access_level='public',
+            uploaded_by=admin,
+            file='library/digital/this-file-was-removed.mp4',
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('library:resource_file', args=[resource.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
 
 class LibraryReportRegressionTests(TestCase):
     """F-35: the report panels had no endpoint to call."""

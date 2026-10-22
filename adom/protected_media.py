@@ -42,6 +42,8 @@ from django.views.static import serve as django_serve
 _PROTECTED_ROOT_DIRS = frozenset({
     'assignments',             # academics.models.Assignment.attachment
     'assignment_submissions',  # academics.models.StudentAssignment.submission_file
+    'reports',                 # analytics.models.Report.file_path
+    'knowledge',               # adom_institute.models.KnowledgeDocument.file
 })
 _PROTECTED_NESTED_DIRS = frozenset({
     'library/digital',         # library.models.DigitalResource.file
@@ -173,7 +175,10 @@ class _RangedFileStream:
 
 def _ranged_file_response(field_file, start, end, total, content_type, filename, attachment):
     """Serve bytes ``start``..``end`` of ``field_file`` so media can seek."""
-    field_file.open('rb')
+    try:
+        field_file.open('rb')
+    except (OSError, ValueError):
+        raise Http404('The stored file is missing.')
     try:
         field_file.seek(start)
     except (OSError, ValueError):
@@ -200,6 +205,15 @@ def protected_file_response(field_file, *, request=None, filename=None, attachme
     if not field_file:
         raise Http404('No file is attached to this record.')
 
+    # A record can outlive its file, for example when a copy was removed from
+    # storage by hand. Answering with a plain 404 is better than a traceback.
+    try:
+        stored = field_file.storage.exists(field_file.name)
+    except (OSError, ValueError):
+        stored = True
+    if not stored:
+        raise Http404('The stored file is missing.')
+
     stored_name = field_file.name.rsplit('/', 1)[-1]
     display_name = filename or stored_name
     try:
@@ -217,7 +231,11 @@ def protected_file_response(field_file, *, request=None, filename=None, attachme
     if not total:
         # Size is unknown (remote storage without a reported length): send the
         # whole stream rather than guessing a Content-Length.
-        response = FileResponse(field_file.open('rb'), content_type=content_type)
+        try:
+            stream = field_file.open('rb')
+        except (OSError, ValueError):
+            raise Http404('The stored file is missing.')
+        response = FileResponse(stream, content_type=content_type)
         response['Accept-Ranges'] = 'none'
         response['Content-Disposition'] = _content_disposition(display_name, attachment)
         return _apply_no_store(response)
@@ -236,7 +254,11 @@ def protected_file_response(field_file, *, request=None, filename=None, attachme
             field_file, start, end, total, content_type, display_name, attachment,
         )
 
-    response = FileResponse(field_file.open('rb'), content_type=content_type)
+    try:
+        stream = field_file.open('rb')
+    except (OSError, ValueError):
+        raise Http404('The stored file is missing.')
+    response = FileResponse(stream, content_type=content_type)
     response['Content-Length'] = str(total)
     response['Accept-Ranges'] = 'bytes'
     try:
