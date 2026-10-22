@@ -318,39 +318,45 @@
                             <input type="checkbox" class="form-check-input resource-checkbox" value="{{ resource.id }}" style="display: none;">
                         </div>
                         
-                        {% if resource.thumbnail %}
-                            <img src="{{ resource.thumbnail.url }}" alt="{{ resource.title }}" class="img-fluid h-100 w-100" style="object-fit: cover;">
+                        {% if resource.resource_type == 'pdf' %}
+                            <i class="fas fa-file-pdf"></i>
+                        {% elif resource.resource_type == 'video' %}
+                            <i class="fas fa-play-circle"></i>
+                        {% elif resource.resource_type == 'audio' %}
+                            <i class="fas fa-music"></i>
+                        {% elif resource.resource_type == 'ebook' %}
+                            <i class="fas fa-book"></i>
+                        {% elif resource.resource_type == 'presentation' %}
+                            <i class="fas fa-file-powerpoint"></i>
+                        {% elif resource.resource_type == 'worksheet' %}
+                            <i class="fas fa-file-excel"></i>
                         {% else %}
-                            {% if resource.file_type == 'pdf' %}
-                                <i class="fas fa-file-pdf"></i>
-                            {% elif resource.file_type == 'video' %}
-                                <i class="fas fa-play-circle"></i>
-                            {% elif resource.file_type == 'audio' %}
-                                <i class="fas fa-music"></i>
-                            {% elif resource.file_type == 'image' %}
-                                <i class="fas fa-image"></i>
-                            {% else %}
-                                <i class="fas fa-file"></i>
-                            {% endif %}
+                            <i class="fas fa-file"></i>
                         {% endif %}
-                        
-                        <span class="badge file-type-badge 
-                            {% if resource.file_type == 'pdf' %}bg-danger{% elif resource.file_type == 'video' %}bg-info{% elif resource.file_type == 'audio' %}bg-warning{% else %}bg-secondary{% endif %}">
-                            {{ resource.file_type|upper }}
+
+                        <span class="badge file-type-badge
+                            {% if resource.resource_type == 'pdf' %}bg-danger{% elif resource.resource_type == 'video' %}bg-info{% elif resource.resource_type == 'audio' %}bg-warning{% elif resource.resource_type == 'ebook' %}bg-primary{% elif resource.resource_type == 'presentation' %}bg-success{% elif resource.resource_type == 'worksheet' %}bg-secondary{% else %}bg-secondary{% endif %}">
+                            {{ resource.get_resource_type_display }}
                         </span>
-                        
-                        <span class="badge access-badge 
-                            {% if resource.access_level == 'public' %}bg-success{% elif resource.access_level == 'student' %}bg-primary{% elif resource.access_level == 'teacher' %}bg-warning{% else %}bg-danger{% endif %}">
+
+                        <span class="badge access-badge
+                            {% if resource.access_level == 'public' %}bg-success{% elif resource.access_level == 'students' %}bg-primary{% elif resource.access_level == 'teachers' %}bg-warning{% else %}bg-danger{% endif %}">
                             {% if resource.access_level == 'public' %}
                                 <i class="fas fa-globe"></i>
-                            {% elif resource.access_level == 'student' %}
+                            {% elif resource.access_level == 'students' %}
                                 <i class="fas fa-user-graduate"></i>
-                            {% elif resource.access_level == 'teacher' %}
+                            {% elif resource.access_level == 'teachers' %}
                                 <i class="fas fa-chalkboard-teacher"></i>
                             {% else %}
                                 <i class="fas fa-lock"></i>
                             {% endif %}
                         </span>
+
+                        {% if not resource.is_active %}
+                        <span class="badge bg-secondary" title="Inactive resources cannot be opened">
+                            <i class="fas fa-eye-slash"></i> Inactive
+                        </span>
+                        {% endif %}
                     </div>
                     
                     <div class="card-body d-flex flex-column">
@@ -358,10 +364,10 @@
                         <p class="card-text text-muted small mb-2">
                             <i class="fas fa-user me-1"></i>{{ resource.author|default:"Unknown" }}<br>
                             {% if resource.subject %}
-                                <i class="fas fa-book me-1"></i>{{ resource.subject.name }}<br>
+                                <i class="fas fa-book me-1"></i>{{ resource.subject }}<br>
                             {% endif %}
                             <span class="resource-size">
-                                <i class="fas fa-hdd me-1"></i>{{ resource.file_size_display }}
+                                <i class="fas fa-hdd me-1"></i>{{ resource.file_size_mb }} MB
                             </span>
                         </p>
                         
@@ -369,7 +375,7 @@
                             <div class="row text-center mb-2">
                                 <div class="col-6">
                                     <small class="text-muted">Downloads</small><br>
-                                    <strong class="download-count">{{ resource.download_count }}</strong>
+                                    <strong class="download-count">{{ resource.current_downloads }}</strong>
                                 </div>
                                 <div class="col-6">
                                     <small class="text-muted">Added</small><br>
@@ -382,9 +388,15 @@
                                     <a href="{% url 'library:digital_resource_detail' resource.pk %}" class="btn btn-outline-primary btn-sm">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    {% if resource.is_active %}
                                     <a href="{% url 'library:resource_file' resource.pk %}" class="btn btn-outline-success btn-sm" target="_blank" rel="noopener" title="View read-only">
                                         <i class="fas fa-book-open"></i>
                                     </a>
+                                    {% else %}
+                                    <span class="btn btn-outline-secondary btn-sm disabled" title="This resource is inactive and cannot be opened">
+                                        <i class="fas fa-eye-slash"></i>
+                                    </span>
+                                    {% endif %}
                                     {% if material_policy.can_manage_material %}
                                     <a href="{% url 'library:digital_resource_update' resource.pk %}" class="btn btn-outline-warning btn-sm">
                                         <i class="fas fa-edit"></i>

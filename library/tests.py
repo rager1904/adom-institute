@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.models import User
-from .forms import DigitalResourceUploadForm
+from .forms import DigitalResourceForm
 from .models import Book, BookCategory, DigitalResource
 
 
@@ -32,7 +32,7 @@ class LibraryUploadValidationTests(TestCase):
             resource.full_clean()
 
     def test_digital_resource_form_rejects_unsupported_video_extension(self):
-        form = DigitalResourceUploadForm(
+        form = DigitalResourceForm(
             data={
                 'title': 'Unsupported video',
                 'description': 'Should fail upload policy',
@@ -53,7 +53,7 @@ class LibraryUploadValidationTests(TestCase):
         self.assertIn('file', form.errors)
 
     def test_digital_resource_form_accepts_supported_resource_extension(self):
-        form = DigitalResourceUploadForm(
+        form = DigitalResourceForm(
             data={
                 'title': 'Supported PDF',
                 'description': 'Valid resource',
@@ -158,7 +158,7 @@ class LibraryUploadValidationTests(TestCase):
         self.client.force_login(teacher)
 
         response = self.client.post(
-            reverse('library:teacher_resource_upload'),
+            reverse('library:digital_resource_create'),
             data={
                 'title': 'Uploaded Teacher Resource',
                 'description': 'Teacher uploaded resource',
@@ -169,6 +169,7 @@ class LibraryUploadValidationTests(TestCase):
                 'tags': '',
                 'access_level': 'students',
                 'is_downloadable': 'on',
+                'is_active': 'on',
                 'file': SimpleUploadedFile('uploaded.pdf', b'%PDF-1.4', content_type='application/pdf'),
             },
         )
@@ -176,6 +177,72 @@ class LibraryUploadValidationTests(TestCase):
         self.assertEqual(response.status_code, 302)
         resource = DigitalResource.objects.get(title='Uploaded Teacher Resource')
         self.assertEqual(resource.uploaded_by, teacher)
+        self.assertTrue(resource.is_active)
+
+    def test_legacy_teacher_upload_url_redirects_to_canonical_form(self):
+        teacher = User.objects.create_user(
+            email='resource-redirect-teacher@example.com',
+            password='password123',
+            first_name='Redirect',
+            last_name='Teacher',
+            user_type=User.UserType.TEACHER,
+        )
+        self.client.force_login(teacher)
+
+        response = self.client.get(reverse('library:teacher_resource_upload'))
+
+        self.assertRedirects(
+            response,
+            reverse('library:digital_resource_create'),
+            target_status_code=200,
+        )
+
+    def test_new_resource_is_active_without_switch_values(self):
+        teacher = User.objects.create_user(
+            email='resource-switch-teacher@example.com',
+            password='password123',
+            first_name='Switch',
+            last_name='Teacher',
+            user_type=User.UserType.TEACHER,
+        )
+        self.client.force_login(teacher)
+
+        self.client.post(
+            reverse('library:digital_resource_create'),
+            data={
+                'title': 'Resource Without Switches',
+                'description': 'Switches were never posted',
+                'resource_type': 'video',
+                'access_level': 'students',
+                'file': SimpleUploadedFile('clip.mp4', b'video-bytes', content_type='video/mp4'),
+            },
+        )
+
+        resource = DigitalResource.objects.get(title='Resource Without Switches')
+        self.assertTrue(resource.is_active)
+
+    def test_inactive_resource_can_be_reactivated_by_its_uploader(self):
+        teacher = User.objects.create_user(
+            email='resource-reactivate-teacher@example.com',
+            password='password123',
+            first_name='Reactivate',
+            last_name='Teacher',
+            user_type=User.UserType.TEACHER,
+        )
+        self.client.force_login(teacher)
+        resource = DigitalResource.objects.create(
+            title='Dormant resource',
+            resource_type='pdf',
+            access_level='students',
+            uploaded_by=teacher,
+            is_active=False,
+            file=SimpleUploadedFile('dormant.pdf', b'%PDF-1.4', content_type='application/pdf'),
+        )
+
+        response = self.client.get(reverse('library:digital_resource_update', args=[resource.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Dormant resource')
 
 
 class LibraryReportRegressionTests(TestCase):

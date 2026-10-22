@@ -205,32 +205,32 @@
             <div class="resource-info-card">
                 <div class="d-flex align-items-start">
                     <div class="resource-preview-small">
-                        {% if resource.thumbnail %}
-                            <img src="{{ resource.thumbnail.url }}" alt="{{ resource.title }}" class="img-fluid h-100 w-100" style="object-fit: cover; border-radius: 10px;">
+                        {% if resource.resource_type == 'pdf' %}
+                            <i class="fas fa-file-pdf"></i>
+                        {% elif resource.resource_type == 'video' %}
+                            <i class="fas fa-play-circle"></i>
+                        {% elif resource.resource_type == 'audio' %}
+                            <i class="fas fa-music"></i>
+                        {% elif resource.resource_type == 'ebook' %}
+                            <i class="fas fa-book"></i>
+                        {% elif resource.resource_type == 'presentation' %}
+                            <i class="fas fa-file-powerpoint"></i>
+                        {% elif resource.resource_type == 'worksheet' %}
+                            <i class="fas fa-file-excel"></i>
                         {% else %}
-                            {% if resource.file_type == 'pdf' %}
-                                <i class="fas fa-file-pdf"></i>
-                            {% elif resource.file_type == 'video' %}
-                                <i class="fas fa-play-circle"></i>
-                            {% elif resource.file_type == 'audio' %}
-                                <i class="fas fa-music"></i>
-                            {% elif resource.file_type == 'image' %}
-                                <i class="fas fa-image"></i>
-                            {% else %}
-                                <i class="fas fa-file"></i>
-                            {% endif %}
+                            <i class="fas fa-file"></i>
                         {% endif %}
                     </div>
                     <div class="flex-grow-1">
                         <h4 class="mb-2">
                             {{ resource.title }}
-                            <span class="file-type-badge">{{ resource.file_type|upper }}</span>
+                            <span class="file-type-badge">{{ resource.get_resource_type_display }}</span>
                             <span class="access-level-badge {{ resource.access_level }}">
                                 {{ resource.get_access_level_display }}
                             </span>
                         </h4>
                         <p class="mb-1"><strong>Author:</strong> {{ resource.author|default:"Unknown" }}</p>
-                        <p class="mb-1"><strong>File Size:</strong> {{ resource.file_size_display }}</p>
+                        <p class="mb-1"><strong>File Size:</strong> {{ resource.file_size_mb }} MB</p>
                         <p class="mb-1"><strong>Uploaded:</strong> {{ resource.created_at|date:"M d, Y" }}</p>
                         {% if resource.subject %}
                         <p class="mb-0"><strong>Subject:</strong> {{ resource.subject.name }}</p>
@@ -242,15 +242,15 @@
             <!-- Resource Statistics -->
             <div class="stats-grid">
                 <div class="stat-item">
-                    <div class="stat-number">{{ resource.download_count }}</div>
+                    <div class="stat-number">{{ resource.current_downloads }}</div>
                     <div class="stat-label">Downloads</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">{{ resource.view_count|default:0 }}</div>
+                    <div class="stat-number">{{ access_count|default:0 }}</div>
                     <div class="stat-label">Views</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">{{ resource.file_size_display }}</div>
+                    <div class="stat-number">{{ resource.file_size_mb }} MB</div>
                     <div class="stat-label">File Size</div>
                 </div>
                 <div class="stat-item">
@@ -341,7 +341,7 @@
                     <div class="form-check">
                         <input type="checkbox" class="form-check-input" id="confirmFile" required>
                         <label class="form-check-label" for="confirmFile">
-                            <strong>I understand that the file ({{ resource.file_size_display }}) will be permanently removed from the server and cannot be recovered.</strong>
+                            <strong>I understand that the file ({{ resource.file_size_mb }} MB) will be permanently removed from the server and cannot be recovered.</strong>
                         </label>
                     </div>
                 </div>
@@ -374,7 +374,7 @@
                     </h5>
                     <p class="mb-0">
                         You are about to permanently delete <strong>"{{ resource.title }}"</strong> and its associated file. 
-                        This action cannot be reversed and will free up {{ resource.file_size_display }} of storage space.
+                        This action cannot be reversed and will free up {{ resource.file_size_mb }} MB of storage space.
                         If you're sure you want to proceed, click the "Delete Resource" button below.
                     </p>
                 </div>
@@ -409,7 +409,7 @@
                 </div>
                 <h4>Deleting resource in <span id="countdown">7</span> seconds...</h4>
                 <div class="countdown-display" id="countdownDisplay">7</div>
-                <p class="text-muted">This will permanently delete the file and free up {{ resource.file_size_display }} of storage space.</p>
+                <p class="text-muted">This will permanently delete the file and free up {{ resource.file_size_mb }} MB of storage space.</p>
                 <div class="progress mt-3">
                     <div class="progress-bar bg-danger progress-bar-striped progress-bar-animated" 
                          role="progressbar" style="width: 100%" id="progressBar"></div>
@@ -438,7 +438,7 @@
                     <i class="fas fa-check-circle fa-4x text-success"></i>
                 </div>
                 <h4>Resource successfully deleted!</h4>
-                <p class="text-muted">{{ resource.file_size_display }} of storage space has been freed up.</p>
+                <p class="text-muted">{{ resource.file_size_mb }} MB of storage space has been freed up.</p>
                 <p class="text-muted">Redirecting to digital resources list...</p>
             </div>
         </div>

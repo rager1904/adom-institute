@@ -15,6 +15,49 @@ from .models import (
 
 User = get_user_model()
 
+
+class AlwaysSubmittedCheckbox(forms.CheckboxInput):
+    """Checkbox that always posts a value.
+
+    An unchecked checkbox sends nothing at all, so Django would store
+    ``False`` even when the field was never part of the submission. The
+    hidden field keeps the key present and the browser posts its own value
+    afterwards, which wins because the last value is the one Django reads.
+    """
+
+    def render(self, name, value, attrs=None, renderer=None):
+        hidden_attrs = {'id': 'id_%s_hidden' % name}
+        hidden = forms.HiddenInput().render(name, 'False', attrs=hidden_attrs, renderer=renderer)
+        checkbox = super().render(name, value, attrs=attrs, renderer=renderer)
+        return hidden + checkbox
+
+
+class TagListField(forms.CharField):
+    """Comma separated tags for a JSON list field.
+
+    The model stores tags as a JSON array, but the JSON form field only
+    accepts a JSON document, so a plain ``topic, science`` string was
+    rejected with "Enter a valid JSON". This field turns the typed list
+    into the list the model expects.
+    """
+
+    def clean(self, value):
+        value = super().clean(value)
+        if not value:
+            return []
+        if isinstance(value, list):
+            return [str(tag).strip() for tag in value if str(tag).strip()]
+        return [tag.strip() for tag in str(value).split(',') if tag.strip()]
+
+
+
+    def render(self, name, value, attrs=None, renderer=None):
+        hidden_attrs = {'id': 'id_%s_hidden' % name}
+        hidden = forms.HiddenInput().render(name, 'False', attrs=hidden_attrs, renderer=renderer)
+        checkbox = super().render(name, value, attrs=attrs, renderer=renderer)
+        return hidden + checkbox
+
+
 class BookSearchForm(forms.Form):
     """Search form for books"""
     search = forms.CharField(
@@ -169,6 +212,16 @@ class DigitalResourceSearchForm(forms.Form):
 
 class DigitalResourceForm(forms.ModelForm):
     """Form for creating/editing digital resources"""
+
+    tags = TagListField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter tags separated by commas'
+        }),
+        help_text='Separate the tags with commas',
+    )
+
     class Meta:
         model = DigitalResource
         fields = [
@@ -179,28 +232,67 @@ class DigitalResourceForm(forms.ModelForm):
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
-            'resource_type': forms.Select(attrs={'class': 'form-select'}),
+            'resource_type': forms.RadioSelect(attrs={'class': 'form-check-input'}),
             'file': forms.FileInput(attrs={'class': 'form-control'}),
             'author': forms.TextInput(attrs={'class': 'form-control'}),
             'subject': forms.TextInput(attrs={'class': 'form-control'}),
             'grade_level': forms.TextInput(attrs={'class': 'form-control'}),
-            'tags': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter tags separated by commas'
-            }),
-            'access_level': forms.Select(attrs={'class': 'form-select'}),
+            'access_level': forms.RadioSelect(attrs={'class': 'form-check-input'}),
             'is_downloadable': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'download_limit': forms.NumberInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
-    def clean_tags(self):
-        tags = self.cleaned_data.get('tags')
-        if tags:
-            # Convert comma-separated string to list
-            tag_list = [tag.strip() for tag in tags.split(',') if tag.strip()]
-            return tag_list
-        return []
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Editing an existing resource keeps the stored file unless a new one
+        # is supplied, so the file input is only mandatory on creation.
+        if self.instance and self.instance.pk and self.instance.file:
+            self.fields['file'].required = False
+        # A new resource is published (active) unless the uploader unticks it.
+        if not (self.instance and self.instance.pk):
+            self.fields['is_active'].initial = True
+            self.fields['is_downloadable'].initial = True
+        # Tags live in a JSON field but are edited as a comma separated list.
+        if self.instance and self.instance.pk and self.instance.tags:
+            self.initial['tags'] = ', '.join(self.instance.tags)
+        # Both switches always travel with the form so they cannot be lost.
+        for name in ('is_active', 'is_downloadable'):
+            self.fields[name].widget = AlwaysSubmittedCheckbox(
+                attrs=self.fields[name].widget.attrs
+            )
+
+    def _checkbox_fallback(self, name, default):
+        """Return the stored value when the key was not submitted at all."""
+        if name not in self.data:
+            if self.instance and self.instance.pk:
+                return getattr(self.instance, name)
+            return default
+        return self.cleaned_data.get(name, default)
+
+    def clean_is_active(self):
+        return self._checkbox_fallback('is_active', True)
+
+    def clean_is_downloadable(self):
+        return self._checkbox_fallback('is_downloadable', True)
+
+    def clean_file(self):
+        """Reject unsafe names, oversized files and unsupported extensions.
+
+        The model field carries the same validators, but running them here
+        reports the problem on the file input instead of as a late
+        non-field error, so the uploader is told what went wrong.
+        """
+        file = self.cleaned_data.get('file')
+        if file:
+            try:
+                validate_safe_filename(file)
+                validate_resource_size(file)
+                validate_learning_resource_extension(file)
+            except ValidationError as exc:
+                raise forms.ValidationError(exc.messages) from exc
+        return file
+
 
 class BookBorrowingForm(forms.ModelForm):
     """Form for creating book borrowings"""
@@ -635,49 +727,3 @@ class BookBarcodeScanForm(forms.Form):
             'autofocus': True
         })
     )
-
-class DigitalResourceUploadForm(forms.ModelForm):
-    """Form for uploading digital resources"""
-    class Meta:
-        model = DigitalResource
-        fields = [
-            'title', 'description', 'resource_type', 'file', 'author',
-            'subject', 'grade_level', 'tags', 'access_level',
-            'is_downloadable', 'download_limit'
-        ]
-        widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
-            'resource_type': forms.Select(attrs={'class': 'form-select'}),
-            'file': forms.FileInput(attrs={'class': 'form-control'}),
-            'author': forms.TextInput(attrs={'class': 'form-control'}),
-            'subject': forms.TextInput(attrs={'class': 'form-control'}),
-            'grade_level': forms.TextInput(attrs={'class': 'form-control'}),
-            'tags': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter tags separated by commas'
-            }),
-            'access_level': forms.Select(attrs={'class': 'form-select'}),
-            'is_downloadable': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'download_limit': forms.NumberInput(attrs={'class': 'form-control'}),
-        }
-
-    def clean_file(self):
-        file = self.cleaned_data.get('file')
-        if file:
-            try:
-                validate_safe_filename(file)
-                validate_resource_size(file)
-                validate_learning_resource_extension(file)
-            except ValidationError as exc:
-                raise forms.ValidationError(exc.messages) from exc
-        
-        return file
-
-    def clean_tags(self):
-        tags = self.cleaned_data.get('tags')
-        if isinstance(tags, list):
-            return tags
-        if tags:
-            return [tag.strip() for tag in str(tags).split(',') if tag.strip()]
-        return []

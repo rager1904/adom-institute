@@ -30,6 +30,53 @@
                 This material is read-only. It opens in your browser and cannot be downloaded or saved.
             </span>
         </div>
+
+        {% if not resource.is_active %}
+            <div class="alert alert-warning d-flex align-items-center gap-2">
+                <i class="fas fa-triangle-exclamation text-warning"></i>
+                <span class="small mb-0">
+                    This resource is <strong>inactive</strong>, so it cannot be opened. Tick
+                    &ldquo;Active&rdquo; when you edit it to make it available again.
+                </span>
+            </div>
+        {% endif %}
+
+        {% if can_view_file %}
+            <div class="adom-card p-4 mb-4">
+                <h2 class="h5 mb-3"><i class="fas fa-circle-play me-2"></i>Preview</h2>
+                {% if not file_exists %}
+                    <div class="alert alert-danger mb-0">
+                        The stored file could not be found. Please upload the file again by editing this resource.
+                    </div>
+                {% elif file_kind == 'video' %}
+                    <video controls preload="metadata" class="w-100 rounded" style="max-height:70vh;background:#000;">
+                        <source src="{% url 'library:resource_file' resource.pk %}" type="{{ file_content_type }}">
+                        Your browser does not support the video tag.
+                    </video>
+                {% elif file_kind == 'audio' %}
+                    <audio controls preload="metadata" class="w-100">
+                        <source src="{% url 'library:resource_file' resource.pk %}" type="{{ file_content_type }}">
+                        Your browser does not support the audio element.
+                    </audio>
+                {% elif file_kind == 'image' %}
+                    <img src="{% url 'library:resource_file' resource.pk %}" alt="{{ resource.title }}" class="img-fluid rounded">
+                {% elif file_kind == 'pdf' %}
+                    <iframe src="{% url 'library:resource_file' resource.pk %}" class="w-100 border rounded" style="height:70vh;" title="{{ resource.title }}"></iframe>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-file fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">No inline preview for .{{ file_extension|default:"unknown" }} files</h6>
+                        <p class="text-muted small mb-3">
+                            Open the file in a new tab to read it. Downloading is disabled on this platform.
+                        </p>
+                        <a href="{% url 'library:resource_file' resource.pk %}" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener">
+                            <i class="fas fa-external-link-alt me-1"></i>Open in a new tab
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
         <dl class="row mb-0">
             <dt class="col-md-3">Author</dt><dd class="col-md-9">{{ resource.author|default:"Not provided" }}</dd>
             <dt class="col-md-3">Subject</dt><dd class="col-md-9">{{ resource.subject|default:"General" }}</dd>

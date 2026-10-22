@@ -6,7 +6,8 @@ from django.core.exceptions import PermissionDenied
 from functools import wraps
 from django.http import JsonResponse, HttpResponse
 from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView, FormView
+    ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView, FormView,
+    RedirectView,
 )
 from django.urls import reverse_lazy, reverse
 from django.db.models import Q, Count, Sum
@@ -26,7 +27,11 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table
-from adom.protected_media import material_downloads_allowed, protected_file_response
+from adom.protected_media import (
+    guess_material_content_type,
+    material_downloads_allowed,
+    protected_file_response,
+)
 from accounts.permissions import (
     AdminRequiredMixin, AcademicStaffRequiredMixin, IsMaterialMaintainer,
     is_admin_user, is_teacher_user, is_platform_admin, user_institution_ids,
@@ -42,7 +47,7 @@ from .forms import (
     BookSearchForm, BookForm, BookCategoryForm, DigitalResourceSearchForm,
     DigitalResourceForm, BookBorrowingForm, BookReturnForm, BookReservationForm,
     CourseResourceForm, LibrarySettingsForm, BulkBookImportForm,
-    BookBarcodeScanForm, DigitalResourceUploadForm,
+    BookBarcodeScanForm,
     BookRequestForm, BookRequestDecisionForm, BookReturnRequestForm,
     BookReturnDecisionForm, BookReturnReceiveForm
 )
@@ -92,6 +97,38 @@ def can_view_resource(user, resource):
     if resource.access_level == 'students':
         return user_type in ('student', 'parent', 'teacher')
     return is_teacher_user(user)
+
+
+def _file_preview_context(resource):
+    """Describe the stored file so the detail page can render a viewer.
+
+    The preview kind comes from the stored file extension rather than from the
+    manually chosen ``resource_type``, so an uploaded MP4 always plays even
+    when the uploader left the type on "Other".
+    """
+    name = resource.file.name or ''
+    extension = name.rsplit('.', 1)[-1].lower() if '.' in name else ''
+    content_type = guess_material_content_type(name) if name else ''
+    if content_type.startswith('video/'):
+        kind = 'video'
+    elif content_type.startswith('audio/'):
+        kind = 'audio'
+    elif content_type.startswith('image/'):
+        kind = 'image'
+    elif content_type == 'application/pdf':
+        kind = 'pdf'
+    else:
+        kind = 'other'
+    try:
+        exists = bool(name) and resource.file.storage.exists(name)
+    except (OSError, ValueError):
+        exists = False
+    return {
+        'file_extension': extension,
+        'file_content_type': content_type,
+        'file_kind': kind,
+        'file_exists': exists,
+    }
 
 
 def can_manage_resources(user):
@@ -949,16 +986,16 @@ class TeacherResourceWorkspaceView(LoginRequiredMixin, AcademicStaffRequiredMixi
         return context
 
 
-class TeacherResourceUploadView(LoginRequiredMixin, AcademicStaffRequiredMixin, CreateView):
-    model = DigitalResource
-    form_class = DigitalResourceUploadForm
-    template_name = 'library/teacher_resource_upload.html'
-    success_url = reverse_lazy('library:teacher_resource_workspace')
+class TeacherResourceUploadView(LoginRequiredMixin, AcademicStaffRequiredMixin, RedirectView):
+    """Single upload entry point for learning material.
 
-    def form_valid(self, form):
-        form.instance.uploaded_by = self.request.user
-        messages.success(self.request, 'Learning resource uploaded successfully.')
-        return super().form_valid(form)
+    Teachers and administrators used to have two separate upload forms for
+    the same model, with different validation and different landing pages.
+    The canonical form is ``library:digital_resource_create``; this route now
+    redirects there so old bookmarks and links keep working.
+    """
+    permanent = False
+    pattern_name = 'library:digital_resource_create'
 
 
 class DigitalResourceDetailView(LoginRequiredMixin, DetailView):
@@ -992,6 +1029,7 @@ class DigitalResourceDetailView(LoginRequiredMixin, DetailView):
         context['can_view_file'] = can_view_resource(self.request.user, self.object)
         context['can_manage'] = can_manage_resource(self.request.user, self.object)
         context['view_count'] = access_logs.filter(action='view').count()
+        context.update(_file_preview_context(self.object))
         return context
 
 class DigitalResourceCreateView(LoginRequiredMixin, AcademicStaffRequiredMixin, CreateView):
@@ -1014,20 +1052,29 @@ class DigitalResourceUpdateView(LoginRequiredMixin, AcademicStaffRequiredMixin, 
     template_name = 'library/digital_resource_form.html'
     
     def get_queryset(self):
-        queryset = super().get_queryset().filter(is_active=True)
+        queryset = super().get_queryset()
         if not is_admin_user(self.request.user):
             # Teachers may only edit material they uploaded.
             queryset = queryset.filter(uploaded_by=self.request.user)
         else:
             # Administrators may only edit the material of their institution.
-            queryset = resources_visible_to(self.request.user).filter(is_active=True)
+            queryset = resources_visible_to(self.request.user)
         return queryset
-    
+
     def get_success_url(self):
         return reverse('library:digital_resource_detail', kwargs={'pk': self.object.pk})
-    
+
     def form_valid(self, form):
+        # A replaced file is stored under a new name, so the old copy has to
+        # be removed from storage to avoid leaving orphans behind.
+        old_file = self.object.file
+        replaced = form.cleaned_data.get('file')
         response = super().form_valid(form)
+        if replaced and old_file and old_file.name != form.instance.file.name:
+            try:
+                old_file.delete(save=False)
+            except OSError:
+                pass
         messages.success(self.request, 'Digital resource updated successfully.')
         return response
 
@@ -1039,11 +1086,11 @@ class DigitalResourceDeleteView(LoginRequiredMixin, AcademicStaffRequiredMixin, 
     context_object_name = 'resource'
     
     def get_queryset(self):
-        queryset = super().get_queryset().filter(is_active=True)
+        queryset = super().get_queryset()
         if not is_admin_user(self.request.user):
             queryset = queryset.filter(uploaded_by=self.request.user)
         else:
-            queryset = resources_visible_to(self.request.user).filter(is_active=True)
+            queryset = resources_visible_to(self.request.user)
         return queryset
 
     def get_context_data(self, **kwargs):
