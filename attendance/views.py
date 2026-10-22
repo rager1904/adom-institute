@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView, FormView
 from django.urls import reverse_lazy
 from django.db.models import Q, Count, Avg
 from django.utils import timezone
@@ -11,7 +11,9 @@ from django.core.paginator import Paginator
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
+# Django's PermissionDenied is converted into a 403 by DRF's exception handler
+# and is rendered as a 403 by the plain Django views, unlike DRF's own class.
+from django.core.exceptions import PermissionDenied
 from datetime import datetime, timedelta
 import json
 
@@ -55,6 +57,43 @@ def ensure_user_can_access_student(user, student):
         and not student.current_class.schedules.filter(teacher__user=user).exists()
     ):
         raise PermissionDenied('You cannot modify attendance for students outside your assigned classes.')
+
+
+def classes_visible_to(user):
+    """Return the classes a user may record attendance for.
+
+    Teachers only see the classes they are timetabled to teach; institution
+    administrators see the classes of their own institutions; platform
+    administrators see every class.
+    """
+    queryset = Class.objects.select_related('academic_year__institution')
+    if is_platform_admin(user):
+        return queryset
+    institution_ids = user_institution_ids(user)
+    if getattr(user, 'user_type', None) == 'teacher':
+        return queryset.filter(schedules__teacher__user=user).distinct()
+    if institution_ids:
+        return queryset.filter(academic_year__institution_id__in=institution_ids)
+    return queryset.none()
+
+
+def students_visible_to(user):
+    """Return the learners a user may pick in attendance filters/forms."""
+    queryset = Student.objects.select_related(
+        'user', 'current_class__academic_year__institution'
+    ).filter(is_active=True)
+    if is_platform_admin(user):
+        return queryset
+    institution_ids = user_institution_ids(user)
+    if getattr(user, 'user_type', None) == 'student':
+        return queryset.filter(user=user)
+    if getattr(user, 'user_type', None) == 'parent':
+        return queryset.filter(parents__user=user).distinct()
+    if getattr(user, 'user_type', None) == 'teacher':
+        return queryset.filter(current_class__schedules__teacher__user=user).distinct()
+    if institution_ids:
+        return queryset.filter(current_class__academic_year__institution_id__in=institution_ids).distinct()
+    return queryset.none()
 
 
 # API Viewsets
@@ -362,7 +401,7 @@ class AttendanceListView(LoginRequiredMixin, InstitutionAccessMixin, ListView):
                 queryset = queryset.none()
         
         # Apply filters
-        form = AttendanceSearchForm(self.request.GET)
+        form = self.get_search_form()
         if form.is_valid():
             if form.cleaned_data.get('date_from'):
                 queryset = queryset.filter(date__gte=form.cleaned_data['date_from'])
@@ -376,10 +415,17 @@ class AttendanceListView(LoginRequiredMixin, InstitutionAccessMixin, ListView):
                 queryset = queryset.filter(status=form.cleaned_data['status'])
         
         return queryset.order_by('-date')
+
+    def get_search_form(self):
+        return AttendanceSearchForm(
+            self.request.GET,
+            classes=classes_visible_to(self.request.user),
+            students=students_visible_to(self.request.user),
+        )
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['search_form'] = AttendanceSearchForm(self.request.GET)
+        context['search_form'] = self.get_search_form()
         return context
 
 
@@ -414,7 +460,14 @@ class AttendanceCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     success_url = reverse_lazy('attendance:attendance_list')
     
     def test_func(self):
-        return get_teacher_profile(self.request.user) is not None
+        # Administrators may also record attendance; the list view offers the
+        # same "+ Add Record" action to them.
+        return get_teacher_profile(self.request.user) is not None or is_admin_user(self.request.user)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['students'] = students_visible_to(self.request.user)
+        return kwargs
     
     def form_valid(self, form):
         ensure_user_can_access_student(self.request.user, form.cleaned_data['student'])
@@ -439,6 +492,11 @@ class AttendanceUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
             and attendance.student.current_class is not None
             and attendance.student.current_class.schedules.filter(teacher=teacher).exists()
         )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['students'] = students_visible_to(self.request.user)
+        return kwargs
     
     def form_valid(self, form):
         ensure_user_can_access_student(self.request.user, form.cleaned_data['student'])
@@ -446,14 +504,23 @@ class AttendanceUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         return super().form_valid(form)
 
 
-class BulkAttendanceView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+class BulkAttendanceView(LoginRequiredMixin, UserPassesTestMixin, FormView):
+    # ``BulkAttendanceForm`` is a plain ``forms.Form`` (it creates Attendance
+    # rows itself), so this view must not be a ModelFormMixin-based CreateView:
+    # CreateView passes ``instance=`` to the form, which raises a TypeError and
+    # renders a 500 for every role.
     form_class = BulkAttendanceForm
     template_name = 'attendance/bulk_attendance.html'
     success_url = reverse_lazy('attendance:attendance_list')
-    
+
     def test_func(self):
         return get_teacher_profile(self.request.user) is not None or is_admin_user(self.request.user)
-    
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['classes'] = classes_visible_to(self.request.user)
+        return kwargs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.method == 'POST':
@@ -777,7 +844,12 @@ def attendance_report(request):
 def get_students_for_class(request):
     class_id = request.GET.get('class_id')
     if class_id:
-        students = Student.objects.filter(current_class_id=class_id)
+        # Only classes the requester may record attendance for are exposed,
+        # and the student list is limited to the learners of that class.
+        visible_classes = classes_visible_to(request.user).filter(id=class_id)
+        if not visible_classes.exists():
+            return JsonResponse({'students': []})
+        students = students_visible_to(request.user).filter(current_class_id=class_id)
         data = [{'id': student.id, 'name': student.user.get_full_name()} for student in students]
         return JsonResponse({'students': data})
     return JsonResponse({'students': []})
@@ -787,7 +859,7 @@ def get_students_for_class(request):
 def mark_attendance_ajax(request):
     if request.method == 'POST':
         teacher = get_teacher_profile(request.user)
-        if teacher is None:
+        if teacher is None and not is_admin_user(request.user):
             return JsonResponse({
                 'success': False,
                 'message': 'Teacher profile required.'
@@ -800,7 +872,8 @@ def mark_attendance_ajax(request):
         remarks = data.get('remarks', '')
         
         try:
-            student = Student.objects.get(id=student_id)
+            student = students_visible_to(request.user).get(id=student_id)
+            ensure_user_can_access_student(request.user, student)
             attendance, created = Attendance.objects.get_or_create(
                 student=student,
                 date=date,

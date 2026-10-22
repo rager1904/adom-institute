@@ -30,6 +30,12 @@ urlpatterns = [
     path('books/<int:pk>/', views.BookDetailView.as_view(), name='book_detail'),
     path('books/<int:pk>/edit/', views.BookUpdateView.as_view(), name='book_update'),
     path('books/<int:pk>/delete/', views.BookDeleteView.as_view(), name='book_delete'),
+    # JSON helpers used by the borrowing/reservation forms
+    path('books/<int:pk>/details/', views.book_details, name='book_details'),
+    path('books/<int:pk>/queue-info/', views.book_queue_info, name='book_queue_info'),
+    path('users/<int:pk>/details/', views.user_details, name='user_details'),
+    path('search/users/', views.search_users, name='search_users'),
+    path('search/books/', views.search_books, name='search_books'),
     
     # Digital Resources
     path('discover/', views.ResourceDiscoveryView.as_view(), name='resource_discovery'),
@@ -77,10 +83,15 @@ urlpatterns = [
     
     # Tools
     path('barcode-scan/', views.barcode_scan, name='barcode_scan'),
+    path('barcode-scan/return/', views.barcode_scan_return, name='barcode_scan_return'),
+    path('barcode-scan/identify/', views.barcode_scan_identify, name='barcode_scan_identify'),
+    path('barcode-scan/user/', views.barcode_scan_user, name='barcode_scan_user'),
     path('bulk-import/', views.bulk_import_books, name='bulk_import'),
     
     # Reports and Settings
     path('reports/', views.library_reports, name='reports'),
+    path('reports/generate/', views.generate_library_report, name='report_generate'),
+    path('reports/export/', views.export_library_report, name='report_export'),
     path('settings/', views.library_settings, name='settings'),
 ]
 

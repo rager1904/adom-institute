@@ -3,6 +3,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, TemplateView
 from rest_framework import permissions, status, viewsets
@@ -10,6 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from accounts.permissions import (
+    AcademicStaffRequiredMixin,
     IsInstitutionTeacherOrAdmin,
     is_admin_user,
     is_platform_admin,
@@ -17,7 +19,7 @@ from accounts.permissions import (
     user_institution_ids,
 )
 from .models import AIConsent, AIConversation, AIMessage, AIUsageLedger, AgentTask, KnowledgeDocument
-from .agents import list_agent_definitions
+from .agents import agent_keys_for_role, list_agent_definitions
 from .forms import AIConsentForm, AIConversationForm, AIMessageForm, AgentTaskForm, KnowledgeDocumentForm
 from .serializers import (
     AIConsentSerializer,
@@ -43,6 +45,12 @@ def ensure_institution_access(user, institution):
     institution_id = getattr(institution, 'id', institution)
     if institution_id and not user_can_access_institution(user, institution_id):
         raise PermissionDenied('You cannot create AI records for this institution.')
+
+
+def ensure_agent_access(user, agent_key):
+    """Reject an agent the account is not cleared to use."""
+    if agent_key and agent_key not in agent_keys_for_role(user):
+        raise PermissionDenied('You cannot use this agent for your role.')
 
 
 class AIConsentViewSet(viewsets.ModelViewSet):
@@ -115,6 +123,7 @@ class AIConversationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         ensure_institution_access(self.request.user, serializer.validated_data.get('institution'))
+        ensure_agent_access(self.request.user, serializer.validated_data.get('agent_key'))
         serializer.save(user=self.request.user)
 
 
@@ -148,6 +157,7 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         ensure_institution_access(self.request.user, serializer.validated_data.get('institution'))
+        ensure_agent_access(self.request.user, serializer.validated_data.get('agent_key'))
         serializer.save(created_by=self.request.user)
 
 
@@ -197,7 +207,7 @@ class KnowledgeDocumentListView(LoginRequiredMixin, ListView):
         ).order_by('-created_at')
 
 
-class KnowledgeDocumentCreateView(LoginRequiredMixin, CreateView):
+class KnowledgeDocumentCreateView(LoginRequiredMixin, AcademicStaffRequiredMixin, CreateView):
     model = KnowledgeDocument
     form_class = KnowledgeDocumentForm
     template_name = 'adom_institute/knowledge_document_form.html'
@@ -227,7 +237,7 @@ class KnowledgeDocumentDetailView(LoginRequiredMixin, DetailView):
         )
 
 
-class KnowledgeDocumentProcessView(LoginRequiredMixin, View):
+class KnowledgeDocumentProcessView(LoginRequiredMixin, AcademicStaffRequiredMixin, View):
     def post(self, request, pk):
         document = get_object_or_404(scoped_institution_queryset(
             request.user,
@@ -280,7 +290,7 @@ class AgentTaskListView(LoginRequiredMixin, ListView):
         return viewset.get_queryset().order_by('-created_at')
 
 
-class AgentTaskCreateView(LoginRequiredMixin, CreateView):
+class AgentTaskCreateView(LoginRequiredMixin, AcademicStaffRequiredMixin, CreateView):
     model = AgentTask
     form_class = AgentTaskForm
     template_name = 'adom_institute/agent_task_form.html'
@@ -293,6 +303,7 @@ class AgentTaskCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         ensure_institution_access(self.request.user, form.cleaned_data.get('institution'))
+        ensure_agent_access(self.request.user, form.cleaned_data.get('agent_key'))
         form.instance.created_by = self.request.user
         messages.success(self.request, 'Agent task queued successfully.')
         return super().form_valid(form)
@@ -332,7 +343,7 @@ class AIConsentListView(LoginRequiredMixin, ListView):
         return viewset.get_queryset().order_by('-granted_at')
 
 
-class AIConsentCreateView(LoginRequiredMixin, CreateView):
+class AIConsentCreateView(LoginRequiredMixin, AcademicStaffRequiredMixin, CreateView):
     model = AIConsent
     form_class = AIConsentForm
     template_name = 'adom_institute/consent_form.html'
@@ -345,9 +356,28 @@ class AIConsentCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         ensure_institution_access(self.request.user, form.cleaned_data.get('institution'))
-        form.instance.user = self.request.user
+        institution = form.cleaned_data.get('institution')
+        # Each member has one consent record per institution/policy; update it
+        # in place rather than letting the unique constraint blow up.
+        defaults = {
+            'status': form.cleaned_data.get('status'),
+            'allow_personalization': form.cleaned_data.get('allow_personalization'),
+            'allow_academic_analysis': form.cleaned_data.get('allow_academic_analysis'),
+            'allow_opportunity_matching': form.cleaned_data.get('allow_opportunity_matching'),
+        }
+        if defaults.get('status') == AIConsent.ConsentStatus.REVOKED:
+            defaults['revoked_at'] = timezone.now()
+        else:
+            defaults['revoked_at'] = None
+            defaults['granted_at'] = timezone.now()
+        AIConsent.objects.update_or_create(
+            user=self.request.user,
+            institution=institution,
+            policy_version='2026-06',
+            defaults=defaults,
+        )
         messages.success(self.request, 'AI consent preferences saved.')
-        return super().form_valid(form)
+        return redirect(self.success_url)
 
 
 class AIConversationListView(LoginRequiredMixin, ListView):
@@ -362,7 +392,7 @@ class AIConversationListView(LoginRequiredMixin, ListView):
         return viewset.get_queryset().order_by('-updated_at')
 
 
-class AIConversationCreateView(LoginRequiredMixin, CreateView):
+class AIConversationCreateView(LoginRequiredMixin, AcademicStaffRequiredMixin, CreateView):
     model = AIConversation
     form_class = AIConversationForm
     template_name = 'adom_institute/conversation_form.html'
@@ -375,6 +405,7 @@ class AIConversationCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         ensure_institution_access(self.request.user, form.cleaned_data.get('institution'))
+        ensure_agent_access(self.request.user, form.cleaned_data.get('agent_key'))
         form.instance.user = self.request.user
         messages.success(self.request, 'Conversation created.')
         return super().form_valid(form)

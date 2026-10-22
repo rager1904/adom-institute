@@ -1,5 +1,8 @@
 from django import forms
 from .models import Report
+from students.models import AcademicYear, Class
+from teachers.models import Teacher
+from accounts.models import User
 
 
 class ReportGenerationForm(forms.ModelForm):
@@ -14,6 +17,17 @@ class ReportGenerationForm(forms.ModelForm):
             'parameters': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'JSON parameters'}),
             'filters': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'JSON filters'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The choices come from the model, so they are present as long as the
+        # form is bound to that model.  Ensure nothing empties the selector.
+        self.fields['report_type'].choices = [('', 'Select Report Type')] + [
+            (value, label) for value, label in Report.ReportType.choices
+        ]
+        self.fields['report_format'].choices = [('', 'Select Format')] + [
+            (value, label) for value, label in Report.ReportFormat.choices
+        ]
 
 
 class AnalyticsFilterForm(forms.Form):
@@ -52,9 +66,31 @@ class AnalyticsFilterForm(forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
+        institution_ids = kwargs.pop('institution_ids', None)
         super().__init__(*args, **kwargs)
-        # You can populate choices dynamically here
-        # For example, from database queries
+        # Populate choices from the database so the filters show the available
+        # academic years and classes (F-36).
+        years = AcademicYear.objects.filter(is_active=True).order_by('-start_date')
+        if institution_ids is not None:
+            id_list = list(institution_ids)
+            years = years.filter(institution_id__in=id_list)
+        self.fields['academic_year'].choices = [('', 'All Academic Years')] + [
+            (str(year.id), year.name) for year in years
+        ]
+        classes = Class.objects.filter(is_active=True).select_related('academic_year').order_by('display_name')
+        if institution_ids is not None:
+            id_list = list(institution_ids)
+            classes = classes.filter(academic_year__institution_id__in=id_list)
+        self.fields['class_id'].choices = [('', 'All Classes')] + [
+            (str(cls.id), str(cls)) for cls in classes
+        ]
+        teachers = Teacher.objects.filter(is_active=True).select_related('user').order_by('user__first_name')
+        if institution_ids is not None:
+            id_list = list(institution_ids)
+            teachers = teachers.filter(institution_id__in=id_list)
+        self.fields['teacher_id'].choices = [('', 'All Teachers')] + [
+            (str(teacher.id), teacher.user.get_full_name()) for teacher in teachers
+        ]
 
 
 class ExportForm(forms.Form):
@@ -113,6 +149,24 @@ class DashboardFilterForm(forms.Form):
         choices=[('', 'All Classes')],
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+
+    def __init__(self, *args, **kwargs):
+        institution_ids = kwargs.pop('institution_ids', None)
+        super().__init__(*args, **kwargs)
+        years = AcademicYear.objects.filter(is_active=True).order_by('-start_date')
+        if institution_ids is not None:
+            id_list = list(institution_ids)
+            years = years.filter(institution_id__in=id_list)
+        self.fields['academic_year'].choices = [('', 'All Academic Years')] + [
+            (str(year.id), year.name) for year in years
+        ]
+        classes = Class.objects.filter(is_active=True).select_related('academic_year').order_by('display_name')
+        if institution_ids is not None:
+            id_list = list(institution_ids)
+            classes = classes.filter(academic_year__institution_id__in=id_list)
+        self.fields['class_filter'].choices = [('', 'All Classes')] + [
+            (str(cls.id), str(cls)) for cls in classes
+        ]
 
 
 class PerformanceComparisonForm(forms.Form):

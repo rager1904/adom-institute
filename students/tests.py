@@ -314,3 +314,174 @@ class StudentTenantAuthorizationTests(TestCase):
             phone_number='260970000009',
             address='Lusaka',
         )
+
+
+class StudentWriteViewRegressionTests(TestCase):
+    """Regression coverage for the student/class/academic-year write views.
+
+    These views called ``scope_student_queryset``/``scope_institution_queryset``
+    without inheriting the matching access mixin, which raised an
+    ``AttributeError`` (HTTP 500) for every administrator.
+    """
+
+    def setUp(self):
+        self.institution_a = Institution.objects.create(name='Write Institution A', code='WRITE-A')
+        self.institution_b = Institution.objects.create(name='Write Institution B', code='WRITE-B')
+        self.admin_a = User.objects.create_user(
+            email='write-admin-a@example.com',
+            password='password123',
+            first_name='Write',
+            last_name='Admin',
+            user_type=User.UserType.ADMINISTRATOR,
+        )
+        InstitutionMembership.objects.create(
+            institution=self.institution_a,
+            user=self.admin_a,
+            role=InstitutionMembership.MembershipRole.ADMINISTRATOR,
+        )
+        self.year_a = self.create_year(self.institution_a, '2026')
+        self.year_b = self.create_year(self.institution_b, '2027')
+        self.class_a = self.create_class(self.year_a, 'A-10')
+        self.class_b = self.create_class(self.year_b, 'B-10')
+        self.student_a = self.create_student('write-student-a@example.com', 'WSA001', self.class_a)
+
+    def create_year(self, institution, name):
+        return AcademicYear.objects.create(
+            institution=institution,
+            name=name,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 12, 31),
+            is_active=True,
+        )
+
+    def create_class(self, academic_year, name):
+        return Class.objects.create(
+            name=name,
+            display_name=f'Class {name}',
+            academic_year=academic_year,
+            capacity=40,
+        )
+
+    def create_student(self, email, student_id, class_obj):
+        user = User.objects.create_user(
+            email=email,
+            password='password123',
+            first_name='Write',
+            last_name='Student',
+            user_type=User.UserType.STUDENT,
+        )
+        InstitutionMembership.objects.create(
+            institution=class_obj.academic_year.institution,
+            user=user,
+            role=InstitutionMembership.MembershipRole.STUDENT,
+        )
+        return Student.objects.create(
+            user=user,
+            student_id=student_id,
+            admission_number=f'ADM-{student_id}',
+            gender=Student.Gender.MALE,
+            date_of_birth=date(2010, 1, 1),
+            address='Lusaka',
+            current_class=class_obj,
+            admission_date=date.today(),
+            admission_status=Student.AdmissionStatus.APPROVED,
+        )
+
+    def test_student_update_view_renders_for_institution_admin(self):
+        self.client.force_login(self.admin_a)
+
+        response = self.client.get(reverse('students:student_update', kwargs={'pk': self.student_a.pk}))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_student_update_view_hides_cross_institution_student(self):
+        student_b = self.create_student('write-student-b@example.com', 'WSB001', self.class_b)
+        self.client.force_login(self.admin_a)
+
+        response = self.client.get(reverse('students:student_update', kwargs={'pk': student_b.pk}))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_student_delete_view_renders_for_institution_admin(self):
+        self.client.force_login(self.admin_a)
+
+        response = self.client.get(reverse('students:student_delete', kwargs={'pk': self.student_a.pk}))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_academic_year_update_view_renders_for_institution_admin(self):
+        self.client.force_login(self.admin_a)
+
+        response = self.client.get(reverse('students:academic_year_update', kwargs={'pk': self.year_a.pk}))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_academic_year_update_view_hides_other_institution_year(self):
+        self.client.force_login(self.admin_a)
+
+        response = self.client.get(reverse('students:academic_year_update', kwargs={'pk': self.year_b.pk}))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_academic_year_delete_view_renders_for_institution_admin(self):
+        self.client.force_login(self.admin_a)
+
+        response = self.client.get(reverse('students:academic_year_delete', kwargs={'pk': self.year_a.pk}))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_class_update_view_renders_for_institution_admin(self):
+        self.client.force_login(self.admin_a)
+
+        response = self.client.get(reverse('students:class_update', kwargs={'pk': self.class_a.pk}))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_class_update_view_hides_other_institution_class(self):
+        self.client.force_login(self.admin_a)
+
+        response = self.client.get(reverse('students:class_update', kwargs={'pk': self.class_b.pk}))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_class_delete_view_renders_for_institution_admin(self):
+        self.client.force_login(self.admin_a)
+
+        response = self.client.get(reverse('students:class_delete', kwargs={'pk': self.class_a.pk}))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_class_delete_view_cannot_delete_other_institution_class(self):
+        self.client.force_login(self.admin_a)
+
+        response = self.client.post(reverse('students:class_delete', kwargs={'pk': self.class_b.pk}))
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Class.objects.filter(pk=self.class_b.pk).exists())
+
+    def test_parent_update_view_is_scoped_to_institution(self):
+        parent_user = User.objects.create_user(
+            email='write-parent@example.com',
+            password='password123',
+            first_name='Write',
+            last_name='Parent',
+            user_type=User.UserType.PARENT,
+        )
+        InstitutionMembership.objects.create(
+            institution=self.institution_a,
+            user=parent_user,
+            role=InstitutionMembership.MembershipRole.PARENT,
+        )
+        parent = Parent.objects.create(
+            student=self.student_a,
+            user=parent_user,
+            relationship=Parent.Relationship.GUARDIAN,
+            phone_number='260970000011',
+            email='write-parent@example.com',
+            is_primary_contact=True,
+        )
+        self.client.force_login(self.admin_a)
+
+        response = self.client.get(reverse('students:parent_update', kwargs={'pk': parent.pk}))
+
+        self.assertEqual(response.status_code, 200)

@@ -44,6 +44,15 @@ class BookSearchForm(forms.Form):
 
 class BookForm(forms.ModelForm):
     """Form for creating/editing books"""
+    new_category = forms.CharField(
+        required=False,
+        label='New category',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Create a category, e.g. Science',
+        }),
+    )
+
     class Meta:
         model = Book
         fields = [
@@ -68,6 +77,35 @@ class BookForm(forms.ModelForm):
             'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # A fresh installation has no book categories, which left the category
+        # dropdown empty and made the Add Book form unusable. Staff can now
+        # create the first category from the form itself.
+        if not self.fields['category'].queryset.exists():
+            self.fields['category'].required = False
+            self.fields['new_category'].required = True
+            self.fields['category'].help_text = (
+                'No categories exist yet - enter a new category name below.'
+            )
+        else:
+            self.fields['new_category'].required = False
+            self.fields['new_category'].help_text = (
+                'Optional: add a new category instead of choosing one above.'
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_category = (cleaned_data.get('new_category') or '').strip()
+        if new_category:
+            category, _created = BookCategory.objects.get_or_create(
+                name=new_category[:100]
+            )
+            cleaned_data['category'] = category
+            # The category choice itself stays empty, so drop its error.
+            self._errors.pop('category', None)
+        return cleaned_data
 
     def clean_isbn(self):
         isbn = self.cleaned_data.get('isbn')

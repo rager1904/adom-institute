@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from functools import wraps
 from django.http import JsonResponse, HttpResponse
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView, FormView
@@ -20,10 +21,15 @@ from django_filters.rest_framework import DjangoFilterBackend
 from datetime import timedelta
 import csv
 import io
+import openpyxl
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table
 from adom.protected_media import material_downloads_allowed, protected_file_response
 from accounts.permissions import (
     AdminRequiredMixin, AcademicStaffRequiredMixin, IsMaterialMaintainer,
-    is_admin_user, is_teacher_user,
+    is_admin_user, is_teacher_user, is_platform_admin, user_institution_ids,
 )
 
 from .models import (
@@ -31,6 +37,7 @@ from .models import (
     DigitalResourceAccess, CourseResource, LibrarySettings, LibraryReport,
     ReturnRequest
 )
+from .reports import build_report, report_rows, REPORT_TITLES
 from .forms import (
     BookSearchForm, BookForm, BookCategoryForm, DigitalResourceSearchForm,
     DigitalResourceForm, BookBorrowingForm, BookReturnForm, BookReservationForm,
@@ -50,6 +57,21 @@ from .serializers import (
 )
 
 User = get_user_model()
+
+
+def library_admin_required(view_func):
+    """Send anonymous visitors to the login page and other roles a 403.
+
+    The class based library views answer a signed-in non-admin with
+    ``PermissionDenied``; the JSON helpers behave the same way.
+    """
+    @login_required
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not is_admin_user(request.user):
+            raise PermissionDenied
+        return view_func(request, *args, **kwargs)
+    return _wrapped
 
 
 def can_view_resource(user, resource):
@@ -77,6 +99,61 @@ def can_manage_resources(user):
     if not user or not user.is_authenticated:
         return False
     return is_admin_user(user) or is_teacher_user(user)
+
+
+def resources_visible_to(user):
+    """Digital resources the user may list.
+
+    A resource is owned by the institution of the user who uploaded it, so
+    the list is limited to the uploader's institution(s). Resources without an
+    uploader (legacy/global material) stay visible to everybody, and a user
+    always keeps sight of the material they uploaded themselves.
+    """
+    queryset = DigitalResource.objects.all()
+    if is_platform_admin(user):
+        return queryset
+    institution_ids = user_institution_ids(user) or []
+    if not institution_ids:
+        return queryset.filter(
+            Q(uploaded_by__isnull=True) | Q(uploaded_by=user)
+        )
+    return queryset.filter(
+        Q(uploaded_by__isnull=True) |
+        Q(uploaded_by=user) |
+        Q(uploaded_by__institution_memberships__institution_id__in=institution_ids)
+    ).distinct()
+
+
+def can_manage_resource(user, resource):
+    """Whether ``user`` may edit or delete a specific resource.
+
+    Teachers may only change material they uploaded; administrators may
+    change the material of their own institution.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if is_platform_admin(user):
+        return True
+    if is_admin_user(user):
+        institution_ids = user_institution_ids(user) or []
+        if not institution_ids or resource.uploaded_by_id is None:
+            return False
+        return resource.uploaded_by.institution_memberships.filter(
+            institution_id__in=institution_ids
+        ).exists()
+    if is_teacher_user(user):
+        return resource.uploaded_by_id == user.id
+    return False
+
+
+class IsResourceOwnerOrInstitutionAdmin(permissions.BasePermission):
+    """Only the uploader or an administrator of the same institution may
+    change a digital resource."""
+
+    message = 'You can only change learning material you uploaded.'
+
+    def has_object_permission(self, request, view, obj):
+        return can_manage_resource(request.user, obj)
 
 
 class IsLibraryStaffOrReadOnly(permissions.BasePermission):
@@ -234,11 +311,15 @@ class DigitalResourceViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ('create', 'update', 'partial_update', 'destroy'):
-            return [IsMaterialMaintainer()]
+            return [
+                IsAuthenticated(),
+                IsMaterialMaintainer(),
+                IsResourceOwnerOrInstitutionAdmin(),
+            ]
         return [IsAuthenticated()]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = resources_visible_to(self.request.user)
         if self.request.user.is_authenticated and not is_admin_user(self.request.user):
             queryset = queryset.filter(is_active=True)
         return queryset
@@ -698,6 +779,14 @@ class BookListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['search_form'] = BookSearchForm(self.request.GET)
         context['categories'] = BookCategory.objects.filter(is_active=True)
+        # Counters shown on the catalogue header.
+        active_books = Book.objects.filter(is_active=True)
+        context['total_books'] = active_books.count()
+        context['available_books'] = active_books.filter(availability='available').count()
+        context['borrowed_books'] = active_books.filter(availability='borrowed').count()
+        context['overdue_books'] = BookBorrowing.objects.filter(
+            due_date__lt=timezone.now(), return_date__isnull=True
+        ).count()
         # Books this member already has a live request for, so the catalogue
         # can grey out the request button.
         context['my_request_book_ids'] = set(
@@ -766,7 +855,7 @@ class DigitalResourceListView(LoginRequiredMixin, ListView):
     paginate_by = 20
     
     def get_queryset(self):
-        queryset = DigitalResource.objects.filter(is_active=True)
+        queryset = resources_visible_to(self.request.user).filter(is_active=True)
         
         # Search
         search = self.request.GET.get('search')
@@ -800,6 +889,14 @@ class DigitalResourceListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_form'] = DigitalResourceSearchForm(self.request.GET)
+        # Counters shown on the digital resources header.
+        resources = resources_visible_to(self.request.user).filter(is_active=True)
+        context['total_resources'] = resources.count()
+        context['pdf_count'] = resources.filter(resource_type='pdf').count()
+        context['video_count'] = resources.filter(resource_type='video').count()
+        context['total_downloads'] = resources.aggregate(
+            total=Sum('current_downloads')
+        )['total'] or 0
         return context
 
 
@@ -810,7 +907,7 @@ class ResourceDiscoveryView(LoginRequiredMixin, ListView):
     paginate_by = 24
 
     def get_queryset(self):
-        queryset = DigitalResource.objects.filter(is_active=True)
+        queryset = resources_visible_to(self.request.user).filter(is_active=True)
         user_type = getattr(self.request.user, 'user_type', '')
         if user_type == 'student':
             queryset = queryset.filter(access_level__in=['public', 'students'])
@@ -831,10 +928,11 @@ class TeacherResourceWorkspaceView(LoginRequiredMixin, AcademicStaffRequiredMixi
     template_name = 'library/teacher_resource_workspace.html'
 
     def get_queryset(self):
-        queryset = DigitalResource.objects.filter(is_active=True).select_related('uploaded_by')
-        if is_admin_user(self.request.user):
-            return queryset
-        return queryset.filter(uploaded_by=self.request.user)
+        queryset = resources_visible_to(self.request.user).select_related('uploaded_by')
+        queryset = queryset.filter(is_active=True)
+        if not is_admin_user(self.request.user):
+            queryset = queryset.filter(uploaded_by=self.request.user)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -872,8 +970,8 @@ class DigitalResourceDetailView(LoginRequiredMixin, DetailView):
     def get_queryset(self):
         queryset = super().get_queryset()
         if is_admin_user(self.request.user):
-            return queryset
-        return queryset.filter(
+            return resources_visible_to(self.request.user)
+        return resources_visible_to(self.request.user).filter(
             is_active=True,
             access_level__in=self._visible_access_levels(),
         )
@@ -892,7 +990,7 @@ class DigitalResourceDetailView(LoginRequiredMixin, DetailView):
         context['access_logs'] = access_logs.order_by('-access_date')[:10]
         context['course_links'] = self.object.course_links.select_related('recommended_by')
         context['can_view_file'] = can_view_resource(self.request.user, self.object)
-        context['can_manage'] = can_manage_resources(self.request.user)
+        context['can_manage'] = can_manage_resource(self.request.user, self.object)
         context['view_count'] = access_logs.filter(action='view').count()
         return context
 
@@ -916,10 +1014,13 @@ class DigitalResourceUpdateView(LoginRequiredMixin, AcademicStaffRequiredMixin, 
     template_name = 'library/digital_resource_form.html'
     
     def get_queryset(self):
-        # Teachers may only edit material they uploaded.
         queryset = super().get_queryset().filter(is_active=True)
         if not is_admin_user(self.request.user):
+            # Teachers may only edit material they uploaded.
             queryset = queryset.filter(uploaded_by=self.request.user)
+        else:
+            # Administrators may only edit the material of their institution.
+            queryset = resources_visible_to(self.request.user).filter(is_active=True)
         return queryset
     
     def get_success_url(self):
@@ -941,7 +1042,14 @@ class DigitalResourceDeleteView(LoginRequiredMixin, AcademicStaffRequiredMixin, 
         queryset = super().get_queryset().filter(is_active=True)
         if not is_admin_user(self.request.user):
             queryset = queryset.filter(uploaded_by=self.request.user)
+        else:
+            queryset = resources_visible_to(self.request.user).filter(is_active=True)
         return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['access_count'] = context['resource'].access_logs.count()
+        return context
     
     def delete(self, request, *args, **kwargs):
         response = super().delete(request, *args, **kwargs)
@@ -1105,6 +1213,9 @@ class BookReservationListView(LoginRequiredMixin, ListView):
         context['fulfilled_today'] = BookReservation.objects.filter(
             fulfilled_at__date=timezone.localdate(),
             **({} if is_admin_user(self.request.user) else {'user': self.request.user}),
+        ).count()
+        context['expired_count'] = reservations.filter(
+            expiry_date__lt=timezone.now()
         ).count()
         return context
 
@@ -1617,10 +1728,123 @@ def view_resource_file(request, resource_id):
         resource.file, request=request, filename=resource.title,
     )
 
+def _book_payload(book):
+    """Serialise a book for the browser side of the library forms."""
+    available = book.availability == 'available'
+    return {
+        'id': book.id,
+        'title': book.title,
+        'author': book.author,
+        'isbn': book.isbn or '',
+        'category': book.category.name if book.category_id else '',
+        'edition': book.edition,
+        'publisher': book.publisher,
+        'publication_year': book.publication_year,
+        'location': book.location,
+        'availability': book.availability,
+        'is_available': available,
+        # The library tracks a single copy per catalogue entry, so the copy
+        # counters are derived from the availability state.
+        'total_copies': 1,
+        'available_copies': 1 if available else 0,
+        'cover_image': book.cover_image.url if book.cover_image else '',
+    }
+
+
+def _user_payload(user_obj):
+    """Serialise a user for the browser side of the library forms."""
+    borrowings = user_obj.book_borrowings.all()
+    return {
+        'id': user_obj.id,
+        'first_name': user_obj.first_name or '',
+        'last_name': user_obj.last_name or '',
+        'full_name': user_obj.get_full_name(),
+        # The account model identifies people by email, so the "username"
+        # shown in the forms falls back to it.
+        'username': getattr(user_obj, 'username', None) or user_obj.email,
+        'email': user_obj.email,
+        'user_type': getattr(user_obj, 'user_type', ''),
+        'active_borrowings': borrowings.filter(return_date__isnull=True).count(),
+        'total_borrowed': borrowings.count(),
+    }
+
+
+@library_admin_required
+def search_users(request):
+    """Staff lookup of library users used by the borrowing/reservation forms."""
+    query = (request.GET.get('q') or '').strip()
+    users = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
+    # The displayed name is "first last", so every word of the query has to
+    # match one of the name parts, otherwise "student banda" finds nothing.
+    for token in query.split():
+        users = users.filter(
+            Q(first_name__icontains=token) |
+            Q(last_name__icontains=token) |
+            Q(email__icontains=token)
+        )
+    return JsonResponse({
+        'users': [_user_payload(user_obj) for user_obj in users[:20]],
+    })
+
+
+@login_required
+def search_books(request):
+    """Catalogue lookup used by the borrowing/reservation forms."""
+    query = (request.GET.get('q') or '').strip()
+    books = Book.objects.filter(is_active=True).select_related('category')
+    for token in query.split():
+        books = books.filter(
+            Q(title__icontains=token) |
+            Q(author__icontains=token) |
+            Q(isbn__icontains=token)
+        )
+    return JsonResponse({
+        'books': [_book_payload(book) for book in books[:20]],
+    })
+
+
+@login_required
+def book_details(request, pk):
+    """Return the details of a single catalogue entry."""
+    book = get_object_or_404(Book, pk=pk, is_active=True)
+    return JsonResponse({'success': True, 'book': _book_payload(book)})
+
+
+@library_admin_required
+def user_details(request, pk):
+    """Return the details of a single library user."""
+    user_obj = get_object_or_404(User, pk=pk, is_active=True)
+    return JsonResponse({'success': True, 'user': _user_payload(user_obj)})
+
+
+@login_required
+def book_queue_info(request, pk):
+    """Return the current reservation queue for a book."""
+    book = get_object_or_404(Book, pk=pk, is_active=True)
+    queue = list(
+        book.reservations
+        .filter(status__in=BookReservation.OPEN_STATUSES)
+        .order_by('reservation_date')
+        .values_list('id', flat=True)
+    )
+    estimated_wait = 'Unknown'
+    if queue:
+        days = max(round(len(queue) * 1.5), 1)
+        estimated_wait = f'about {days} day(s)'
+    return JsonResponse({
+        'success': True,
+        'book_id': book.id,
+        'queue_length': len(queue),
+        'estimated_wait': estimated_wait,
+    })
+
+
 @login_required
 @user_passes_test(is_admin_user)
 def barcode_scan(request):
     """Barcode scanning interface"""
+    if request.method == 'GET' and request.GET.get('barcode'):
+        return _barcode_lookup(request)
     if request.method == 'POST':
         form = BookBarcodeScanForm(request.POST)
         if form.is_valid():
@@ -1634,6 +1858,89 @@ def barcode_scan(request):
         form = BookBarcodeScanForm()
     
     return render(request, 'library/barcode_scan.html', {'form': form})
+
+
+def _barcode_lookup(request):
+    """JSON lookup of a catalogue entry by its barcode."""
+    barcode = (request.GET.get('barcode') or '').strip()
+    book = Book.objects.filter(barcode=barcode, is_active=True).first()
+    if book is None:
+        return JsonResponse(
+            {'success': False, 'error': 'Book not found with this barcode.'},
+            status=404,
+        )
+    return JsonResponse({'success': True, 'book': _book_payload(book)})
+
+
+@library_admin_required
+def barcode_scan_return(request):
+    """JSON lookup of the active borrowing behind a scanned barcode."""
+    barcode = (request.GET.get('barcode') or '').strip()
+    book = Book.objects.filter(barcode=barcode, is_active=True).first()
+    if book is None:
+        return JsonResponse(
+            {'success': False, 'error': 'Book not found with this barcode.'},
+            status=404,
+        )
+    borrowing = (
+        book.borrowings
+        .filter(return_date__isnull=True)
+        .select_related('borrower')
+        .order_by('-borrowed_date')
+        .first()
+    )
+    if borrowing is None:
+        return JsonResponse(
+            {'success': False, 'error': 'No active borrowing found for this barcode'},
+            status=404,
+        )
+    return JsonResponse({
+        'success': True,
+        'borrowing': {
+            'id': borrowing.id,
+            'book_id': book.id,
+            'book_title': book.title,
+            'borrower_id': borrowing.borrower_id,
+            'borrower_name': borrowing.borrower.get_full_name(),
+            'borrowed_date': borrowing.borrowed_date.strftime('%Y-%m-%d'),
+            'due_date': borrowing.due_date.strftime('%Y-%m-%d'),
+            'is_overdue': borrowing.due_date < timezone.now(),
+            'late_fee': borrowing.late_fee,
+        },
+    })
+
+
+@library_admin_required
+def barcode_scan_identify(request):
+    """JSON lookup telling a scanned barcode apart as a book or a user."""
+    barcode = (request.GET.get('barcode') or '').strip()
+    book = Book.objects.filter(barcode=barcode, is_active=True).first()
+    if book is not None:
+        return JsonResponse({'success': True, 'type': 'book', 'id': book.id})
+    user_obj = User.objects.filter(
+        Q(email__iexact=barcode), is_active=True,
+    ).first()
+    if user_obj is not None:
+        return JsonResponse({'success': True, 'type': 'user', 'id': user_obj.id})
+    return JsonResponse(
+        {'success': False, 'error': 'Could not identify barcode type'},
+        status=404,
+    )
+
+
+@library_admin_required
+def barcode_scan_user(request):
+    """JSON lookup of a library user by barcode/card number."""
+    barcode = (request.GET.get('barcode') or '').strip()
+    user_obj = User.objects.filter(
+        Q(email__iexact=barcode), is_active=True,
+    ).first()
+    if user_obj is None:
+        return JsonResponse(
+            {'success': False, 'error': 'No user found with this barcode'},
+            status=404,
+        )
+    return JsonResponse({'success': True, 'user': _user_payload(user_obj)})
 
 @login_required
 @user_passes_test(is_admin_user)
@@ -1705,21 +2012,104 @@ def bulk_import_books(request):
 @user_passes_test(is_admin_user)
 def library_reports(request):
     """Library reports view"""
-    # Generate today's report if it doesn't exist
+    # Generate today's report if it doesn't exist.  ``generate_daily_report``
+    # already performs an ``update_or_create`` and returns ``(report, created)``.
     today = timezone.now().date()
-    report, created = LibraryReport.objects.get_or_create(
-        report_type='daily',
-        report_date=today,
-        defaults=LibraryReport.generate_daily_report(today).__dict__
-    )
+    report = LibraryReport.generate_daily_report(today)
     
     # Get recent reports
     recent_reports = LibraryReport.objects.order_by('-report_date')[:30]
+
+    # Summary counters for the page header
+    borrowings = BookBorrowing.objects.all()
+    summary = {
+        'total_books': Book.objects.filter(is_active=True).count(),
+        'total_borrowings': borrowings.count(),
+        'active_users': borrowings.values('borrower_id').distinct().count(),
+        'overdue_count': borrowings.filter(
+            return_date__isnull=True, due_date__lt=timezone.now()
+        ).count(),
+    }
     
     return render(request, 'library/reports.html', {
         'today_report': report,
-        'recent_reports': recent_reports
+        'recent_reports': recent_reports,
+        'categories': BookCategory.objects.all(),
+        **summary,
     })
+
+
+@library_admin_required
+def generate_library_report(request):
+    """Return the JSON payload for the selected library report panel."""
+    report_type = request.GET.get('report_type', '')
+    data = build_report(report_type, request.GET)
+    if data is None:
+        return JsonResponse(
+            {'success': False, 'error': f'Unknown report type: {report_type}'},
+            status=400,
+        )
+    payload = {
+        'success': True,
+        'report_type': report_type,
+        'title': REPORT_TITLES.get(report_type, 'Library Report'),
+        'generated_at': timezone.now().isoformat(),
+    }
+    payload.update(data)
+    return JsonResponse(payload, json_dumps_params={'default': str})
+
+
+@library_admin_required
+def export_library_report(request):
+    """Export the selected library report as CSV, Excel or PDF."""
+    report_type = request.GET.get('report_type', '')
+    export_format = (request.GET.get('format') or 'csv').lower()
+    data = build_report(report_type, request.GET)
+    if data is None:
+        return JsonResponse(
+            {'success': False, 'error': f'Unknown report type: {report_type}'},
+            status=400,
+        )
+
+    headers, rows = report_rows(report_type, data)
+    title = REPORT_TITLES.get(report_type, 'Library Report')
+    stem = f'library-{report_type.replace("_", "-")}'
+
+    if export_format == 'excel':
+        buffer = io.BytesIO()
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = title[:31]
+        sheet.append(headers)
+        for row in rows:
+            sheet.append(row)
+        workbook.save(buffer)
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = f'attachment; filename="{stem}.xlsx"'
+        return response
+
+    if export_format == 'pdf':
+        buffer = io.BytesIO()
+        document = SimpleDocTemplate(buffer, pagesize=A4)
+        styles = getSampleStyleSheet()
+        story = [Paragraph(title, styles['Heading1']), Spacer(1, 12)]
+        table_data = [headers] + [[str(cell) for cell in row] for row in rows]
+        story.append(Table(table_data, repeatRows=1))
+        document.build(story)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{stem}.pdf"'
+        return response
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{stem}.csv"'
+    writer = csv.writer(response)
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow(row)
+    return response
 
 @login_required
 @user_passes_test(is_admin_user)

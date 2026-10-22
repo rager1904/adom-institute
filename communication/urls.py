@@ -53,6 +53,7 @@ urlpatterns = [
     path('ajax/notifications/<int:notification_id>/mark-read/', views.mark_notification_read, name='mark_notification_read'),
     path('ajax/notifications/count/', views.get_notification_count, name='get_notification_count'),
     path('ajax/messages/count/', views.get_message_count, name='get_message_count'),
+    path('ajax/users-for-message/', views.get_users_for_message, name='get_users_for_message'),
     
     # API URLs
     path('api/', include(router.urls)),

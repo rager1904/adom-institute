@@ -86,6 +86,18 @@ class StudentFeeForm(forms.ModelForm):
             'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'payment_status': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The fee detail selector must show every active fee line so the admin
+        # can charge a student even if the setup flow isn't complete.
+        self.fields['fee_structure_detail'].queryset = (
+            FeeStructureDetail.objects
+            .select_related('fee_structure', 'fee_category')
+            .filter(fee_structure__is_active=True)
+            .order_by('fee_structure__name', 'fee_category__name')
+        )
+        self.fields['fee_structure_detail'].empty_label = None
     
     def clean_due_date(self):
         due_date = self.cleaned_data.get('due_date')
@@ -109,6 +121,18 @@ class PaymentForm(forms.ModelForm):
             'reference_number': forms.TextInput(attrs={'class': 'form-control'}),
             'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The payment form needs to show open student fees so an existing charge
+        # can be collected.
+        self.fields['student_fee'].queryset = (
+            StudentFee.objects
+            .select_related('student__user', 'fee_structure_detail__fee_category')
+            .filter(payment_status__in=['pending', 'partial'])
+            .order_by('-due_date')
+        )
+        self.fields['student_fee'].empty_label = None
     
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')

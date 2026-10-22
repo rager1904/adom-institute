@@ -53,6 +53,7 @@ def get_student_profile(user):
     return getattr(user, 'student_profile', None)
 
 
+@method_decorator(login_required, name='dispatch')
 class DashboardView(InstitutionAccessMixin, TemplateView):
     template_name = 'academics/dashboard.html'
 
@@ -77,6 +78,7 @@ class DashboardView(InstitutionAccessMixin, TemplateView):
         return context
 
 
+@method_decorator(login_required, name='dispatch')
 class CourseListView(InstitutionAccessMixin, ListView):
     model = Class
     template_name = 'academics/course_list.html'
@@ -88,15 +90,16 @@ class CourseListView(InstitutionAccessMixin, ListView):
         user = self.request.user
         if is_platform_admin(user):
             return queryset.order_by('display_name')
-        if user.user_type == 'student':
+        if getattr(user, 'user_type', None) == 'student':
             return queryset.filter(students__user=user).distinct().order_by('display_name')
-        if user.user_type == 'parent':
+        if getattr(user, 'user_type', None) == 'parent':
             return queryset.filter(students__parents__user=user).distinct().order_by('display_name')
-        if user.user_type == 'teacher':
+        if getattr(user, 'user_type', None) == 'teacher':
             return queryset.filter(Q(assignments__teacher__user=user) | Q(schedules__teacher__user=user)).distinct().order_by('display_name')
         return self.scope_institution_queryset(queryset, 'academic_year__institution_id').order_by('display_name')
 
 
+@method_decorator(login_required, name='dispatch')
 class CourseDetailView(InstitutionAccessMixin, DetailView):
     model = Class
     template_name = 'academics/course_detail.html'

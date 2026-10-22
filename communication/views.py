@@ -18,7 +18,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from accounts.permissions import (
     AdminRequiredMixin, AcademicStaffRequiredMixin, is_admin_user,
-    is_academic_staff_user,
+    is_academic_staff_user, is_platform_admin, user_institution_ids,
 )
 
 from .models import (
@@ -29,7 +29,7 @@ from .forms import (
     MessageForm, AnnouncementForm, NotificationForm, EmailTemplateForm,
     SMSTemplateForm, CommunicationLogForm, MessageSearchForm,
     AnnouncementSearchForm, NotificationSearchForm, BulkMessageForm,
-    BulkAnnouncementForm
+    BulkAnnouncementForm, message_recipients_for, classes_visible_to
 )
 from .serializers import (
     MessageSerializer, MessageCreateSerializer, MessageRecipientSerializer,
@@ -42,6 +42,62 @@ from .serializers import (
 from accounts.models import User
 from students.models import Student, Class
 from teachers.models import Teacher
+
+
+def messages_visible_to(user):
+    """Messages a user may read, limited to their own institution(s)."""
+    queryset = Message.objects.select_related('sender').prefetch_related('recipients')
+    if is_platform_admin(user):
+        return queryset
+    institution_ids = user_institution_ids(user) or []
+    if not institution_ids:
+        return queryset.none()
+    return queryset.filter(
+        Q(sender__institution_memberships__institution_id__in=institution_ids) |
+        Q(recipients__institution_memberships__institution_id__in=institution_ids)
+    ).distinct()
+
+
+def announcements_visible_to(user):
+    """Announcements a user may read, limited to their own institution(s)."""
+    queryset = Announcement.objects.select_related('published_by').prefetch_related('target_classes')
+    if is_platform_admin(user):
+        return queryset
+    institution_ids = user_institution_ids(user) or []
+    if not institution_ids:
+        return queryset.none()
+    return queryset.filter(
+        Q(published_by__institution_memberships__institution_id__in=institution_ids) |
+        Q(target_classes__academic_year__institution_id__in=institution_ids)
+    ).distinct()
+
+
+def notifications_visible_to(user):
+    """Notifications a user may read, limited to their own institution(s)."""
+    queryset = Notification.objects.select_related(
+        'recipient', 'related_message', 'related_announcement'
+    )
+    if is_platform_admin(user):
+        return queryset
+    institution_ids = user_institution_ids(user) or []
+    if not institution_ids:
+        return queryset.none()
+    return queryset.filter(
+        recipient__institution_memberships__institution_id__in=institution_ids
+    ).distinct()
+
+
+def communication_logs_visible_to(user):
+    """Communication logs a user may read, limited to their own institution(s)."""
+    queryset = CommunicationLog.objects.select_related('recipient')
+    if is_platform_admin(user):
+        return queryset
+    institution_ids = user_institution_ids(user) or []
+    if not institution_ids:
+        return queryset.none()
+    return queryset.filter(
+        recipient__institution_memberships__institution_id__in=institution_ids
+    ).distinct()
 
 
 # API Viewsets
@@ -325,10 +381,10 @@ class MessageListView(LoginRequiredMixin, ListView):
     
     def get_queryset(self):
         user = self.request.user
-        queryset = Message.objects.select_related('sender').prefetch_related('recipients')
+        queryset = messages_visible_to(user)
         
         # Apply filters
-        form = MessageSearchForm(self.request.GET)
+        form = MessageSearchForm(self.request.GET, user=user)
         if form.is_valid():
             if form.cleaned_data.get('subject'):
                 queryset = queryset.filter(subject__icontains=form.cleaned_data['subject'])
@@ -357,7 +413,7 @@ class MessageListView(LoginRequiredMixin, ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['search_form'] = MessageSearchForm(self.request.GET)
+        context['search_form'] = MessageSearchForm(self.request.GET, user=self.request.user)
         return context
 
 
@@ -415,7 +471,7 @@ class MessageDetailView(LoginRequiredMixin, DetailView):
     
     def get_queryset(self):
         user = self.request.user
-        queryset = Message.objects.select_related('sender').prefetch_related('recipients')
+        queryset = messages_visible_to(user)
         if is_admin_user(user):
             return queryset
         return queryset.filter(Q(sender=user) | Q(recipients=user)).distinct()
@@ -438,7 +494,7 @@ class AnnouncementListView(LoginRequiredMixin, ListView):
     
     def get_queryset(self):
         user = self.request.user
-        queryset = Announcement.objects.select_related('published_by').prefetch_related('target_classes')
+        queryset = announcements_visible_to(user)
         
         # Apply filters
         form = AnnouncementSearchForm(self.request.GET)
@@ -449,7 +505,10 @@ class AnnouncementListView(LoginRequiredMixin, ListView):
                 queryset = queryset.filter(announcement_type=form.cleaned_data['announcement_type'])
             if form.cleaned_data.get('target_audience'):
                 queryset = queryset.filter(target_audience=form.cleaned_data['target_audience'])
-            if form.cleaned_data.get('is_published') is not None:
+            # ``is_published`` is a checkbox: when it is absent the form value is
+            # False, not None, so the filter must only be applied when the
+            # request actually carried the parameter.
+            if 'is_published' in self.request.GET:
                 queryset = queryset.filter(is_published=form.cleaned_data['is_published'])
             if form.cleaned_data.get('is_urgent'):
                 queryset = queryset.filter(is_urgent=True)
@@ -464,8 +523,12 @@ class AnnouncementListView(LoginRequiredMixin, ListView):
         if is_admin_user(user):
             return queryset.order_by('-created_at')
         else:
+            # ``is_expired`` is a model property, not a database field, so the
+            # expiry condition has to be expressed with the raw column.
             return queryset.filter(
-                is_published=True, is_expired=False
+                is_published=True
+            ).filter(
+                Q(expires_at__isnull=True) | Q(expires_at__gte=timezone.now())
             ).order_by('-created_at')
     
     def get_context_data(self, **kwargs):
@@ -479,6 +542,11 @@ class AnnouncementCreateView(LoginRequiredMixin, AcademicStaffRequiredMixin, Cre
     form_class = AnnouncementForm
     template_name = 'communication/announcement_form.html'
     success_url = reverse_lazy('communication:announcement_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
     
     def form_valid(self, form):
         form.instance.published_by = self.request.user
@@ -493,11 +561,12 @@ class AnnouncementDetailView(LoginRequiredMixin, DetailView):
     
     def get_queryset(self):
         user = self.request.user
+        queryset = announcements_visible_to(user)
         if is_admin_user(user):
-            return Announcement.objects.select_related('published_by').prefetch_related('target_classes')
-        return Announcement.objects.filter(
-            is_published=True, is_expired=False
-        ).select_related('published_by').prefetch_related('target_classes')
+            return queryset
+        return queryset.filter(is_published=True).filter(
+            Q(expires_at__isnull=True) | Q(expires_at__gte=timezone.now())
+        )
 
 
 class NotificationListView(LoginRequiredMixin, ListView):
@@ -511,7 +580,7 @@ class NotificationListView(LoginRequiredMixin, ListView):
         queryset = Notification.objects.filter(recipient=user)
         
         # Apply filters
-        form = NotificationSearchForm(self.request.GET)
+        form = NotificationSearchForm(self.request.GET, user=user)
         if form.is_valid():
             if form.cleaned_data.get('title'):
                 queryset = queryset.filter(title__icontains=form.cleaned_data['title'])
@@ -530,7 +599,7 @@ class NotificationListView(LoginRequiredMixin, ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['search_form'] = NotificationSearchForm(self.request.GET)
+        context['search_form'] = NotificationSearchForm(self.request.GET, user=self.request.user)
         return context
 
 
@@ -541,7 +610,7 @@ class NotificationDetailView(LoginRequiredMixin, DetailView):
 
     def get_queryset(self):
         if is_admin_user(self.request.user):
-            return Notification.objects.select_related('recipient', 'related_message', 'related_announcement')
+            return notifications_visible_to(self.request.user)
         return Notification.objects.filter(recipient=self.request.user).select_related(
             'recipient', 'related_message', 'related_announcement'
         )
@@ -555,7 +624,7 @@ class NotificationUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView)
 
     def get_queryset(self):
         if is_admin_user(self.request.user):
-            return Notification.objects.all()
+            return notifications_visible_to(self.request.user)
         return Notification.objects.filter(recipient=self.request.user)
 
     def form_valid(self, form):
@@ -724,18 +793,19 @@ def get_users_for_message(request):
     """Get users for message composition"""
     user_type = request.GET.get('user_type', '')
     class_id = request.GET.get('class_id', '')
-    
-    users = User.objects.all()
-    
+
+    # Only users the requester may actually message are returned.
+    users = message_recipients_for(request.user)
+
     if user_type == 'students':
-        users = User.objects.filter(student__isnull=False)
+        users = users.filter(user_type='student', student_profile__isnull=False)
         if class_id:
-            users = users.filter(student__current_class_id=class_id)
+            users = users.filter(student_profile__current_class_id=class_id)
     elif user_type == 'teachers':
-        users = User.objects.filter(teacher__isnull=False)
+        users = users.filter(user_type='teacher', teacher_profile__isnull=False)
     elif user_type == 'staff':
-        users = User.objects.filter(user_type__in=['super_admin', 'administrator', 'accountant'])
-    
+        users = users.filter(user_type__in=['super_admin', 'administrator', 'accountant'])
+
     data = [{'id': user.id, 'name': user.get_full_name(), 'email': user.email} for user in users]
     return JsonResponse({'users': data})
 
@@ -817,15 +887,15 @@ def communication_report(request):
         start_date = timezone.now() - timezone.timedelta(days=365)
     
     # Message statistics
-    messages = Message.objects.filter(sent_at__gte=start_date)
+    message_qs = messages_visible_to(request.user).filter(sent_at__gte=start_date)
     message_stats = {
-        'total': messages.count(),
-        'by_type': dict(messages.values_list('message_type').annotate(count=Count('id'))),
-        'urgent': messages.filter(is_urgent=True).count(),
+        'total': message_qs.count(),
+        'by_type': dict(message_qs.values_list('message_type').annotate(count=Count('id'))),
+        'urgent': message_qs.filter(is_urgent=True).count(),
     }
     
     # Announcement statistics
-    announcements = Announcement.objects.filter(created_at__gte=start_date)
+    announcements = announcements_visible_to(request.user).filter(created_at__gte=start_date)
     announcement_stats = {
         'total': announcements.count(),
         'published': announcements.filter(is_published=True).count(),
@@ -833,7 +903,7 @@ def communication_report(request):
     }
     
     # Notification statistics
-    notifications = Notification.objects.filter(created_at__gte=start_date)
+    notifications = notifications_visible_to(request.user).filter(created_at__gte=start_date)
     notification_stats = {
         'total': notifications.count(),
         'sent': notifications.filter(status='sent').count(),

@@ -2,7 +2,11 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
-from accounts.permissions import is_admin_user
+from accounts.permissions import (
+    is_admin_user,
+    is_platform_admin,
+    user_institution_ids,
+)
 from .models import (
     Message, Announcement, Notification, EmailTemplate, 
     SMSTemplate, CommunicationLog
@@ -15,9 +19,68 @@ User = get_user_model()
 STAFF_MESSAGE_USER_TYPES = ['super_admin', 'administrator', 'accountant']
 
 
+def message_recipients_for(user):
+    """Return the users a given user is allowed to message.
+
+    The role branches used ``hasattr(user, 'teacher')``/``hasattr(user, 'student')``
+    but the related names are ``teacher_profile``/``student_profile``, so the
+    student branch never matched and every user fell back to the unrestricted
+    ``User.objects.all()`` queryset. The queryset is also limited to the
+    sender's own institution(s) so messages cannot cross tenant boundaries.
+    """
+    queryset = User.objects.filter(is_active=True)
+
+    if is_platform_admin(user):
+        return queryset
+
+    institution_ids = user_institution_ids(user) or []
+    if not institution_ids:
+        return queryset.none()
+
+    # Only members of the sender's institutions are addressable.
+    queryset = queryset.filter(
+        models.Q(is_superuser=True) |
+        models.Q(institution_memberships__institution_id__in=institution_ids)
+    ).distinct()
+
+    user_type = getattr(user, 'user_type', None)
+    if is_admin_user(user):
+        return queryset
+
+    if user_type == 'student':
+        # Students may message teachers and office staff, never other students.
+        return queryset.exclude(user_type='student')
+
+    if user_type == 'teacher':
+        # Teachers may message students, other teachers and office staff.
+        return queryset
+
+    if user_type == 'parent':
+        return queryset.exclude(user_type='parent')
+
+    return queryset
+
+
+def classes_visible_to(user):
+    """Return the classes a user may target with an announcement.
+
+    The list is limited to the user's own institution(s) so announcements
+    cannot target classes of another institution.
+    """
+    queryset = Class.objects.select_related('academic_year__institution')
+    if is_platform_admin(user):
+        return queryset
+    institution_ids = user_institution_ids(user) or []
+    if not institution_ids:
+        return queryset.none()
+    return queryset.filter(
+        academic_year__institution_id__in=institution_ids
+    ).distinct()
+
+
 class MessageForm(forms.ModelForm):
     recipients = forms.ModelMultipleChoiceField(
-        queryset=User.objects.all(),
+        queryset=User.objects.filter(is_active=True),
         widget=forms.CheckboxSelectMultiple,
         help_text="Select one or more recipients"
     )
@@ -39,22 +102,7 @@ class MessageForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         if user:
-            # Filter recipients based on user role
-            if is_admin_user(user):
-                self.fields['recipients'].queryset = User.objects.all()
-            elif hasattr(user, 'teacher'):
-                # Teachers can message students, other teachers, and non-teaching office staff.
-                self.fields['recipients'].queryset = User.objects.filter(
-                    models.Q(user_type__in=STAFF_MESSAGE_USER_TYPES) |
-                    models.Q(teacher__isnull=False) |
-                    models.Q(student__isnull=False)
-                )
-            elif hasattr(user, 'student'):
-                # Students can message teachers and non-teaching office staff.
-                self.fields['recipients'].queryset = User.objects.filter(
-                    models.Q(user_type__in=STAFF_MESSAGE_USER_TYPES) |
-                    models.Q(teacher__isnull=False)
-                )
+            self.fields['recipients'].queryset = message_recipients_for(user)
     
     def clean(self):
         cleaned_data = super().clean()
@@ -89,6 +137,15 @@ class AnnouncementForm(forms.ModelForm):
             ),
             'attachment': forms.FileInput(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        classes = kwargs.pop('classes', None)
+        super().__init__(*args, **kwargs)
+        if classes is not None:
+            self.fields['target_classes'].queryset = classes
+        elif user is not None:
+            self.fields['target_classes'].queryset = classes_visible_to(user)
     
     def clean_expires_at(self):
         expires_at = self.cleaned_data.get('expires_at')
@@ -197,7 +254,7 @@ class MessageSearchForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Search subject...'})
     )
     sender = forms.ModelChoiceField(
-        queryset=User.objects.all(),
+        queryset=User.objects.filter(is_active=True),
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
@@ -221,6 +278,12 @@ class MessageSearchForm(forms.Form):
         required=False,
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user is not None:
+            self.fields['sender'].queryset = message_recipients_for(user)
 
 
 class AnnouncementSearchForm(forms.Form):
@@ -257,7 +320,7 @@ class NotificationSearchForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Search title...'})
     )
     recipient = forms.ModelChoiceField(
-        queryset=User.objects.all(),
+        queryset=User.objects.filter(is_active=True),
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
@@ -280,6 +343,12 @@ class NotificationSearchForm(forms.Form):
         required=False,
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user is not None:
+            self.fields['recipient'].queryset = message_recipients_for(user)
 
 
 # Bulk Operation Forms

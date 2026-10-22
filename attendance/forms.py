@@ -16,6 +16,11 @@ class AttendanceForm(forms.ModelForm):
             'status': forms.Select(attrs={'class': 'form-select'}),
             'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Enter remarks if any'}),
         }
+
+    def __init__(self, *args, students=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if students is not None:
+            self.fields['student'].queryset = students
     
     def clean_date(self):
         date = self.cleaned_data.get('date')
@@ -34,7 +39,12 @@ class BulkAttendanceForm(forms.Form):
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         initial=timezone.now().date()
     )
-    
+
+    def __init__(self, *args, classes=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if classes is not None:
+            self.fields['class_obj'].queryset = classes
+
     def clean_date(self):
         date = self.cleaned_data.get('date')
         if date and date > timezone.now().date():
@@ -169,6 +179,13 @@ class AttendanceSearchForm(forms.Form):
         required=False,
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+
+    def __init__(self, *args, classes=None, students=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if classes is not None:
+            self.fields['class_obj'].queryset = classes
+        if students is not None:
+            self.fields['student'].queryset = students
 
 
 class LeaveRequestSearchForm(forms.Form):

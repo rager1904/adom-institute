@@ -221,6 +221,17 @@
                         {% endif %}
                         <div class="field-help">Book category for organization</div>
                     </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.new_category.id_for_label }}" class="form-label">
+                            New category
+                        </label>
+                        {{ form.new_category }}
+                        {% if form.new_category.errors %}
+                            <div class="text-danger mt-1">{{ form.new_category.errors }}</div>
+                        {% endif %}
+                        <div class="field-help">{{ form.new_category.help_text }}</div>
+                    </div>
                 </div>
                 
                 <div class="mb-3">

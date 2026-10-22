@@ -123,3 +123,71 @@ def list_agent_definitions():
 
 def get_agent_definition(agent_key):
     return AGENT_DEFINITIONS[agent_key]
+
+
+# Agents that only support a learner or a member of staff one to one. They
+# never change institutional data, so every role may use them.
+STUDENT_AGENT_KEYS = frozenset({
+    'student_success',
+    'learning_coach',
+    'research',
+    'career_guidance',
+    'scholarship_opportunities',
+})
+
+# Agents that prepare content for staff. They still work on the institution's
+# material, so students are kept away from them.
+STAFF_AGENT_KEYS = frozenset({
+    'assessment',
+    'academic_integrity',
+    'content_management',
+    'zambian_curriculum',
+})
+
+# Agents that act on the institution itself. Only administrators may run them.
+ADMIN_AGENT_KEYS = frozenset({
+    'administrative',
+})
+
+# Agents that change shared data and therefore need a human to approve the
+# result before it is applied.
+HUMAN_APPROVAL_AGENT_KEYS = frozenset({
+    'assessment',
+    'academic_integrity',
+    'content_management',
+    'administrative',
+    'zambian_curriculum',
+})
+
+
+def agent_keys_for_role(user):
+    """Return the agent keys the given user may queue or talk to.
+
+    Platform administrators may use every agent. Teachers and other staff
+    members may use the student agents plus the content agents, and only
+    administrators may use the administrative agent.
+    """
+    from accounts.permissions import is_admin_user, is_platform_admin, is_teacher_user
+
+    if is_platform_admin(user):
+        return frozenset(AGENT_DEFINITIONS)
+    if is_admin_user(user):
+        return frozenset(AGENT_DEFINITIONS) - ADMIN_AGENT_KEYS
+    if is_teacher_user(user):
+        return STUDENT_AGENT_KEYS | STAFF_AGENT_KEYS
+    return STUDENT_AGENT_KEYS
+
+
+def agent_choices_for_user(user):
+    """Return the (key, label) choices the given user may pick."""
+    allowed = agent_keys_for_role(user)
+    return [
+        (key, definition.name)
+        for key, definition in AGENT_DEFINITIONS.items()
+        if key in allowed
+    ]
+
+
+def requires_human_approval(agent_key):
+    """Whether the given agent should be reviewed by a human by default."""
+    return agent_key in HUMAN_APPROVAL_AGENT_KEYS

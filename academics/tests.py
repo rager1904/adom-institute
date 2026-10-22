@@ -304,3 +304,64 @@ class AcademicWorkflowRegressionTests(TestCase):
         submission.refresh_from_db()
         self.assertEqual(submission.marks_obtained, Decimal('88.00'))
         self.assertEqual(submission.feedback, 'Strong work')
+
+
+class CourseAccessRegressionTests(TestCase):
+    """Regression coverage for the course list/detail pages.
+
+    The views read ``request.user.user_type`` without an authentication guard,
+    which raised an ``AttributeError`` (HTTP 500) for anonymous visitors.
+    """
+
+    def setUp(self):
+        self.institution = Institution.objects.create(name='Course School', code='CRS-SCHOOL')
+        self.year = AcademicYear.objects.create(
+            institution=self.institution,
+            name='2026',
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 12, 31),
+            is_active=True,
+        )
+        self.class_obj = Class.objects.create(
+            name='G10A',
+            display_name='Grade 10 A',
+            academic_year=self.year,
+            capacity=40,
+        )
+        self.teacher_user = User.objects.create_user(
+            email='course-teacher@example.com',
+            password='password123',
+            first_name='Course',
+            last_name='Teacher',
+            user_type=User.UserType.TEACHER,
+        )
+        InstitutionMembership.objects.create(
+            institution=self.institution,
+            user=self.teacher_user,
+            role=InstitutionMembership.MembershipRole.TEACHER,
+        )
+
+    def test_anonymous_course_list_redirects_to_login(self):
+        response = self.client.get(reverse('academics:course_list'))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login', response['Location'])
+
+    def test_anonymous_course_detail_redirects_to_login(self):
+        response = self.client.get(reverse('academics:course_detail', kwargs={'pk': self.class_obj.pk}))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login', response['Location'])
+
+    def test_anonymous_academics_dashboard_redirects_to_login(self):
+        response = self.client.get(reverse('academics:dashboard'))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login', response['Location'])
+
+    def test_teacher_course_list_renders(self):
+        self.client.force_login(self.teacher_user)
+
+        response = self.client.get(reverse('academics:course_list'))
+
+        self.assertEqual(response.status_code, 200)

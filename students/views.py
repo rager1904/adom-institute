@@ -591,7 +591,7 @@ class StudentCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class StudentUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
+class StudentUpdateView(LoginRequiredMixin, AdminRequiredMixin, StudentAccessMixin, UpdateView):
     model = Student
     form_class = StudentForm
     template_name = 'students/student_form.html'
@@ -614,7 +614,7 @@ class StudentUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class StudentDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
+class StudentDeleteView(LoginRequiredMixin, AdminRequiredMixin, StudentAccessMixin, DeleteView):
     model = Student
     template_name = 'students/student_confirm_delete.html'
     success_url = reverse_lazy('students:student_list')
@@ -624,9 +624,12 @@ class StudentDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
             Student.objects.select_related('user', 'current_class__academic_year__institution')
         )
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Student deleted successfully!')
-        return super().delete(request, *args, **kwargs)
+    def form_valid(self, form):
+        # DeleteView routes the POST through FormMixin, so the success notice
+        # has to be raised here rather than from a ``delete()`` override.
+        response = super().form_valid(form)
+        messages.success(self.request, 'Student deleted successfully!')
+        return response
 
 
 class AcademicYearListView(LoginRequiredMixin, InstitutionAccessMixin, ListView):
@@ -661,7 +664,7 @@ class AcademicYearCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView)
         return super().form_valid(form)
 
 
-class AcademicYearUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
+class AcademicYearUpdateView(LoginRequiredMixin, AdminRequiredMixin, InstitutionAccessMixin, UpdateView):
     model = AcademicYear
     form_class = AcademicYearForm
     template_name = 'students/academic_year_form.html'
@@ -682,7 +685,7 @@ class AcademicYearUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView)
         return super().form_valid(form)
 
 
-class AcademicYearDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
+class AcademicYearDeleteView(LoginRequiredMixin, AdminRequiredMixin, InstitutionAccessMixin, DeleteView):
     model = AcademicYear
     template_name = 'students/academic_year_confirm_delete.html'
     context_object_name = 'academic_year'
@@ -693,9 +696,10 @@ class AcademicYearDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView)
             AcademicYear.objects.select_related('institution'), 'institution_id'
         )
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Academic year deleted successfully!')
-        return super().delete(request, *args, **kwargs)
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, 'Academic year deleted successfully!')
+        return response
 
 
 class ClassListView(LoginRequiredMixin, InstitutionAccessMixin, ListView):
@@ -779,7 +783,7 @@ class ClassCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ClassUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
+class ClassUpdateView(LoginRequiredMixin, AdminRequiredMixin, InstitutionAccessMixin, UpdateView):
     model = Class
     form_class = ClassForm
     template_name = 'students/class_form.html'
@@ -803,15 +807,22 @@ class ClassUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class ClassDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
+class ClassDeleteView(LoginRequiredMixin, AdminRequiredMixin, InstitutionAccessMixin, DeleteView):
     model = Class
     template_name = 'students/class_confirm_delete.html'
     context_object_name = 'class_obj'
     success_url = reverse_lazy('students:class_list')
-    
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Class deleted successfully!')
-        return super().delete(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return self.scope_institution_queryset(
+            Class.objects.select_related('academic_year__institution'),
+            'academic_year__institution_id'
+        )
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, 'Class deleted successfully!')
+        return response
 
 
 class StudentClassPlacementView(LoginRequiredMixin, AdminRequiredMixin, FormView):
@@ -931,11 +942,19 @@ class ParentCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ParentUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
+class ParentUpdateView(LoginRequiredMixin, AdminRequiredMixin, InstitutionAccessMixin, UpdateView):
     model = Parent
     form_class = ParentForm
     template_name = 'students/parent_form.html'
-    
+
+    def get_queryset(self):
+        return self.scope_institution_queryset(
+            Parent.objects.select_related(
+                'user', 'student__user', 'student__current_class__academic_year__institution'
+            ),
+            'student__current_class__academic_year__institution_id'
+        )
+
     def get_success_url(self):
         return reverse('students:parent_detail', kwargs={'pk': self.object.pk})
     
@@ -944,14 +963,23 @@ class ParentUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class ParentDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
+class ParentDeleteView(LoginRequiredMixin, AdminRequiredMixin, InstitutionAccessMixin, DeleteView):
     model = Parent
     template_name = 'students/parent_confirm_delete.html'
     success_url = reverse_lazy('students:parent_list')
-    
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Parent deleted successfully!')
-        return super().delete(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return self.scope_institution_queryset(
+            Parent.objects.select_related(
+                'user', 'student__user', 'student__current_class__academic_year__institution'
+            ),
+            'student__current_class__academic_year__institution_id'
+        )
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, 'Parent deleted successfully!')
+        return response
 
 
 # AJAX Views

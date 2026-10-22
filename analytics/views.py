@@ -6,7 +6,7 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from accounts.permissions import AdminRequiredMixin, is_admin_user
+from accounts.permissions import AdminRequiredMixin, is_admin_user, user_institution_ids
 
 from .models import (
     AnalyticsEvent, StudentPerformance, ClassPerformance, 
@@ -16,7 +16,9 @@ from .serializers import (
     AnalyticsEventSerializer, StudentPerformanceSerializer, ClassPerformanceSerializer,
     TeacherPerformanceSerializer, SchoolAnalyticsSerializer, ReportSerializer
 )
-from .forms import ReportGenerationForm
+from .forms import ReportGenerationForm, AnalyticsFilterForm, ExportForm, DashboardFilterForm, PerformanceComparisonForm
+from students.models import Student, Class, AcademicYear
+from teachers.models import Teacher
 
 
 # API Viewsets
@@ -62,6 +64,8 @@ class DashboardView(LoginRequiredMixin, AdminRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        institution_ids = user_institution_ids(self.request.user)
+        context['filter_form'] = DashboardFilterForm(self.request.GET, institution_ids=institution_ids)
         context['total_students'] = StudentPerformance.objects.count()
         context['total_teachers'] = TeacherPerformance.objects.count()
         context['total_classes'] = ClassPerformance.objects.count()
@@ -96,15 +100,18 @@ class MyAnalyticsView(LoginRequiredMixin, TemplateView):
                 class_obj__schedules__teacher__user=user
             ).select_related('class_obj', 'academic_year').distinct()
         elif is_admin_user(user):
-            context['student_performances'] = StudentPerformance.objects.select_related(
+            student_qs = StudentPerformance.objects.select_related(
                 'student__user', 'academic_year', 'class_obj'
-            )[:10]
-            context['teacher_performances'] = TeacherPerformance.objects.select_related(
-                'teacher__user', 'academic_year'
-            )[:10]
-            context['class_performances'] = ClassPerformance.objects.select_related(
-                'class_obj', 'academic_year'
-            )[:10]
+            )
+            teacher_qs = TeacherPerformance.objects.select_related('teacher__user', 'academic_year')
+            class_qs = ClassPerformance.objects.select_related('class_obj', 'academic_year')
+            if institution_ids := user_institution_ids(user):
+                student_qs = student_qs.filter(academic_year__institution_id__in=institution_ids)
+                teacher_qs = teacher_qs.filter(academic_year__institution_id__in=institution_ids)
+                class_qs = class_qs.filter(academic_year__institution_id__in=institution_ids)
+            context['student_performances'] = student_qs[:10]
+            context['teacher_performances'] = teacher_qs[:10]
+            context['class_performances'] = class_qs[:10]
             context['school_analytics'] = SchoolAnalytics.objects.select_related('academic_year')[:5]
 
         return context
@@ -116,6 +123,15 @@ class StudentPerformanceListView(LoginRequiredMixin, AdminRequiredMixin, ListVie
     context_object_name = 'performances'
     paginate_by = 20
 
+    def get_queryset(self):
+        queryset = StudentPerformance.objects.select_related(
+            'student__user', 'academic_year', 'class_obj'
+        ).order_by('-percentage')
+        institution_ids = user_institution_ids(self.request.user)
+        if institution_ids:
+            queryset = queryset.filter(academic_year__institution_id__in=institution_ids)
+        return queryset
+
 
 class ClassPerformanceListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
     model = ClassPerformance
@@ -123,12 +139,30 @@ class ClassPerformanceListView(LoginRequiredMixin, AdminRequiredMixin, ListView)
     context_object_name = 'performances'
     paginate_by = 20
 
+    def get_queryset(self):
+        queryset = ClassPerformance.objects.select_related(
+            'class_obj', 'academic_year'
+        ).order_by('-average_percentage')
+        institution_ids = user_institution_ids(self.request.user)
+        if institution_ids:
+            queryset = queryset.filter(academic_year__institution_id__in=institution_ids)
+        return queryset
+
 
 class TeacherPerformanceListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
     model = TeacherPerformance
     template_name = 'analytics/teacher_performance_list.html'
     context_object_name = 'performances'
     paginate_by = 20
+
+    def get_queryset(self):
+        queryset = TeacherPerformance.objects.select_related(
+            'teacher__user', 'academic_year'
+        ).order_by('-average_class_performance')
+        institution_ids = user_institution_ids(self.request.user)
+        if institution_ids:
+            queryset = queryset.filter(academic_year__institution_id__in=institution_ids)
+        return queryset
 
 
 class ReportListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
@@ -152,6 +186,7 @@ class ReportCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.generated_by = self.request.user
+        form.instance.status = Report.ReportStatus.GENERATED
         messages.success(self.request, 'Report created successfully.')
         return super().form_valid(form)
 
