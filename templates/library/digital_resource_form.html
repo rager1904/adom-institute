@@ -46,7 +46,13 @@
         border-color: #11998e;
         background: #f0fffe;
     }
-    .file-upload-area input[type="file"] { margin-top: 15px; }
+    .file-upload-area input[type="file"] {
+        margin-top: 15px;
+        border: 1px dashed #ced4da;
+        border-radius: 8px;
+        padding: 8px;
+        background: #fff;
+    }
     .file-summary {
         background: #eef7f6;
         border-radius: 10px;
@@ -56,22 +62,37 @@
     }
     .choice-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
         gap: 12px;
     }
-    .choice-grid label {
+    /* The widget wraps the options in one div; taking that wrapper out of the
+       flow keeps every option a visible card of its own. */
+    .choice-grid > div { display: contents; }
+    .choice-grid > div > div {
         border: 2px solid #e9ecef;
         border-radius: 10px;
         padding: 14px 10px;
         text-align: center;
         cursor: pointer;
         transition: all 0.2s ease;
+        background: #fff;
+        position: relative;
+    }
+    .choice-grid > div > div:hover { border-color: #11998e; }
+    .choice-grid label {
+        display: block;
         margin: 0;
+        cursor: pointer;
         font-weight: 500;
     }
-    .choice-grid label:hover { border-color: #11998e; }
-    .choice-grid input[type="radio"] { position: absolute; opacity: 0; }
-    .choice-grid label:has(input:checked) {
+    .choice-grid input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+    }
+    .choice-grid > div > div:has(input:checked),
+    .choice-grid > div > div.selected {
         border-color: #11998e;
         background: #f0fffe;
         box-shadow: 0 0 0 2px rgba(17, 153, 142, 0.15);
@@ -169,7 +190,7 @@
             </div>
 
             <div class="mb-3">
-                <label for="{{ form.resource_type.id_for_label }}" class="form-label">Resource Type <span class="required-asterisk">*</span></label>
+                <span class="form-label d-block">Resource Type <span class="required-asterisk">*</span></span>
                 <div class="choice-grid">
                     {{ form.resource_type }}
                 </div>
@@ -210,7 +231,7 @@
             <h5><i class="fas fa-users me-2"></i>Access and Settings</h5>
 
             <div class="mb-3">
-                <label for="{{ form.access_level.id_for_label }}" class="form-label">Access Level <span class="required-asterisk">*</span></label>
+                <span class="form-label d-block">Access Level <span class="required-asterisk">*</span></span>
                 <div class="choice-grid">
                     {{ form.access_level }}
                 </div>
@@ -319,6 +340,18 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    // Highlight the chosen radio card in every browser.
+    document.querySelectorAll('.choice-grid input[type="radio"]').forEach(function (radio) {
+        var label = radio.closest('label');
+        var card = label ? label.parentElement : null;
+        if (!card) { return; }
+        var sync = function () {
+            card.classList.toggle('selected', radio.checked);
+        };
+        radio.addEventListener('change', sync);
+        sync();
+    });
 });
 </script>
 {% endblock %}

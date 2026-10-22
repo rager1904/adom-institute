@@ -232,12 +232,12 @@ class DigitalResourceForm(forms.ModelForm):
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
-            'resource_type': forms.RadioSelect(attrs={'class': 'form-check-input'}),
+            'resource_type': forms.RadioSelect(),
             'file': forms.FileInput(attrs={'class': 'form-control'}),
             'author': forms.TextInput(attrs={'class': 'form-control'}),
             'subject': forms.TextInput(attrs={'class': 'form-control'}),
             'grade_level': forms.TextInput(attrs={'class': 'form-control'}),
-            'access_level': forms.RadioSelect(attrs={'class': 'form-check-input'}),
+            'access_level': forms.RadioSelect(),
             'is_downloadable': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'download_limit': forms.NumberInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -261,6 +261,11 @@ class DigitalResourceForm(forms.ModelForm):
             self.fields[name].widget = AlwaysSubmittedCheckbox(
                 attrs=self.fields[name].widget.attrs
             )
+        # The radio cards look pointless with the empty "---------" option, and
+        # both fields are required anyway.
+        for name in ('resource_type', 'access_level'):
+            field = self.fields[name]
+            field.choices = [(value, label) for value, label in field.choices if value]
 
     def _checkbox_fallback(self, name, default):
         """Return the stored value when the key was not submitted at all."""
