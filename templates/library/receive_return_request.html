@@ -13,7 +13,7 @@
     <section class="metric-grid">
         <article class="metric-card">
             <span class="metric-icon"><i class="fas fa-user"></i></span>
-            <div class="metric-value">{{ return_request.user.get_full_name|default:return_request.user.username }}</div>
+            <div class="metric-value">{{ return_request.user.get_full_name|default:return_request.user.email }}</div>
             <div class="metric-label">Borrower</div>
             <div class="metric-detail">Handed over {{ borrowing.borrowed_date|date:"d M Y" }}</div>
         </article>

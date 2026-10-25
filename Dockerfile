@@ -25,7 +25,13 @@ RUN apt-get update \
         libgdk-pixbuf-2.0-dev \
         shared-mime-info \
         curl \
-    && rm -rf /var/lib/apt/lists/*
+        fonts-liberation \
+        fonts-dejavu-core \
+        fontconfig \
+        libreoffice-writer \
+        libreoffice-calc \
+        libreoffice-impress \
+    && rm -rf /var/lib/apt/lists/* && fc-cache -fv
 
 # Install Python dependencies
 COPY requirements.txt /app/

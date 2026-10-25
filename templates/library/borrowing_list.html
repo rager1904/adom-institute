@@ -351,7 +351,7 @@
                             
                             <div class="flex-grow-1">
                                 <h6 class="card-title mb-1">{{ borrowing.borrower.get_full_name }}</h6>
-                                <p class="text-muted small mb-2">{{ borrowing.borrower.username }}</p>
+                                <p class="text-muted small mb-2">{{ borrowing.borrower.email }}</p>
                                 
                                 <span class="status-badge 
                                     {% if borrowing.is_overdue %}overdue{% elif borrowing.days_until_due <= 3 %}due-soon{% else %}on-time{% endif %}">

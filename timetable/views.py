@@ -15,7 +15,10 @@ from .forms import (
     RoomScheduleForm, AcademicCalendarForm, RoomSearchForm, ClassScheduleSearchForm
 )
 from django.utils import timezone
-from accounts.permissions import AdminRequiredMixin, is_platform_admin, user_institution_ids
+from accounts.permissions import (
+    AdminRequiredMixin, IsPlatformOrInstitutionAdmin,
+    is_platform_admin, user_institution_ids,
+)
 
 
 def scope_schedules_for_user(user, queryset):
@@ -37,17 +40,34 @@ class RoomViewSet(viewsets.ModelViewSet):
     serializer_class = RoomSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        # The room inventory is an administrative resource: signed-in users
+        # may read it, but only admins may change it.
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsPlatformOrInstitutionAdmin()]
+        return super().get_permissions()
+
 
 class TimeSlotViewSet(viewsets.ModelViewSet):
     queryset = TimeSlot.objects.all()
     serializer_class = TimeSlotSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsPlatformOrInstitutionAdmin()]
+        return super().get_permissions()
+
 
 class ClassScheduleViewSet(viewsets.ModelViewSet):
     queryset = ClassSchedule.objects.all()
     serializer_class = ClassScheduleSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsPlatformOrInstitutionAdmin()]
+        return super().get_permissions()
 
     def get_queryset(self):
         # The API previously returned every schedule in the system to any

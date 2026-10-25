@@ -59,9 +59,39 @@
                         Your browser does not support the audio element.
                     </audio>
                 {% elif file_kind == 'image' %}
-                    <img src="{% url 'library:resource_file' resource.pk %}" alt="{{ resource.title }}" class="img-fluid rounded">
+                    <img src="{% url 'library:resource_file' resource.pk %}" alt="{{ resource.title }}" class="img-fluid rounded" id="resourcePreview">
+                    <div class="mt-2 text-end">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="openFullscreen(document.getElementById('resourcePreview'))">
+                            <i class="fas fa-expand me-1"></i>View Full Screen
+                        </button>
+                    </div>
                 {% elif file_kind == 'pdf' %}
-                    <iframe src="{% url 'library:resource_file' resource.pk %}" class="w-100 border rounded" style="height:70vh;" title="{{ resource.title }}"></iframe>
+                    <iframe src="{% url 'library:resource_file' resource.pk %}" class="w-100 border rounded" style="height:70vh;" title="{{ resource.title }}" id="resourcePreview"></iframe>
+                    <div class="mt-2 text-end">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="openFullscreen(document.getElementById('resourcePreview'))">
+                            <i class="fas fa-expand me-1"></i>View Full Screen
+                        </button>
+                    </div>
+                {% elif use_preview_pdf %}
+                    <iframe src="{% url 'library:resource_preview' resource.pk %}" class="w-100 border rounded" style="height:70vh;" title="{{ resource.title }}" id="resourcePreview"></iframe>
+                    <div class="mt-2 text-end">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="openFullscreen(document.getElementById('resourcePreview'))">
+                            <i class="fas fa-expand me-1"></i>View Full Screen
+                        </button>
+                        <a href="{% url 'library:resource_preview' resource.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">
+                            <i class="fas fa-external-link-alt me-1"></i>Open in a new tab
+                        </a>
+                    </div>
+                {% elif file_kind == 'presentation' or file_kind == 'document' or file_kind == 'spreadsheet' or file_kind == 'text' %}
+                    <iframe src="{% url 'library:resource_file' resource.pk %}" class="w-100 border rounded" style="height:70vh;" title="{{ resource.title }}" id="resourcePreview"></iframe>
+                    <div class="mt-2 text-end">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="openFullscreen(document.getElementById('resourcePreview'))">
+                            <i class="fas fa-expand me-1"></i>View Full Screen
+                        </button>
+                        <a href="{% url 'library:resource_file' resource.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">
+                            <i class="fas fa-external-link-alt me-1"></i>Open in a new tab
+                        </a>
+                    </div>
                 {% else %}
                     <div class="text-center py-4">
                         <i class="fas fa-file fa-3x text-muted mb-3"></i>
@@ -74,6 +104,14 @@
                         </a>
                     </div>
                 {% endif %}
+                <script>
+                function openFullscreen(el){
+                    if(!el) return;
+                    if(el.requestFullscreen){ el.requestFullscreen(); }
+                    else if(el.webkitRequestFullscreen){ el.webkitRequestFullscreen(); }
+                    else if(el.msRequestFullscreen){ el.msRequestFullscreen(); }
+                }
+                </script>
             </div>
         {% endif %}
 

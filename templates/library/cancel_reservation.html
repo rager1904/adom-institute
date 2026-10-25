@@ -12,7 +12,7 @@
 
     <section class="panel">
         <div class="panel-heading">
-            <h2 class="panel-title">{{ reservation.user.get_full_name|default:reservation.user.username }}</h2>
+            <h2 class="panel-title">{{ reservation.user.get_full_name|default:reservation.user.email }}</h2>
         </div>
         <div class="focus-list">
             <div class="focus-item">

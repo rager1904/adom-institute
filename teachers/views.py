@@ -6,10 +6,13 @@ from django.urls import reverse_lazy
 from django.db.models import Q, Count
 from django.http import JsonResponse
 from django.utils import timezone
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from accounts.permissions import AdminRequiredMixin, is_platform_admin, user_institution_ids
+from accounts.permissions import (
+    AdminRequiredMixin, IsPlatformOrInstitutionAdmin,
+    is_platform_admin, user_institution_ids,
+)
 from .models import Teacher, Subject, TeacherSubject, Department, TeacherDepartment
 from .serializers import (
     TeacherSerializer,
@@ -27,7 +30,15 @@ from .forms import (
 class TeacherViewSet(viewsets.ModelViewSet):
     queryset = Teacher.objects.select_related('user').prefetch_related('teacher_subjects__subject', 'teacher_departments__department')
     serializer_class = TeacherSerializer
-    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        # Staff records are read-only for everybody else. Without this a
+        # student could create, edit or delete teacher profiles.
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsPlatformOrInstitutionAdmin()]
+        return super().get_permissions()
+
     def get_queryset(self):
         queryset = Teacher.objects.select_related('user').prefetch_related('teacher_subjects__subject', 'teacher_departments__department')
         user = self.request.user
@@ -66,10 +77,11 @@ class TeacherViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def statistics(self, request):
-        total_teachers = Teacher.objects.count()
-        active_teachers = Teacher.objects.filter(employment_status=Teacher.EmploymentStatus.ACTIVE).count()
-        full_time_teachers = Teacher.objects.filter(employment_type=Teacher.EmploymentType.FULL_TIME).count()
-        class_teachers = Teacher.objects.filter(is_class_teacher=True).count()
+        teachers = self.get_queryset()
+        total_teachers = teachers.count()
+        active_teachers = teachers.filter(employment_status=Teacher.EmploymentStatus.ACTIVE).count()
+        full_time_teachers = teachers.filter(employment_type=Teacher.EmploymentType.FULL_TIME).count()
+        class_teachers = teachers.filter(is_class_teacher=True).count()
         
         return Response({
             'total_teachers': total_teachers,
@@ -82,7 +94,13 @@ class TeacherViewSet(viewsets.ModelViewSet):
 class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.prefetch_related('teacher_subjects__teacher__user')
     serializer_class = SubjectSerializer
-    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsPlatformOrInstitutionAdmin()]
+        return super().get_permissions()
+
     def get_queryset(self):
         queryset = Subject.objects.prefetch_related('teacher_subjects__teacher__user')
         
@@ -104,7 +122,13 @@ class SubjectViewSet(viewsets.ModelViewSet):
 class DepartmentViewSet(viewsets.ModelViewSet):
     queryset = Department.objects.select_related('head_of_department__user').prefetch_related('teacher_departments__teacher__user')
     serializer_class = DepartmentSerializer
-    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsPlatformOrInstitutionAdmin()]
+        return super().get_permissions()
+
     def get_queryset(self):
         queryset = Department.objects.select_related('head_of_department__user').prefetch_related('teacher_departments__teacher__user')
         

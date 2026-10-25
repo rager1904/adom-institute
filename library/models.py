@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from datetime import timedelta
+from decimal import Decimal
 import uuid
 import os
 from accounts.validators import image_upload_validators, resource_upload_validators
@@ -106,6 +107,21 @@ class Book(models.Model):
         return self.availability == 'available'
 
     @property
+    def total_copies(self):
+        """The library tracks a single physical copy per catalogue entry."""
+        return 1
+
+    @property
+    def available_copies(self):
+        """How many copies can be borrowed right now."""
+        return 1 if self.availability == 'available' else 0
+
+    @property
+    def copies_borrowed(self):
+        """How many copies are currently out on loan."""
+        return 1 if self.availability == 'borrowed' else 0
+
+    @property
     def current_borrower(self):
         """Get current borrower if book is borrowed"""
         if self.availability == 'borrowed':
@@ -154,6 +170,7 @@ class DigitalResource(models.Model):
         upload_to=digital_resource_path,
         validators=resource_upload_validators,
     )
+    preview_pdf = models.FileField(upload_to=digital_resource_path, blank=True, null=True)
     file_size = models.PositiveIntegerField(blank=True, null=True, help_text="File size in bytes")
     author = models.CharField(max_length=255, blank=True)
     subject = models.CharField(max_length=100, blank=True)
@@ -295,24 +312,34 @@ class BookBorrowing(models.Model):
 
     @property
     def calculated_late_fee(self):
-        """Calculate late fee based on days overdue"""
+        """Late fee owed for the days this loan is overdue.
+
+        The per-day rate comes from the library settings so the fee charged
+        at the desk always matches the rate reported by the reports module.
+        """
         days = self.days_overdue
-        if days > 0:
-            return days * 0.50  # $0.50 per day
-        return 0
+        if days <= 0:
+            return Decimal('0.00')
+        rate = LibrarySettings.get_settings().late_fee_per_day
+        return (Decimal(days) * Decimal(rate)).quantize(Decimal('0.01'))
 
     def calculate_late_fee(self):
         """Calculate and update late fee"""
         self.late_fee = self.calculated_late_fee
-        self.save()
+        self.save(update_fields=['late_fee'])
 
     def return_book(self, returned_by=None):
         """Mark book as returned"""
         self.return_date = timezone.now()
         self.returned_by = returned_by
         self.calculate_late_fee()
-        self.book.availability = 'available'
-        self.book.save()
+        # A live reservation keeps the copy held for the next reader, so the
+        # book goes back to "reserved" instead of straight to the shelf.
+        if self.book.reservations.filter(status__in=BookReservation.OPEN_STATUSES).exists():
+            self.book.availability = 'reserved'
+        else:
+            self.book.availability = 'available'
+        self.book.save(update_fields=['availability'])
         self.save()
 
 class BookReservation(models.Model):

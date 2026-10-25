@@ -21,31 +21,6 @@
         margin-bottom: 30px;
         text-align: center;
     }
-    .settings-nav {
-        background: #f8f9fa;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 30px;
-    }
-    .settings-nav .nav-link {
-        color: #495057;
-        border-radius: 10px;
-        padding: 12px 20px;
-        margin-bottom: 5px;
-        transition: all 0.3s ease;
-    }
-    .settings-nav .nav-link.active {
-        background: #28a745;
-        color: white;
-    }
-    .settings-nav .nav-link:hover {
-        background: #e9ecef;
-        color: #495057;
-    }
-    .settings-nav .nav-link.active:hover {
-        background: #28a745;
-        color: white;
-    }
     .settings-section {
         background: #f8f9fa;
         border-radius: 15px;
@@ -73,18 +48,6 @@
         color: #495057;
         margin-bottom: 8px;
     }
-    .btn-primary {
-        border-radius: 25px;
-        padding: 12px 30px;
-        font-weight: 600;
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        border: none;
-    }
-    .btn-secondary {
-        border-radius: 25px;
-        padding: 12px 30px;
-        font-weight: 600;
-    }
     .setting-item {
         background: white;
         border: 1px solid #e9ecef;
@@ -96,12 +59,14 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 15px;
     }
     .custom-switch {
         position: relative;
         display: inline-block;
         width: 60px;
         height: 34px;
+        flex-shrink: 0;
     }
     .custom-switch input {
         opacity: 0;
@@ -136,65 +101,11 @@
     input:checked + .slider:before {
         transform: translateX(26px);
     }
-    .backup-status {
-        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-        color: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        text-align: center;
-    }
-    .maintenance-mode {
-        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-        color: #212529;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        text-align: center;
-    }
-    .danger-zone {
-        background: #fff5f5;
-        border: 2px solid #fed7d7;
-        border-radius: 15px;
-        padding: 25px;
-        margin-top: 30px;
-    }
-    .danger-zone h6 {
-        color: #e53e3e;
-        margin-bottom: 15px;
-    }
-    .color-picker {
-        width: 50px;
-        height: 40px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-    }
-    .file-upload-area {
-        border: 2px dashed #dee2e6;
-        border-radius: 10px;
-        padding: 30px;
-        text-align: center;
-        background: #fafafa;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    .file-upload-area:hover {
-        border-color: #28a745;
-        background: #f0fff4;
-    }
-    .current-logo {
-        max-width: 150px;
-        max-height: 100px;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'library:dashboard' %}">Library</a></li>
@@ -203,7 +114,6 @@
     </nav>
 
     <div class="settings-container">
-        <!-- Settings Header -->
         <div class="settings-header">
             <h1 class="mb-3">
                 <i class="fas fa-cog fa-2x me-3"></i>
@@ -212,720 +122,158 @@
             <p class="mb-0">Configure your library system preferences and policies</p>
         </div>
 
-        <div class="row">
-            <div class="col-md-3">
-                <!-- Settings Navigation -->
-                <div class="settings-nav">
-                    <ul class="nav nav-pills flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link active" href="#general" onclick="showSection('general')">
-                                <i class="fas fa-cog me-2"></i>General Settings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#borrowing" onclick="showSection('borrowing')">
-                                <i class="fas fa-hand-holding me-2"></i>Borrowing Policies
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#notifications" onclick="showSection('notifications')">
-                                <i class="fas fa-bell me-2"></i>Notifications
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#appearance" onclick="showSection('appearance')">
-                                <i class="fas fa-palette me-2"></i>Appearance
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#backup" onclick="showSection('backup')">
-                                <i class="fas fa-database me-2"></i>Backup & Export
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#maintenance" onclick="showSection('maintenance')">
-                                <i class="fas fa-tools me-2"></i>Maintenance
-                            </a>
-                        </li>
-                    </ul>
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="settings-section">
+                <h5><i class="fas fa-hand-holding me-2"></i>Borrowing Policies</h5>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.max_books_per_user.id_for_label }}">Maximum books per member</label>
+                            {{ form.max_books_per_user }}
+                            <div class="form-text">How many books a member may have on loan at once.</div>
+                            {% for error in form.max_books_per_user.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.borrowing_duration_days.id_for_label }}">Loan period (days)</label>
+                            {{ form.borrowing_duration_days }}
+                            {% for error in form.borrowing_duration_days.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.late_fee_per_day.id_for_label }}">Late fee per day</label>
+                            {{ form.late_fee_per_day }}
+                            <div class="form-text">This is the rate charged when a book comes back late.</div>
+                            {% for error in form.late_fee_per_day.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.max_reservations_per_user.id_for_label }}">Maximum open requests per member</label>
+                            {{ form.max_reservations_per_user }}
+                            {% for error in form.max_reservations_per_user.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="col-md-9">
-                <!-- General Settings -->
-                <div id="general-section" class="settings-content">
-                    <div class="settings-section">
-                        <h5><i class="fas fa-building me-2"></i>Library Information</h5>
-                        
-                        <form id="generalForm">
-                            {% csrf_token %}
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="libraryName" class="form-label">Library Name</label>
-                                        <input type="text" class="form-control" id="libraryName" 
-                                               value="{{ settings.library_name|default:'School Library' }}">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="libraryCode" class="form-label">Library Code</label>
-                                        <input type="text" class="form-control" id="libraryCode" 
-                                               value="{{ settings.library_code|default:'LIB001' }}">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="libraryDescription" class="form-label">Description</label>
-                                <textarea class="form-control" id="libraryDescription" rows="3">{{ settings.library_description|default:'Welcome to our school library' }}</textarea>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="openTime" class="form-label">Opening Time</label>
-                                        <input type="time" class="form-control" id="openTime" 
-                                               value="{{ settings.opening_time|default:'08:00' }}">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="closeTime" class="form-label">Closing Time</label>
-                                        <input type="time" class="form-control" id="closeTime" 
-                                               value="{{ settings.closing_time|default:'17:00' }}">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="contactInfo" class="form-label">Contact Information</label>
-                                <textarea class="form-control" id="contactInfo" rows="2">{{ settings.contact_info|default:'library@school.edu | (555) 123-4567' }}</textarea>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+            <div class="settings-section">
+                <h5><i class="fas fa-bookmark me-2"></i>Reservations</h5>
 
-                <!-- Borrowing Policies -->
-                <div id="borrowing-section" class="settings-content" style="display: none;">
-                    <div class="settings-section">
-                        <h5><i class="fas fa-hand-holding me-2"></i>Borrowing Policies</h5>
-                        
-                        <form id="borrowingForm">
-                            {% csrf_token %}
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="defaultBorrowPeriod" class="form-label">Default Borrow Period (days)</label>
-                                        <input type="number" class="form-control" id="defaultBorrowPeriod" 
-                                               value="{{ settings.default_borrow_period|default:14 }}" min="1" max="365">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="maxRenewals" class="form-label">Maximum Renewals</label>
-                                        <input type="number" class="form-control" id="maxRenewals" 
-                                               value="{{ settings.max_renewals|default:2 }}" min="0" max="10">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="maxBooksStudent" class="form-label">Max Books per Student</label>
-                                        <input type="number" class="form-control" id="maxBooksStudent" 
-                                               value="{{ settings.max_books_student|default:3 }}" min="1" max="50">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="maxBooksTeacher" class="form-label">Max Books per Teacher</label>
-                                        <input type="number" class="form-control" id="maxBooksTeacher" 
-                                               value="{{ settings.max_books_teacher|default:5 }}" min="1" max="50">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="lateFeePerDay" class="form-label">Late Fee per Day ($)</label>
-                                        <input type="number" class="form-control" id="lateFeePerDay" 
-                                               value="{{ settings.late_fee_per_day|default:0.50 }}" step="0.01" min="0">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="maxLateFee" class="form-label">Maximum Late Fee ($)</label>
-                                        <input type="number" class="form-control" id="maxLateFee" 
-                                               value="{{ settings.max_late_fee|default:25.00 }}" step="0.01" min="0">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="setting-item">
-                                <div class="setting-toggle">
-                                    <div>
-                                        <h6 class="mb-1">Allow Reservations</h6>
-                                        <small class="text-muted">Enable book reservation system</small>
-                                    </div>
-                                    <label class="custom-switch">
-                                        <input type="checkbox" id="allowReservations" 
-                                               {% if settings.allow_reservations %}checked{% endif %}>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="setting-item">
-                                <div class="setting-toggle">
-                                    <div>
-                                        <h6 class="mb-1">Require Approval for Borrowing</h6>
-                                        <small class="text-muted">Staff must approve all borrowing requests</small>
-                                    </div>
-                                    <label class="custom-switch">
-                                        <input type="checkbox" id="requireApproval" 
-                                               {% if settings.require_approval %}checked{% endif %}>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Notifications -->
-                <div id="notifications-section" class="settings-content" style="display: none;">
-                    <div class="settings-section">
-                        <h5><i class="fas fa-bell me-2"></i>Notification Settings</h5>
-                        
-                        <form id="notificationsForm">
-                            {% csrf_token %}
-                            <div class="setting-item">
-                                <div class="setting-toggle">
-                                    <div>
-                                        <h6 class="mb-1">Email Notifications</h6>
-                                        <small class="text-muted">Send email notifications to users</small>
-                                    </div>
-                                    <label class="custom-switch">
-                                        <input type="checkbox" id="emailNotifications" 
-                                               {% if settings.email_notifications %}checked{% endif %}>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="setting-item">
-                                <div class="setting-toggle">
-                                    <div>
-                                        <h6 class="mb-1">Due Date Reminders</h6>
-                                        <small class="text-muted">Remind users about upcoming due dates</small>
-                                    </div>
-                                    <label class="custom-switch">
-                                        <input type="checkbox" id="dueDateReminders" 
-                                               {% if settings.due_date_reminders %}checked{% endif %}>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="setting-item">
-                                <div class="setting-toggle">
-                                    <div>
-                                        <h6 class="mb-1">Overdue Notifications</h6>
-                                        <small class="text-muted">Notify users about overdue books</small>
-                                    </div>
-                                    <label class="custom-switch">
-                                        <input type="checkbox" id="overdueNotifications" 
-                                               {% if settings.overdue_notifications %}checked{% endif %}>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="reminderDays" class="form-label">Reminder Days Before Due</label>
-                                        <input type="number" class="form-control" id="reminderDays" 
-                                               value="{{ settings.reminder_days|default:3 }}" min="1" max="14">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="notificationTime" class="form-label">Notification Time</label>
-                                        <input type="time" class="form-control" id="notificationTime" 
-                                               value="{{ settings.notification_time|default:'09:00' }}">
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Appearance -->
-                <div id="appearance-section" class="settings-content" style="display: none;">
-                    <div class="settings-section">
-                        <h5><i class="fas fa-palette me-2"></i>Library Appearance</h5>
-                        
-                        <form id="appearanceForm">
-                            {% csrf_token %}
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="primaryColor" class="form-label">Primary Color</label>
-                                        <div class="d-flex align-items-center">
-                                            <input type="color" class="color-picker me-3" id="primaryColor" 
-                                                   value="{{ settings.primary_color|default:'#007bff' }}">
-                                            <input type="text" class="form-control" id="primaryColorText" 
-                                                   value="{{ settings.primary_color|default:'#007bff' }}">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="secondaryColor" class="form-label">Secondary Color</label>
-                                        <div class="d-flex align-items-center">
-                                            <input type="color" class="color-picker me-3" id="secondaryColor" 
-                                                   value="{{ settings.secondary_color|default:'#6c757d' }}">
-                                            <input type="text" class="form-control" id="secondaryColorText" 
-                                                   value="{{ settings.secondary_color|default:'#6c757d' }}">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Library Logo</label>
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="file-upload-area" onclick="document.getElementById('logoUpload').click()">
-                                            <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
-                                            <p class="mb-0">Click to upload logo</p>
-                                            <small class="text-muted">PNG, JPG up to 2MB</small>
-                                        </div>
-                                        <input type="file" id="logoUpload" accept="image/*" style="display: none;">
-                                    </div>
-                                    <div class="col-md-4">
-                                        {% if settings.library_logo %}
-                                        <div class="text-center">
-                                            <p class="small text-muted mb-2">Current Logo</p>
-                                            <img src="{{ settings.library_logo.url }}" alt="Library Logo" class="current-logo">
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="setting-item">
-                                <div class="setting-toggle">
-                                    <div>
-                                        <h6 class="mb-1">Dark Mode</h6>
-                                        <small class="text-muted">Enable dark theme for the library interface</small>
-                                    </div>
-                                    <label class="custom-switch">
-                                        <input type="checkbox" id="darkMode" 
-                                               {% if settings.dark_mode %}checked{% endif %}>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Backup & Export -->
-                <div id="backup-section" class="settings-content" style="display: none;">
-                    <div class="backup-status">
-                        <h5 class="mb-3"><i class="fas fa-shield-alt me-2"></i>Backup Status</h5>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <h6>Last Backup</h6>
-                                <p class="mb-0">{{ last_backup|default:"Never" }}</p>
-                            </div>
-                            <div class="col-md-4">
-                                <h6>Next Scheduled</h6>
-                                <p class="mb-0">{{ next_backup|default:"Not scheduled" }}</p>
-                            </div>
-                            <div class="col-md-4">
-                                <h6>Backup Size</h6>
-                                <p class="mb-0">{{ backup_size|default:"N/A" }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="settings-section">
-                        <h5><i class="fas fa-database me-2"></i>Backup & Export Options</h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="setting-item">
-                                    <h6 class="mb-2">Create Manual Backup</h6>
-                                    <p class="text-muted small mb-3">Generate a complete backup of your library data</p>
-                                    <button type="button" class="btn btn-primary" onclick="createBackup()">
-                                        <i class="fas fa-download me-2"></i>Create Backup
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="setting-item">
-                                    <h6 class="mb-2">Export Library Data</h6>
-                                    <p class="text-muted small mb-3">Export books and borrowing data to Excel/CSV</p>
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-outline-success" onclick="exportData('excel')">
-                                            <i class="fas fa-file-excel me-1"></i>Excel
-                                        </button>
-                                        <button type="button" class="btn btn-outline-info" onclick="exportData('csv')">
-                                            <i class="fas fa-file-csv me-1"></i>CSV
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="setting-item">
-                            <div class="setting-toggle">
-                                <div>
-                                    <h6 class="mb-1">Automatic Backups</h6>
-                                    <small class="text-muted">Create daily automatic backups</small>
-                                </div>
-                                <label class="custom-switch">
-                                    <input type="checkbox" id="autoBackup" 
-                                           {% if settings.auto_backup %}checked{% endif %}>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.reservation_duration_hours.id_for_label }}">Pickup window (hours)</label>
+                            {{ form.reservation_duration_hours }}
+                            <div class="form-text">How long a member has to collect a book that is being held for them.</div>
+                            {% for error in form.reservation_duration_hours.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
                     </div>
                 </div>
 
-                <!-- Maintenance -->
-                <div id="maintenance-section" class="settings-content" style="display: none;">
-                    <div class="maintenance-mode">
-                        <h5 class="mb-3"><i class="fas fa-tools me-2"></i>Maintenance Mode</h5>
-                        <p class="mb-3">When enabled, only administrators can access the library system</p>
-                        <div class="setting-toggle">
-                            <span class="fw-bold">Maintenance Mode</span>
-                            <label class="custom-switch">
-                                <input type="checkbox" id="maintenanceMode" 
-                                       {% if settings.maintenance_mode %}checked{% endif %}>
-                                <span class="slider"></span>
-                            </label>
+                <div class="setting-item">
+                    <div class="setting-toggle">
+                        <div>
+                            <h6 class="mb-1">Enable reservations</h6>
+                            <small class="text-muted">Let members ask the library for a book that is out.</small>
                         </div>
-                    </div>
-                    
-                    <div class="settings-section">
-                        <h5><i class="fas fa-broom me-2"></i>System Maintenance</h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="setting-item">
-                                    <h6 class="mb-2">Clear Cache</h6>
-                                    <p class="text-muted small mb-3">Clear all cached data to improve performance</p>
-                                    <button type="button" class="btn btn-outline-warning" onclick="clearCache()">
-                                        <i class="fas fa-trash me-2"></i>Clear Cache
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="setting-item">
-                                    <h6 class="mb-2">Optimize Database</h6>
-                                    <p class="text-muted small mb-3">Optimize database for better performance</p>
-                                    <button type="button" class="btn btn-outline-info" onclick="optimizeDatabase()">
-                                        <i class="fas fa-database me-2"></i>Optimize
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="danger-zone">
-                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h6>
-                        <p class="mb-3">These actions are irreversible. Please be very careful.</p>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <button type="button" class="btn btn-outline-danger" onclick="resetAllData()">
-                                    <i class="fas fa-trash-alt me-2"></i>Reset All Data
-                                </button>
-                                <small class="d-block text-muted mt-1">This will delete all library data</small>
-                            </div>
-                            <div class="col-md-6">
-                                <button type="button" class="btn btn-outline-danger" onclick="resetSettings()">
-                                    <i class="fas fa-undo me-2"></i>Reset Settings
-                                </button>
-                                <small class="d-block text-muted mt-1">Reset all settings to defaults</small>
-                            </div>
-                        </div>
+                        <label class="custom-switch">
+                            {{ form.enable_reservations }}
+                            <span class="slider"></span>
+                        </label>
                     </div>
                 </div>
 
-                <!-- Save Button -->
-                <div class="text-center mt-4">
-                    <button type="button" class="btn btn-primary btn-lg" onclick="saveSettings()">
-                        <i class="fas fa-save me-2"></i>Save All Settings
-                    </button>
+                <div class="setting-item">
+                    <div class="setting-toggle">
+                        <div>
+                            <h6 class="mb-1">{{ form.require_approval.label }}</h6>
+                            <small class="text-muted">Staff approve the request before the book is handed over.</small>
+                        </div>
+                        <label class="custom-switch">
+                            {{ form.require_approval }}
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-toggle">
+                        <div>
+                            <h6 class="mb-1">{{ form.enable_delivery.label }}</h6>
+                            <small class="text-muted">Members may ask for the book to be delivered to them.</small>
+                        </div>
+                        <label class="custom-switch">
+                            {{ form.enable_delivery }}
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <div class="settings-section">
+                <h5><i class="fas fa-tools me-2"></i>Library Features</h5>
+
+                <div class="setting-item">
+                    <div class="setting-toggle">
+                        <div>
+                            <h6 class="mb-1">Barcodes</h6>
+                            <small class="text-muted">Allow books to be scanned at the desk.</small>
+                        </div>
+                        <label class="custom-switch">
+                            {{ form.enable_barcode }}
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-toggle">
+                        <div>
+                            <h6 class="mb-1">QR codes</h6>
+                            <small class="text-muted">Print QR labels for the catalogue.</small>
+                        </div>
+                        <label class="custom-switch">
+                            {{ form.enable_qr_code }}
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-toggle">
+                        <div>
+                            <h6 class="mb-1">Digital resources</h6>
+                            <small class="text-muted">Let teachers upload learning material.</small>
+                        </div>
+                        <label class="custom-switch">
+                            {{ form.enable_digital_resources }}
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save me-2"></i>Save Settings
+                </button>
+            </div>
+        </form>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Navigation functionality
-    window.showSection = function(section) {
-        // Hide all sections
-        document.querySelectorAll('.settings-content').forEach(content => {
-            content.style.display = 'none';
-        });
-        
-        // Remove active class from all nav links
-        document.querySelectorAll('.settings-nav .nav-link').forEach(link => {
-            link.classList.remove('active');
-        });
-        
-        // Show selected section
-        document.getElementById(section + '-section').style.display = 'block';
-        
-        // Add active class to clicked nav link
-        event.target.classList.add('active');
-    };
-    
-    // Color picker synchronization
-    const primaryColor = document.getElementById('primaryColor');
-    const primaryColorText = document.getElementById('primaryColorText');
-    const secondaryColor = document.getElementById('secondaryColor');
-    const secondaryColorText = document.getElementById('secondaryColorText');
-    
-    primaryColor.addEventListener('change', function() {
-        primaryColorText.value = this.value;
-    });
-    
-    primaryColorText.addEventListener('change', function() {
-        primaryColor.value = this.value;
-    });
-    
-    secondaryColor.addEventListener('change', function() {
-        secondaryColorText.value = this.value;
-    });
-    
-    secondaryColorText.addEventListener('change', function() {
-        secondaryColor.value = this.value;
-    });
-    
-    // Logo upload handling
-    document.getElementById('logoUpload').addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-            const file = this.files[0];
-            if (file.size > 2 * 1024 * 1024) {
-                alert('File size must be less than 2MB');
-                return;
-            }
-            
-            // Preview the uploaded image
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                // You can add preview functionality here
-                console.log('Logo uploaded:', file.name);
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-    
-    // Save settings function
-    window.saveSettings = function() {
-        const settings = {
-            // General settings
-            library_name: document.getElementById('libraryName').value,
-            library_code: document.getElementById('libraryCode').value,
-            library_description: document.getElementById('libraryDescription').value,
-            opening_time: document.getElementById('openTime').value,
-            closing_time: document.getElementById('closeTime').value,
-            contact_info: document.getElementById('contactInfo').value,
-            
-            // Borrowing policies
-            default_borrow_period: document.getElementById('defaultBorrowPeriod').value,
-            max_renewals: document.getElementById('maxRenewals').value,
-            max_books_student: document.getElementById('maxBooksStudent').value,
-            max_books_teacher: document.getElementById('maxBooksTeacher').value,
-            late_fee_per_day: document.getElementById('lateFeePerDay').value,
-            max_late_fee: document.getElementById('maxLateFee').value,
-            allow_reservations: document.getElementById('allowReservations').checked,
-            require_approval: document.getElementById('requireApproval').checked,
-            
-            // Notifications
-            email_notifications: document.getElementById('emailNotifications').checked,
-            due_date_reminders: document.getElementById('dueDateReminders').checked,
-            overdue_notifications: document.getElementById('overdueNotifications').checked,
-            reminder_days: document.getElementById('reminderDays').value,
-            notification_time: document.getElementById('notificationTime').value,
-            
-            // Appearance
-            primary_color: document.getElementById('primaryColor').value,
-            secondary_color: document.getElementById('secondaryColor').value,
-            dark_mode: document.getElementById('darkMode').checked,
-            
-            // Maintenance
-            auto_backup: document.getElementById('autoBackup').checked,
-            maintenance_mode: document.getElementById('maintenanceMode').checked
-        };
-        
-        fetch('/library/settings/save/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: JSON.stringify(settings)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Settings saved successfully!');
-            } else {
-                alert('Error saving settings: ' + (data.error || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while saving settings');
-        });
-    };
-    
-    // Maintenance functions
-    window.createBackup = function() {
-        if (confirm('Create a backup of all library data?')) {
-            fetch('/library/maintenance/backup/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                }
-            })
-            .then(response => response.blob())
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `library_backup_${new Date().toISOString().split('T')[0]}.sql`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error creating backup');
-            });
-        }
-    };
-    
-    window.exportData = function(format) {
-        const link = document.createElement('a');
-        link.href = `/library/export/${format}/`;
-        link.download = `library_data.${format}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-    
-    window.clearCache = function() {
-        if (confirm('Clear all cached data?')) {
-            fetch('/library/maintenance/clear-cache/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Cache cleared successfully!');
-                } else {
-                    alert('Error clearing cache');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error clearing cache');
-            });
-        }
-    };
-    
-    window.optimizeDatabase = function() {
-        if (confirm('Optimize database? This may take a few minutes.')) {
-            fetch('/library/maintenance/optimize-db/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Database optimized successfully!');
-                } else {
-                    alert('Error optimizing database');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error optimizing database');
-            });
-        }
-    };
-    
-    window.resetAllData = function() {
-        const confirmation = prompt('Type "RESET ALL DATA" to confirm this action:');
-        if (confirmation === 'RESET ALL DATA') {
-            fetch('/library/maintenance/reset-data/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('All data has been reset!');
-                    location.reload();
-                } else {
-                    alert('Error resetting data');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error resetting data');
-            });
-        }
-    };
-    
-    window.resetSettings = function() {
-        if (confirm('Reset all settings to defaults?')) {
-            fetch('/library/maintenance/reset-settings/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Settings reset to defaults!');
-                    location.reload();
-                } else {
-                    alert('Error resetting settings');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error resetting settings');
-            });
-        }
-    };
-});
-</script>
 {% endblock %}

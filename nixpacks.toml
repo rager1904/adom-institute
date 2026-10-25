@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python311", "postgresql", "gcc", "g++", "libffi", "openssl", "zlib", "libjpeg", "libpng", "libwebp", "freetype", "pango", "cairo", "gdk-pixbuf", "pkg-config", "musl", "libxml2", "libxslt", "shared-mime-info"]
+nixPkgs = ["python311", "postgresql", "gcc", "g++", "libffi", "openssl", "zlib", "libjpeg", "libpng", "libwebp", "freetype", "pango", "cairo", "gdk-pixbuf", "pkg-config", "musl", "libxml2", "libxslt", "shared-mime-info", "libreoffice"]
 
 [phases.install]
 cmds = [

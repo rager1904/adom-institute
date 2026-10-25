@@ -1,12 +1,18 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
+from django.http import Http404, JsonResponse
 from django.views.generic import ListView, DetailView, TemplateView, CreateView, UpdateView, DeleteView
-from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.contrib import messages
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from accounts.permissions import AdminRequiredMixin, is_admin_user, user_institution_ids
+from adom.protected_media import protected_file_response
+from accounts.permissions import (
+    AdminRequiredMixin, IsPlatformOrInstitutionAdmin,
+    is_admin_user, user_institution_ids,
+)
 
 from .models import (
     AnalyticsEvent, StudentPerformance, ClassPerformance, 
@@ -21,41 +27,94 @@ from students.models import Student, Class, AcademicYear
 from teachers.models import Teacher
 
 
+def scope_to_institution(queryset, user, lookup):
+    """Limit ``queryset`` to the institutions ``user`` belongs to.
+
+    A platform administrator (``None`` from ``user_institution_ids``) sees
+    everything; everybody else sees only their own institution's rows.
+    """
+    institution_ids = user_institution_ids(user)
+    if institution_ids is None:
+        return queryset
+    if not institution_ids:
+        return queryset.none()
+    return queryset.filter(**{f'{lookup}__in': institution_ids}).distinct()
+
+
+class AnalyticsAdminWriteMixin:
+    """Read for signed-in users, write for institution administrators."""
+
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsPlatformOrInstitutionAdmin()]
+        return super().get_permissions()
+
+
 # API Viewsets
-class AnalyticsEventViewSet(viewsets.ModelViewSet):
+class AnalyticsEventViewSet(AnalyticsAdminWriteMixin, viewsets.ModelViewSet):
     queryset = AnalyticsEvent.objects.all()
     serializer_class = AnalyticsEventSerializer
     permission_classes = [IsAuthenticated]
 
 
-class StudentPerformanceViewSet(viewsets.ModelViewSet):
+class StudentPerformanceViewSet(AnalyticsAdminWriteMixin, viewsets.ModelViewSet):
     queryset = StudentPerformance.objects.all()
     serializer_class = StudentPerformanceSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        return scope_to_institution(
+            StudentPerformance.objects.select_related('student__user', 'academic_year'),
+            self.request.user, 'academic_year__institution_id',
+        )
 
-class ClassPerformanceViewSet(viewsets.ModelViewSet):
+
+class ClassPerformanceViewSet(AnalyticsAdminWriteMixin, viewsets.ModelViewSet):
     queryset = ClassPerformance.objects.all()
     serializer_class = ClassPerformanceSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        return scope_to_institution(
+            ClassPerformance.objects.select_related('class_obj', 'academic_year'),
+            self.request.user, 'academic_year__institution_id',
+        )
 
-class TeacherPerformanceViewSet(viewsets.ModelViewSet):
+
+class TeacherPerformanceViewSet(AnalyticsAdminWriteMixin, viewsets.ModelViewSet):
     queryset = TeacherPerformance.objects.all()
     serializer_class = TeacherPerformanceSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        return scope_to_institution(
+            TeacherPerformance.objects.select_related('teacher__user', 'academic_year'),
+            self.request.user, 'academic_year__institution_id',
+        )
 
-class SchoolAnalyticsViewSet(viewsets.ModelViewSet):
+
+class SchoolAnalyticsViewSet(AnalyticsAdminWriteMixin, viewsets.ModelViewSet):
     queryset = SchoolAnalytics.objects.all()
     serializer_class = SchoolAnalyticsSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        return scope_to_institution(
+            SchoolAnalytics.objects.select_related('academic_year'),
+            self.request.user, 'academic_year__institution_id',
+        )
 
-class ReportViewSet(viewsets.ModelViewSet):
+
+class ReportViewSet(AnalyticsAdminWriteMixin, viewsets.ModelViewSet):
     queryset = Report.objects.all()
     serializer_class = ReportSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return scope_to_institution(
+            Report.objects.select_related('generated_by'),
+            self.request.user, 'generated_by__institution_memberships__institution_id',
+        )
 
 
 # Web Views
@@ -171,11 +230,25 @@ class ReportListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
     context_object_name = 'reports'
     paginate_by = 20
 
+    def get_queryset(self):
+        return scope_to_institution(
+            Report.objects.select_related('generated_by'),
+            self.request.user,
+            'generated_by__institution_memberships__institution_id',
+        ).order_by('-generated_at')
+
 
 class ReportDetailView(LoginRequiredMixin, AdminRequiredMixin, DetailView):
     model = Report
     template_name = 'analytics/report_detail_modern.html'
     context_object_name = 'report'
+
+    def get_queryset(self):
+        return scope_to_institution(
+            Report.objects.select_related('generated_by'),
+            self.request.user,
+            'generated_by__institution_memberships__institution_id',
+        )
 
 
 class ReportCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
@@ -197,6 +270,13 @@ class ReportUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
     template_name = 'analytics/report_form_modern.html'
     success_url = reverse_lazy('analytics:report_list')
 
+    def get_queryset(self):
+        return scope_to_institution(
+            Report.objects.all(),
+            self.request.user,
+            'generated_by__institution_memberships__institution_id',
+        )
+
     def form_valid(self, form):
         messages.success(self.request, 'Report updated successfully.')
         return super().form_valid(form)
@@ -207,3 +287,40 @@ class ReportDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
     template_name = 'analytics/report_confirm_delete_modern.html'
     success_url = reverse_lazy('analytics:report_list')
     context_object_name = 'report'
+
+    def get_queryset(self):
+        return scope_to_institution(
+            Report.objects.all(),
+            self.request.user,
+            'generated_by__institution_memberships__institution_id',
+        )
+
+
+@login_required
+def report_file(request, pk):
+    """Stream a generated report through the authenticated inline viewer.
+
+    Generated reports can contain sensitive institutional data, so the raw
+    ``/media/reports/`` URL must never be handed to a client.
+    """
+    if not is_admin_user(request.user):
+        raise PermissionDenied
+
+    report = get_object_or_404(Report, pk=pk)
+    if not report.file_path:
+        raise Http404('This report has no generated file.')
+
+    institution_ids = user_institution_ids(request.user)
+    if institution_ids is not None:
+        belongs = (
+            report.generated_by_id is not None
+            and report.generated_by.institution_memberships.filter(
+                institution_id__in=institution_ids
+            ).exists()
+        )
+        if not belongs:
+            raise PermissionDenied
+
+    return protected_file_response(
+        report.file_path, request=request, filename=report.name,
+    )

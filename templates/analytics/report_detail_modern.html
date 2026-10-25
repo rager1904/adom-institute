@@ -22,7 +22,7 @@
             <dt class="col-md-3">Generated at</dt><dd class="col-md-9">{{ report.generated_at|date:"M d, Y H:i" }}</dd>
             <dt class="col-md-3">Status</dt><dd class="col-md-9">{% if report.is_successful %}Successful{% else %}Failed{% endif %}</dd>
             {% if report.file_path %}
-            <dt class="col-md-3">File</dt><dd class="col-md-9"><a href="{{ report.file_path.url }}" target="_blank" rel="noopener">Open file</a></dd>
+            <dt class="col-md-3">File</dt><dd class="col-md-9"><a href="{% url 'analytics:report_file' report.pk %}" target="_blank" rel="noopener">Open file</a></dd>
             {% endif %}
         </dl>
     </div>

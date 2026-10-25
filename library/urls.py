@@ -49,6 +49,7 @@ urlpatterns = [
     # Inline, authenticated viewer. This is the only route that reads a
     # material file; the raw /media/ path is blocked for material.
     path('digital-resources/<int:resource_id>/file/', views.view_resource_file, name='resource_file'),
+    path('digital-resources/<int:resource_id>/preview/', views.view_resource_preview, name='resource_preview'),
     # Kept for stale links. Refuses with a message unless
     # ALLOW_MATERIAL_DOWNLOADS is turned on.
     path('digital-resources/<int:resource_id>/download/', views.download_resource, name='download_resource'),

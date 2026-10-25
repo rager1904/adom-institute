@@ -12,7 +12,7 @@
 
     {% if return_request %}
         <div class="alert alert-info">
-            {{ return_request.user.get_full_name|default:return_request.user.username }} asked to return this book
+            {{ return_request.user.get_full_name|default:return_request.user.email }} asked to return this book
             ({{ return_request.get_return_method_display }}). Checking it in here will close that request too.
         </div>
     {% endif %}
@@ -20,7 +20,7 @@
     <section class="metric-grid">
         <article class="metric-card">
             <span class="metric-icon"><i class="fas fa-user"></i></span>
-            <div class="metric-value">{{ borrowing.borrower.get_full_name|default:borrowing.borrower.username }}</div>
+            <div class="metric-value">{{ borrowing.borrower.get_full_name|default:borrowing.borrower.email }}</div>
             <div class="metric-label">Borrower</div>
             <div class="metric-detail">Borrowed {{ borrowing.borrowed_date|date:"d M Y" }}</div>
         </article>

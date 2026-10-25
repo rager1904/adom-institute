@@ -50,14 +50,6 @@ class TagListField(forms.CharField):
         return [tag.strip() for tag in str(value).split(',') if tag.strip()]
 
 
-
-    def render(self, name, value, attrs=None, renderer=None):
-        hidden_attrs = {'id': 'id_%s_hidden' % name}
-        hidden = forms.HiddenInput().render(name, 'False', attrs=hidden_attrs, renderer=renderer)
-        checkbox = super().render(name, value, attrs=attrs, renderer=renderer)
-        return hidden + checkbox
-
-
 class BookSearchForm(forms.Form):
     """Search form for books"""
     search = forms.CharField(
@@ -303,13 +295,21 @@ class BookBorrowingForm(forms.ModelForm):
     """Form for creating book borrowings"""
     class Meta:
         model = BookBorrowing
-        fields = ['book', 'borrower', 'due_date', 'notes']
+        fields = [
+            'book', 'borrower', 'due_date', 'fulfillment_method',
+            'delivery_address', 'notes',
+        ]
         widgets = {
             'book': forms.Select(attrs={'class': 'form-select'}),
             'borrower': forms.Select(attrs={'class': 'form-select'}),
             'due_date': forms.DateTimeInput(attrs={
                 'class': 'form-control',
                 'type': 'datetime-local'
+            }),
+            'fulfillment_method': forms.Select(attrs={'class': 'form-select'}),
+            'delivery_address': forms.Textarea(attrs={
+                'class': 'form-control', 'rows': 2,
+                'placeholder': 'Where should the book be delivered?',
             }),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
@@ -323,6 +323,13 @@ class BookBorrowingForm(forms.ModelForm):
         )
         # Only show active users
         self.fields['borrower'].queryset = User.objects.filter(is_active=True)
+        if not LibrarySettings.get_settings().enable_delivery:
+            self.fields['fulfillment_method'].choices = [
+                (value, label) for value, label in BookBorrowing.FULFILLMENT_METHOD_CHOICES
+                if value == 'pickup'
+            ]
+            self.fields['fulfillment_method'].initial = 'pickup'
+            self.fields['fulfillment_method'].widget = forms.HiddenInput()
 
     def clean_due_date(self):
         due_date = self.cleaned_data.get('due_date')
@@ -334,7 +341,15 @@ class BookBorrowingForm(forms.ModelForm):
         cleaned_data = super().clean()
         borrower = cleaned_data.get('borrower')
         book = cleaned_data.get('book')
-        
+        method = cleaned_data.get('fulfillment_method')
+        address = cleaned_data.get('delivery_address')
+
+        if method == 'delivery' and not (address or '').strip():
+            self.add_error(
+                'delivery_address',
+                'Say where the book should be delivered.',
+            )
+
         if borrower and book:
             # Check if user has reached borrowing limit
             settings = LibrarySettings.get_settings()
@@ -560,6 +575,13 @@ class BookReturnRequestForm(forms.ModelForm):
     courier collects it from them.
     """
 
+    borrowing = forms.ModelChoiceField(
+        queryset=BookBorrowing.objects.none(),
+        required=False,
+        label='Book you are returning',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+
     class Meta:
         model = ReturnRequest
         fields = ['return_method', 'delivery_address', 'delivery_phone', 'notes']
@@ -583,19 +605,43 @@ class BookReturnRequestForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.borrowing = kwargs.pop('borrowing', None)
+        self.borrower = kwargs.pop('borrower', None)
         super().__init__(*args, **kwargs)
         self.fields['return_method'].initial = 'dropoff'
 
+        if self.borrowing is not None:
+            # A specific loan was named in the URL, so it is fixed.
+            self.fields['borrowing'].queryset = BookBorrowing.objects.filter(
+                pk=self.borrowing.pk,
+            )
+            self.fields['borrowing'].initial = self.borrowing
+            self.fields['borrowing'].widget = forms.HiddenInput()
+        else:
+            self.fields['borrowing'].queryset = self._returnable_borrowings()
+            self.fields['borrowing'].required = True
+
+    def _returnable_borrowings(self):
+        """The loans this member can still hand back."""
+        queryset = BookBorrowing.objects.filter(return_date__isnull=True)
+        if self.borrower is not None and self.borrower.is_authenticated:
+            queryset = queryset.filter(borrower=self.borrower)
+        else:
+            queryset = queryset.none()
+        return queryset.exclude(
+            return_requests__status__in=ReturnRequest.OPEN_STATUSES,
+        ).select_related('book').order_by('due_date')
+
     def clean(self):
         cleaned_data = super().clean()
-        self.cleaned_borrowing = self.borrowing
+        borrowing = self.borrowing or cleaned_data.get('borrowing')
+        self.cleaned_borrowing = borrowing
 
-        if self.borrowing is None:
+        if borrowing is None:
             raise forms.ValidationError("Select a book to return.")
-        if self.borrowing.return_date is not None:
+        if borrowing.return_date is not None:
             raise forms.ValidationError("This book has already been returned.")
         if ReturnRequest.objects.filter(
-            borrowing=self.borrowing,
+            borrowing=borrowing,
             status__in=ReturnRequest.OPEN_STATUSES,
         ).exists():
             raise forms.ValidationError(
@@ -685,6 +731,7 @@ class LibrarySettingsForm(forms.ModelForm):
         fields = [
             'max_books_per_user', 'borrowing_duration_days', 'late_fee_per_day',
             'reservation_duration_hours', 'max_reservations_per_user',
+            'require_approval', 'enable_delivery',
             'enable_barcode', 'enable_qr_code', 'enable_digital_resources',
             'enable_reservations'
         ]
@@ -697,10 +744,16 @@ class LibrarySettingsForm(forms.ModelForm):
             }),
             'reservation_duration_hours': forms.NumberInput(attrs={'class': 'form-control'}),
             'max_reservations_per_user': forms.NumberInput(attrs={'class': 'form-control'}),
+            'require_approval': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'enable_delivery': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'enable_barcode': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'enable_qr_code': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'enable_digital_resources': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'enable_reservations': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'require_approval': 'Require approval for borrowing requests',
+            'enable_delivery': 'Allow books to be delivered to members',
         }
 
 class BulkBookImportForm(forms.Form):

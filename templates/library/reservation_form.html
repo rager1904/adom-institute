@@ -321,25 +321,30 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Priority Level</label>
-                            <div class="priority-selector">
-                                <div class="priority-option" data-priority="normal">
-                                    <i class="fas fa-clock text-success fa-2x mb-2"></i>
-                                    <h6>Normal</h6>
-                                    <small class="text-muted">Standard queue position</small>
-                                </div>
-                                <div class="priority-option" data-priority="high">
-                                    <i class="fas fa-exclamation text-warning fa-2x mb-2"></i>
-                                    <h6>High</h6>
-                                    <small class="text-muted">Priority position</small>
-                                </div>
-                                <div class="priority-option" data-priority="urgent">
-                                    <i class="fas fa-bolt text-danger fa-2x mb-2"></i>
-                                    <h6>Urgent</h6>
-                                    <small class="text-muted">Top of queue</small>
-                                </div>
-                            </div>
-                            <input type="hidden" id="priorityInput" name="priority" value="normal">
+                            {% if form.fulfillment_method.field.widget.input_type != 'hidden' %}
+                            <label for="{{ form.fulfillment_method.id_for_label }}" class="form-label">Collection Method</label>
+                            {% endif %}
+                            {{ form.fulfillment_method }}
+                            {% if form.fulfillment_method.errors %}
+                                <div class="text-danger mt-1">{{ form.fulfillment_method.errors }}</div>
+                            {% endif %}
+                            <div class="field-help">Pickup at the library or delivery by the school courier</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.delivery_address.id_for_label }}" class="form-label">Delivery Address</label>
+                            {{ form.delivery_address }}
+                            {% if form.delivery_address.errors %}
+                                <div class="text-danger mt-1">{{ form.delivery_address.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.delivery_phone.id_for_label }}" class="form-label">Delivery Phone</label>
+                            {{ form.delivery_phone }}
+                            {% if form.delivery_phone.errors %}
+                                <div class="text-danger mt-1">{{ form.delivery_phone.errors }}</div>
+                            {% endif %}
                         </div>
                     </div>
                     
@@ -351,20 +356,6 @@
                                 <div class="text-danger mt-1">{{ form.notes.errors }}</div>
                             {% endif %}
                             <div class="field-help">Any special instructions or notes for this reservation</div>
-                        </div>
-                        
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="notifyWhenReady" checked>
-                            <label class="form-check-label" for="notifyWhenReady">
-                                Notify user when book becomes available
-                            </label>
-                        </div>
-                        
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="autoExpire" checked>
-                            <label class="form-check-label" for="autoExpire">
-                                Auto-expire after 7 days if not picked up
-                            </label>
                         </div>
                     </div>
                 </div>
@@ -383,8 +374,8 @@
                     <span id="summaryBook">-</span>
                 </div>
                 <div class="summary-item">
-                    <span>Priority:</span>
-                    <span id="summaryPriority">Normal</span>
+                    <span>Collection:</span>
+                    <span id="summaryMethod">-</span>
                 </div>
                 <div class="summary-item">
                     <span>Queue Position:</span>
@@ -416,12 +407,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('reservationForm');
     const userInput = document.querySelector('#{{ form.user.id_for_label }}');
     const bookInput = document.querySelector('#{{ form.book.id_for_label }}');
-    const priorityInput = document.getElementById('priorityInput');
+    const methodInput = document.querySelector('#{{ form.fulfillment_method.id_for_label }}');
     const submitBtn = document.getElementById('submitBtn');
     
     let selectedUser = null;
     let selectedBook = null;
-    let selectedPriority = 'normal';
     
     // Hide original inputs
     userInput.style.display = 'none';
@@ -631,21 +621,6 @@ document.addEventListener('DOMContentLoaded', function() {
         checkFormCompletion();
     };
     
-    // Priority selection
-    const priorityOptions = document.querySelectorAll('.priority-option');
-    priorityOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            priorityOptions.forEach(opt => opt.classList.remove('selected'));
-            this.classList.add('selected');
-            selectedPriority = this.dataset.priority;
-            priorityInput.value = selectedPriority;
-            updateSummary();
-        });
-    });
-    
-    // Set default priority
-    document.querySelector('[data-priority="normal"]').classList.add('selected');
-    
     // Update summary
     function updateSummary() {
         const summarySection = document.getElementById('reservationSummary');
@@ -655,15 +630,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             document.getElementById('summaryUser').textContent = selectedUser.full_name;
             document.getElementById('summaryBook').textContent = selectedBook.title;
-            document.getElementById('summaryPriority').textContent = selectedPriority.charAt(0).toUpperCase() + selectedPriority.slice(1);
+            document.getElementById('summaryMethod').textContent = methodInput ? methodInput.value : 'pickup';
             
-            // Calculate queue position based on priority
-            let queuePosition = selectedBook.queue_length || 0;
-            if (selectedPriority === 'high') {
-                queuePosition = Math.ceil(queuePosition / 2);
-            } else if (selectedPriority === 'urgent') {
-                queuePosition = 1;
-            }
+            // Position in the queue for this title.
+            const queuePosition = selectedBook.queue_length || 0;
             document.getElementById('summaryQueuePosition').textContent = queuePosition > 0 ? `#${queuePosition + 1}` : '#1';
             
             // Estimated wait time

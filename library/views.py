@@ -11,11 +11,13 @@ from django.views.generic import (
 )
 from django.urls import reverse_lazy, reverse
 from django.db.models import Q, Count, Sum
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets, status, filters, permissions
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
@@ -43,6 +45,11 @@ from .models import (
     ReturnRequest
 )
 from .reports import build_report, report_rows, REPORT_TITLES
+from .converters import (
+    convert_field_file_to_pdf_bytes,
+    is_convertible_filename,
+)
+from django.core.files.base import ContentFile
 from .forms import (
     BookSearchForm, BookForm, BookCategoryForm, DigitalResourceSearchForm,
     DigitalResourceForm, BookBorrowingForm, BookReturnForm, BookReservationForm,
@@ -58,7 +65,7 @@ from .serializers import (
     BookDetailSerializer, DigitalResourceDetailSerializer, LibraryStatisticsSerializer,
     UserLibraryActivitySerializer, BookSearchSerializer, DigitalResourceSearchSerializer,
     BookBorrowActionSerializer, BookReturnActionSerializer, BookReserveActionSerializer,
-    DigitalResourceDownloadSerializer, ReturnRequestSerializer
+    DigitalResourceDownloadSerializer, ReturnRequestSerializer, UserSerializer
 )
 
 User = get_user_model()
@@ -99,15 +106,51 @@ def can_view_resource(user, resource):
     return is_teacher_user(user)
 
 
-def _file_preview_context(resource):
-    """Describe the stored file so the detail page can render a viewer.
+def generate_preview_pdf(resource):
+    """Generate and save a preview PDF for convertible Office files."""
+    try:
+        if not resource or not resource.file:
+            return False
+        if getattr(resource, 'preview_pdf') and resource.preview_pdf:
+            try:
+                if resource.preview_pdf.name and resource.preview_pdf.storage.exists(resource.preview_pdf.name):
+                    return True
+            except Exception:
+                pass
+        if not is_convertible_filename(resource.file.name):
+            return False
+        pdf_bytes = convert_field_file_to_pdf_bytes(resource.file)
+        if not pdf_bytes:
+            return False
+        base = os.path.splitext(os.path.basename(resource.file.name or 'document'))[0]
+        resource.preview_pdf.save(f'{base}_preview.pdf', ContentFile(pdf_bytes), save=True)
+        return True
+    except Exception:
+        return False
 
-    The preview kind comes from the stored file extension rather than from the
-    manually chosen ``resource_type``, so an uploaded MP4 always plays even
-    when the uploader left the type on "Other".
-    """
+
+def _file_preview_context(resource):
+    """Describe the stored file so the detail page can render a viewer."""
     name = resource.file.name or ''
     extension = name.rsplit('.', 1)[-1].lower() if '.' in name else ''
+
+    # Try to generate on-demand if missing
+    if is_convertible_filename(resource.file.name):
+        generate_preview_pdf(resource)
+
+    if getattr(resource, 'preview_pdf') and resource.preview_pdf:
+        try:
+            if resource.preview_pdf.name and resource.preview_pdf.storage.exists(resource.preview_pdf.name):
+                return {
+                    'file_extension': 'pdf',
+                    'file_content_type': 'application/pdf',
+                    'file_kind': 'pdf',
+                    'file_exists': True,
+                    'use_preview_pdf': True,
+                }
+        except Exception:
+            pass
+
     content_type = guess_material_content_type(name) if name else ''
     if content_type.startswith('video/'):
         kind = 'video'
@@ -117,6 +160,14 @@ def _file_preview_context(resource):
         kind = 'image'
     elif content_type == 'application/pdf':
         kind = 'pdf'
+    elif extension in ['ppt', 'pptx']:
+        kind = 'presentation'
+    elif extension in ['doc', 'docx']:
+        kind = 'document'
+    elif extension in ['xls', 'xlsx']:
+        kind = 'spreadsheet'
+    elif extension in ['txt', 'csv']:
+        kind = 'text'
     else:
         kind = 'other'
     try:
@@ -128,6 +179,7 @@ def _file_preview_context(resource):
         'file_content_type': content_type,
         'file_kind': kind,
         'file_exists': exists,
+        'use_preview_pdf': False,
     }
 
 
@@ -261,65 +313,97 @@ class BookViewSet(viewsets.ModelViewSet):
         """Borrow a book"""
         book = self.get_object()
         serializer = BookBorrowActionSerializer(data=request.data)
-        
-        if serializer.is_valid():
-            try:
-                borrower = User.objects.get(id=serializer.validated_data['borrower_id'])
-                due_date = serializer.validated_data['due_date']
-                notes = serializer.validated_data.get('notes', '')
-                
-                borrowing = BookBorrowing.objects.create(
-                    book=book,
-                    borrower=borrower,
-                    due_date=due_date,
-                    notes=notes
-                )
-                
-                book.availability = 'borrowed'
-                book.save()
-                
-                return Response({
-                    'message': 'Book borrowed successfully',
-                    'borrowing_id': borrowing.id
-                }, status=status.HTTP_201_CREATED)
-            except Exception as e:
-                return Response({
-                    'error': str(e)
-                }, status=status.HTTP_400_BAD_REQUEST)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        borrower = get_object_or_404(User, id=serializer.validated_data['borrower_id'])
+        due_date = serializer.validated_data['due_date']
+        notes = serializer.validated_data.get('notes', '')
+
+        if due_date <= timezone.now():
+            return Response(
+                {'detail': 'The due date has to be in the future.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if book.availability != 'available':
+            return Response(
+                {'detail': 'That book is not on the shelf right now.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        settings = LibrarySettings.get_settings()
+        active_loans = BookBorrowing.objects.filter(
+            borrower=borrower, return_date__isnull=True,
+        ).count()
+        if active_loans >= settings.max_books_per_user:
+            return Response(
+                {'detail': 'That member already holds the maximum number of books.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        borrowing = BookBorrowing.objects.create(
+            book=book,
+            borrower=borrower,
+            due_date=due_date,
+            notes=notes,
+        )
+
+        book.availability = 'borrowed'
+        book.save(update_fields=['availability'])
+
+        return Response({
+            'message': 'Book borrowed successfully',
+            'borrowing_id': borrowing.id
+        }, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
     def reserve(self, request, pk=None):
         """Reserve a book"""
         book = self.get_object()
         serializer = BookReserveActionSerializer(data=request.data)
-        
-        if serializer.is_valid():
-            try:
-                user = User.objects.get(id=serializer.validated_data['user_id'])
-                notes = serializer.validated_data.get('notes', '')
-                
-                settings = LibrarySettings.get_settings()
-                expiry_date = timezone.now() + timedelta(hours=settings.reservation_duration_hours)
-                
-                reservation = BookReservation.objects.create(
-                    book=book,
-                    user=user,
-                    expiry_date=expiry_date,
-                    notes=notes
-                )
-                
-                return Response({
-                    'message': 'Book reserved successfully',
-                    'reservation_id': reservation.id
-                }, status=status.HTTP_201_CREATED)
-            except Exception as e:
-                return Response({
-                    'error': str(e)
-                }, status=status.HTTP_400_BAD_REQUEST)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user = get_object_or_404(User, id=serializer.validated_data['user_id'])
+        notes = serializer.validated_data.get('notes', '')
+
+        settings = LibrarySettings.get_settings()
+        if not settings.enable_reservations:
+            return Response(
+                {'detail': 'Reservations are switched off for this library.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if BookReservation.objects.filter(
+            user=user, book=book, status__in=BookReservation.OPEN_STATUSES,
+        ).exists():
+            return Response(
+                {'detail': 'That member already has a live request for this book.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        live_requests = BookReservation.objects.filter(
+            user=user, status__in=BookReservation.OPEN_STATUSES,
+        ).count()
+        if live_requests >= settings.max_reservations_per_user:
+            return Response(
+                {'detail': 'That member already holds the maximum number of open requests.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        expiry_date = timezone.now() + timedelta(hours=settings.reservation_duration_hours)
+
+        reservation = BookReservation.objects.create(
+            book=book,
+            user=user,
+            expiry_date=expiry_date,
+            notes=notes,
+        )
+
+        return Response({
+            'message': 'Book reserved successfully',
+            'reservation_id': reservation.id
+        }, status=status.HTTP_201_CREATED)
 
 class BookCategoryViewSet(viewsets.ModelViewSet):
     """API viewset for BookCategory model. Catalogue changes are staff-only."""
@@ -491,6 +575,7 @@ class BookReservationViewSet(viewsets.ModelViewSet):
 
     Students may raise a request against themselves; staff do the reviewing.
     """
+
     queryset = BookReservation.objects.select_related('book', 'user').all()
     serializer_class = BookReservationSerializer
     permission_classes = [IsAuthenticated, IsLibraryStaffOrOwnRequest]
@@ -503,6 +588,29 @@ class BookReservationViewSet(viewsets.ModelViewSet):
         return _scoped_to_own_requests(
             super().get_queryset(), self.request.user, 'user',
         )
+
+    def perform_create(self, serializer):
+        """Pin the request to the member who raised it.
+
+        A member may only raise a request for themselves. Staff may raise one
+        on behalf of somebody else by naming the member.
+        """
+        requested_user_id = serializer.validated_data.pop('user_id', None)
+        settings = LibrarySettings.get_settings()
+        # The pickup window belongs to the library, not to the caller.
+        serializer.validated_data['expiry_date'] = timezone.now() + timedelta(
+            hours=settings.reservation_duration_hours
+        )
+        if is_admin_user(self.request.user) and requested_user_id:
+            serializer.save(user_id=requested_user_id)
+        else:
+            serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        """Stop a member from moving a request onto somebody else's account."""
+        if not is_admin_user(self.request.user):
+            serializer.validated_data.pop('user_id', None)
+        serializer.save()
 
 
 class ReturnRequestViewSet(viewsets.ModelViewSet):
@@ -524,7 +632,28 @@ class ReturnRequestViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        """A return request can only be raised against a loan the member holds."""
+        borrowing_id = serializer.validated_data.pop('borrowing_id', None)
+        borrowing = get_object_or_404(
+            BookBorrowing.objects.select_related('book'), id=borrowing_id,
+        )
+        if borrowing.borrower_id != self.request.user.id and not is_admin_user(self.request.user):
+            raise PermissionDenied(
+                'You can only request a return for a book you are holding.'
+            )
+        if borrowing.return_date is not None:
+            raise ValidationError('That book has already been returned.')
+        if ReturnRequest.objects.filter(
+            borrowing=borrowing, status__in=ReturnRequest.OPEN_STATUSES,
+        ).exists():
+            raise ValidationError('There is already an open return request for that book.')
+        serializer.save(user=self.request.user, borrowing=borrowing)
+
+    def perform_update(self, serializer):
+        """A member cannot re-point a request at somebody else's loan."""
+        if not is_admin_user(self.request.user):
+            serializer.validated_data.pop('borrowing_id', None)
+        serializer.save()
 
     @action(detail=True, methods=['post'])
     def decide(self, request, pk=None):
@@ -595,11 +724,10 @@ class LibraryStatisticsViewSet(viewsets.ViewSet):
     """API viewset for library statistics"""
     permission_classes = [IsAuthenticated]
 
-    @action(detail=False, methods=['get'])
-    def dashboard(self, request):
-        """Get library dashboard statistics"""
+    def _dashboard_data(self):
+        """Collect the library wide counters used by the dashboard."""
         today = timezone.now().date()
-        
+
         # Basic statistics
         total_books = Book.objects.filter(is_active=True).count()
         available_books = Book.objects.filter(availability='available', is_active=True).count()
@@ -608,12 +736,12 @@ class LibraryStatisticsViewSet(viewsets.ViewSet):
             due_date__lt=timezone.now(),
             return_date__isnull=True
         ).count()
-        
+
         total_digital_resources = DigitalResource.objects.filter(is_active=True).count()
         total_borrowings_today = BookBorrowing.objects.filter(borrowed_date__date=today).count()
         total_returns_today = BookBorrowing.objects.filter(return_date__date=today).count()
         total_digital_access_today = DigitalResourceAccess.objects.filter(access_date__date=today).count()
-        
+
         # Most borrowed books (last 30 days)
         thirty_days_ago = today - timedelta(days=30)
         most_borrowed = BookBorrowing.objects.filter(
@@ -621,15 +749,15 @@ class LibraryStatisticsViewSet(viewsets.ViewSet):
         ).values('book__title').annotate(
             count=Count('id')
         ).order_by('-count')[:10]
-        
+
         # Most accessed digital resources (last 30 days)
         most_accessed = DigitalResourceAccess.objects.filter(
             access_date__gte=thirty_days_ago
         ).values('resource__title').annotate(
             count=Count('id')
         ).order_by('-count')[:10]
-        
-        data = {
+
+        return {
             'total_books': total_books,
             'available_books': available_books,
             'borrowed_books': borrowed_books,
@@ -641,8 +769,16 @@ class LibraryStatisticsViewSet(viewsets.ViewSet):
             'most_borrowed_books': list(most_borrowed),
             'most_accessed_resources': list(most_accessed)
         }
-        
-        serializer = LibraryStatisticsSerializer(data)
+
+    def list(self, request):
+        """Library wide statistics (the router's list route)."""
+        serializer = LibraryStatisticsSerializer(self._dashboard_data())
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def dashboard(self, request):
+        """Get library dashboard statistics"""
+        serializer = LibraryStatisticsSerializer(self._dashboard_data())
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
@@ -709,7 +845,9 @@ class LibraryStatisticsViewSet(viewsets.ViewSet):
         recent_activity = recent_activity[:10]
         
         data = {
-            'user': UserSerializer(user).data,
+            # The activity serializer renders the user itself, so hand it the
+            # account rather than an already rendered copy of it.
+            'user': user,
             'current_borrowings': current_borrowings,
             'overdue_books': overdue_books,
             'total_late_fees': float(total_late_fees),
@@ -797,12 +935,17 @@ class BookListView(LoginRequiredMixin, ListView):
                 Q(description__icontains=search)
             )
         
-        # Filters
-        category = self.request.GET.get('category_filter')
+        # Filters. The catalogue page posts "category" and "status"; the
+        # search form uses the longer "category_filter"/"availability_filter"
+        # names. Both spellings are accepted.
+        category = self.request.GET.get('category_filter') or self.request.GET.get('category')
         if category:
             queryset = queryset.filter(category_id=category)
         
-        availability = self.request.GET.get('availability_filter')
+        availability = (
+            self.request.GET.get('availability_filter') or
+            self.request.GET.get('status')
+        )
         if availability:
             queryset = queryset.filter(availability=availability)
         
@@ -842,10 +985,17 @@ class BookDetailView(LoginRequiredMixin, DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['current_borrowing'] = self.object.current_borrower
-        context['borrowing_history'] = self.object.borrowings.select_related('borrower').order_by('-borrowed_date')[:10]
-        context['reservations'] = self.object.reservations.select_related('user').filter(status='pending')
+        context['current_borrower'] = self.object.current_borrower
+        # Who borrowed what is staff information: members only get the
+        # catalogue entry.
+        if is_admin_user(self.request.user):
+            context['borrowing_history'] = self.object.borrowings.select_related('borrower').order_by('-borrowed_date')[:10]
+            context['reservations'] = self.object.reservations.select_related('user').filter(status='pending')
+        else:
+            context['borrowing_history'] = BookBorrowing.objects.none()
+            context['reservations'] = BookReservation.objects.none()
         return context
+
 
 class BookCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
     """Book create view"""
@@ -1042,6 +1192,7 @@ class DigitalResourceCreateView(LoginRequiredMixin, AcademicStaffRequiredMixin, 
     def form_valid(self, form):
         form.instance.uploaded_by = self.request.user
         response = super().form_valid(form)
+        generate_preview_pdf(self.object)
         messages.success(self.request, 'Digital resource uploaded successfully.')
         return response
 
@@ -1075,6 +1226,18 @@ class DigitalResourceUpdateView(LoginRequiredMixin, AcademicStaffRequiredMixin, 
                 old_file.delete(save=False)
             except OSError:
                 pass
+        if replaced:
+            try:
+                if self.object.preview_pdf:
+                    try:
+                        self.object.preview_pdf.delete(save=False)
+                    except Exception:
+                        pass
+                    self.object.preview_pdf = None
+                    self.object.save(update_fields=['preview_pdf'])
+            except Exception:
+                pass
+        generate_preview_pdf(self.object)
         messages.success(self.request, 'Digital resource updated successfully.')
         return response
 
@@ -1098,9 +1261,11 @@ class DigitalResourceDeleteView(LoginRequiredMixin, AcademicStaffRequiredMixin, 
         context['access_count'] = context['resource'].access_logs.count()
         return context
     
-    def delete(self, request, *args, **kwargs):
-        response = super().delete(request, *args, **kwargs)
-        messages.success(request, 'Digital resource deleted successfully.')
+    def form_valid(self, form):
+        # The confirmation is on the page, so the work happens in form_valid
+        # rather than in a custom delete() (which Django 4.0+ deprecates).
+        response = super().form_valid(form)
+        messages.success(self.request, 'Digital resource deleted successfully.')
         return response
 
 def _library_settings():
@@ -1108,14 +1273,24 @@ def _library_settings():
 
 
 def _expire_lapsed_requests():
-    """Close requests whose pickup window has passed."""
+    """Close requests whose pickup window has passed.
+
+    Return requests have no expiry column of their own, so the library's
+    holding window (``reservation_duration_hours``) is used as the pickup
+    deadline. The deadline has to be in the past: without it every open
+    request would be cancelled the moment somebody opened the borrowings
+    page.
+    """
     now = timezone.now()
     for reservation in BookReservation.objects.filter(
         status__in=['approved', 'available'], expiry_date__lt=now
     ):
         reservation.mark_expired()
+
+    settings = LibrarySettings.get_settings()
+    deadline = now - timedelta(hours=settings.reservation_duration_hours)
     return ReturnRequest.objects.filter(
-        status__in=['approved', 'in_transit'], requested_at__lt=now
+        status__in=['approved', 'in_transit'], requested_at__lt=deadline
     ).update(status='cancelled')
 
 
@@ -1137,6 +1312,53 @@ class BookBorrowingListView(LoginRequiredMixin, ListView):
         # Filter by user unless administrator.
         if not is_admin_user(self.request.user):
             queryset = queryset.filter(borrower=self.request.user)
+
+        params = self.request.GET
+
+        # Search by borrower, book title or ISBN.
+        search = (params.get('search') or '').strip()
+        if search:
+            queryset = queryset.filter(
+                Q(book__title__icontains=search) |
+                Q(book__isbn__icontains=search) |
+                Q(borrower__first_name__icontains=search) |
+                Q(borrower__last_name__icontains=search) |
+                Q(borrower__email__icontains=search)
+            )
+
+        # Loan status.
+        status = params.get('status')
+        now = timezone.now()
+        if status == 'active':
+            queryset = queryset.filter(return_date__isnull=True)
+        elif status == 'overdue':
+            queryset = queryset.filter(return_date__isnull=True, due_date__lt=now)
+        elif status == 'due_soon':
+            queryset = queryset.filter(
+                return_date__isnull=True, due_date__gte=now,
+                due_date__lte=now + timedelta(days=3),
+            )
+        elif status == 'returned':
+            queryset = queryset.filter(return_date__isnull=False)
+
+        # Borrower type.
+        user_type = params.get('user_type')
+        if user_type == 'student':
+            queryset = queryset.filter(borrower__user_type='student')
+        elif user_type == 'teacher':
+            queryset = queryset.filter(borrower__user_type='teacher')
+        elif user_type == 'staff':
+            queryset = queryset.filter(borrower__user_type__in=[
+                'administrator', 'super_admin', 'accountant',
+            ])
+
+        # Borrowed within the given window.
+        date_range = params.get('date_range')
+        if date_range in ('today', 'week', 'month'):
+            days = {'today': 1, 'week': 7, 'month': 30}[date_range]
+            queryset = queryset.filter(
+                borrowed_date__gte=timezone.now() - timedelta(days=days)
+            )
 
         return queryset
 
@@ -1173,6 +1395,14 @@ class BookBorrowingCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView
     form_class = BookBorrowingForm
     template_name = 'library/borrowing_form.html'
     success_url = reverse_lazy('library:borrowing_list')
+
+    def get_initial(self):
+        """Pre-select the book the librarian came from on the catalogue."""
+        initial = super().get_initial()
+        book_id = self.request.GET.get('book')
+        if book_id:
+            initial['book'] = book_id
+        return initial
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -1247,6 +1477,36 @@ class BookReservationListView(LoginRequiredMixin, ListView):
         if not is_admin_user(self.request.user):
             queryset = queryset.filter(user=self.request.user)
 
+        params = self.request.GET
+
+        search = (params.get('search') or '').strip()
+        if search:
+            queryset = queryset.filter(
+                Q(book__title__icontains=search) |
+                Q(book__author__icontains=search) |
+                Q(book__isbn__icontains=search) |
+                Q(user__first_name__icontains=search) |
+                Q(user__last_name__icontains=search) |
+                Q(user__email__icontains=search)
+            )
+
+        status = params.get('status')
+        if status == 'active':
+            queryset = queryset.filter(status__in=['pending', 'approved'])
+        elif status == 'ready':
+            queryset = queryset.filter(status='available')
+        elif status == 'expired':
+            queryset = queryset.filter(status='expired')
+        elif status == 'fulfilled':
+            queryset = queryset.filter(status='fulfilled')
+
+        date_range = params.get('date_range')
+        if date_range in ('today', 'week', 'month'):
+            days = {'today': 1, 'week': 7, 'month': 30}[date_range]
+            queryset = queryset.filter(
+                reservation_date__gte=timezone.now() - timedelta(days=days)
+            )
+
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -1264,6 +1524,7 @@ class BookReservationListView(LoginRequiredMixin, ListView):
         context['expired_count'] = reservations.filter(
             expiry_date__lt=timezone.now()
         ).count()
+        context['can_review'] = can_review_library_requests(self.request.user)
         return context
 
 
@@ -1289,6 +1550,15 @@ class BookReservationCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateVi
             form.instance.reviewed_at = timezone.now()
 
         response = super().form_valid(form)
+
+        # An approved request holds the copy, exactly like approving one from
+        # the review queue does.
+        if form.instance.status == 'approved':
+            book = form.instance.book
+            if book.availability == 'available':
+                book.availability = 'reserved'
+                book.save(update_fields=['availability'])
+
         messages.success(
             self.request,
             'Request recorded and approved.' if not settings.require_approval
@@ -1535,6 +1805,7 @@ class ReturnRequestCreateView(LoginRequiredMixin, FormView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['borrowing'] = self.get_borrowing()
+        kwargs['borrower'] = self.request.user
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -1775,6 +2046,27 @@ def view_resource_file(request, resource_id):
         resource.file, request=request, filename=resource.title,
     )
 
+
+@login_required
+def view_resource_preview(request, resource_id):
+    """Stream a generated preview PDF for convertible Office files."""
+    resource = get_object_or_404(DigitalResource, id=resource_id, is_active=True)
+    if not can_view_resource(request.user, resource):
+        raise PermissionDenied('You do not have permission to access this material.')
+    generate_preview_pdf(resource)
+    if not resource.preview_pdf:
+        raise Http404('Preview not available for this file.')
+    DigitalResourceAccess.objects.create(
+        resource=resource,
+        user=request.user,
+        action='view',
+        ip_address=request.META.get('REMOTE_ADDR'),
+        user_agent=request.META.get('HTTP_USER_AGENT', ''),
+    )
+    return protected_file_response(
+        resource.preview_pdf, request=request, filename=f'{resource.title}.pdf',
+    )
+
 def _book_payload(book):
     """Serialise a book for the browser side of the library forms."""
     available = book.availability == 'available'
@@ -1989,16 +2281,53 @@ def barcode_scan_user(request):
         )
     return JsonResponse({'success': True, 'user': _user_payload(user_obj)})
 
+def _decode_csv(raw):
+    """Decode an uploaded CSV, tolerating the encodings spreadsheets use."""
+    for encoding in ('utf-8-sig', 'cp1252', 'latin-1'):
+        try:
+            return raw.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    raise UnicodeDecodeError('utf-8', raw, 0, 1, 'unreadable file')
+
+
+def _csv_int(value):
+    """Read an integer from a spreadsheet cell, or ``None`` when it is blank."""
+    value = (value or '').strip()
+    if not value:
+        return None
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _csv_decimal(value):
+    """Read a price from a spreadsheet cell, or ``None`` when it is blank."""
+    from decimal import Decimal, InvalidOperation
+    value = (value or '').strip()
+    if not value:
+        return None
+    try:
+        return Decimal(value)
+    except (TypeError, InvalidOperation):
+        return None
+
+
 @login_required
 @user_passes_test(is_admin_user)
 def bulk_import_books(request):
-    """Bulk import books from CSV"""
+    """Bulk import books from CSV.
+
+    A row that cannot be imported is reported and skipped: one bad line must
+    not throw away the whole file.
+    """
     if request.method == 'POST':
         form = BulkBookImportForm(request.POST, request.FILES)
         if form.is_valid():
             csv_file = form.cleaned_data['csv_file']
             category_mapping = form.cleaned_data.get('category_mapping', '')
-            
+
             # Parse category mapping
             category_map = {}
             if category_mapping:
@@ -2006,53 +2335,95 @@ def bulk_import_books(request):
                     if ':' in mapping:
                         csv_cat, existing_cat = mapping.strip().split(':', 1)
                         category_map[csv_cat.strip()] = existing_cat.strip()
-            
-            # Process CSV
+
             try:
-                decoded_file = csv_file.read().decode('utf-8')
-                csv_data = csv.DictReader(io.StringIO(decoded_file))
-                
-                imported_count = 0
-                for row in csv_data:
-                    # Get or create category
-                    category_name = row.get('category', '').strip()
-                    if category_name in category_map:
-                        category_name = category_map[category_name]
-                    
-                    category, created = BookCategory.objects.get_or_create(
-                        name=category_name,
-                        defaults={'description': f'Imported category: {category_name}'}
-                    )
-                    
-                    # Create book
-                    book_data = {
-                        'title': row.get('title', '').strip(),
-                        'author': row.get('author', '').strip(),
-                        'isbn': row.get('isbn', '').strip() or None,
-                        'category': category,
-                        'edition': row.get('edition', '').strip(),
-                        'publisher': row.get('publisher', '').strip(),
-                        'publication_year': int(row.get('publication_year', 0)) if row.get('publication_year') else None,
-                        'pages': int(row.get('pages', 0)) if row.get('pages') else None,
-                        'description': row.get('description', '').strip(),
-                        'location': row.get('location', '').strip(),
-                        'price': float(row.get('price', 0)) if row.get('price') else None,
-                    }
-                    
-                    # Remove None values
-                    book_data = {k: v for k, v in book_data.items() if v is not None}
-                    
-                    Book.objects.create(**book_data)
-                    imported_count += 1
-                
-                messages.success(request, f'Successfully imported {imported_count} books.')
-                return redirect('library:book_list')
-                
-            except Exception as e:
-                messages.error(request, f'Error importing books: {str(e)}')
+                decoded_file = _decode_csv(csv_file.read())
+            except UnicodeDecodeError:
+                messages.error(
+                    request,
+                    'That file could not be read as a CSV. Save it as UTF-8 and try again.',
+                )
+                return render(request, 'library/bulk_import.html', {'form': form})
+
+            csv_data = csv.DictReader(io.StringIO(decoded_file))
+            imported_count = 0
+            errors = []
+
+            for line_number, raw_row in enumerate(csv_data, start=2):
+                row = {
+                    (key or '').strip().lower(): (value or '')
+                    for key, value in raw_row.items()
+                }
+                title = row.get('title', '').strip()
+                author = row.get('author', '').strip()
+                if not title or not author:
+                    errors.append(f'Line {line_number}: a title and an author are required.')
+                    continue
+
+                isbn = row.get('isbn', '').strip()
+                if isbn and len(isbn) > 13:
+                    errors.append(f'Line {line_number}: the ISBN is longer than 13 digits.')
+                    continue
+                if isbn and Book.objects.filter(isbn=isbn).exists():
+                    errors.append(f'Line {line_number}: ISBN {isbn} is already in the catalogue.')
+                    continue
+
+                category_name = row.get('category', '').strip()
+                category_name = category_map.get(category_name, category_name)
+                if not category_name:
+                    category_name = 'Uncategorised'
+                category, _ = BookCategory.objects.get_or_create(
+                    name=category_name,
+                    defaults={'description': f'Imported category: {category_name}'}
+                )
+
+                book_data = {
+                    'title': title,
+                    'author': author,
+                    'category': category,
+                    'edition': row.get('edition', '').strip(),
+                    'publisher': row.get('publisher', '').strip(),
+                    'description': row.get('description', '').strip(),
+                    'location': row.get('location', '').strip(),
+                }
+                if isbn:
+                    book_data['isbn'] = isbn
+
+                publication_year = _csv_int(row.get('publication_year'))
+                if publication_year is not None:
+                    book_data['publication_year'] = publication_year
+                pages = _csv_int(row.get('pages'))
+                if pages is not None:
+                    book_data['pages'] = pages
+                price = _csv_decimal(row.get('price'))
+                if price is not None:
+                    book_data['price'] = price
+
+                try:
+                    with transaction.atomic():
+                        Book.objects.create(**book_data)
+                except IntegrityError as exc:
+                    errors.append(f'Line {line_number}: "{title}" could not be imported ({exc}).')
+                    continue
+                imported_count += 1
+
+            if errors:
+                messages.warning(
+                    request,
+                    f'Imported {imported_count} books, skipped {len(errors)} rows.',
+                )
+                return render(request, 'library/bulk_import.html', {
+                    'form': form,
+                    'imported_count': imported_count,
+                    'import_errors': errors,
+                })
+
+            messages.success(request, f'Successfully imported {imported_count} books.')
+            return redirect('library:book_list')
+
     else:
         form = BulkBookImportForm()
-    
+
     return render(request, 'library/bulk_import.html', {'form': form})
 
 @login_required

@@ -101,6 +101,16 @@ class RoleRequiredMixin(UserPassesTestMixin):
 class AdminRequiredMixin(RoleRequiredMixin):
     allowed_user_types = ('administrator',)
 
+    def test_func(self):
+        """Institution owners/administrators are administrators too.
+
+        ``is_admin_user`` and ``IsPlatformOrInstitutionAdmin`` already treat an
+        active institution membership with an admin role as an administrator.
+        Without this, the same person could manage the library through the
+        function views and the API but was refused by the class based views.
+        """
+        return is_admin_user(self.request.user)
+
 
 class FinanceRequiredMixin(RoleRequiredMixin):
     allowed_user_types = ('administrator', 'accountant')

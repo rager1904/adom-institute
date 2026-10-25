@@ -173,9 +173,6 @@
                     <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#uploadModal">
                         <i class="fas fa-upload me-2"></i>Upload Files
                     </button>
-                    <button type="button" class="btn btn-secondary" id="toggleBulkSelect">
-                        <i class="fas fa-check-square me-2"></i>Bulk Select
-                    </button>
                 </div>
             {% endif %}
         </div>
@@ -289,23 +286,6 @@
             </a>
         </div>
     </div>
-
-    <!-- Bulk Actions -->
-    {% if material_policy.can_manage_material %}
-    <div class="bulk-actions" id="bulkActions">
-        <div class="d-flex justify-content-between align-items-center">
-            <span id="selectedCount">0 resources selected</span>
-            <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-danger" id="bulkDelete">
-                    <i class="fas fa-trash me-1"></i>Delete Selected
-                </button>
-                <button type="button" class="btn btn-sm btn-warning" id="bulkUpdateAccess">
-                    <i class="fas fa-lock me-1"></i>Update Access
-                </button>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
     <!-- Resource Grid/List -->
     <div id="resourceContainer" class="grid-view">
@@ -567,46 +547,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const savedView = localStorage.getItem('resourceView') || 'grid';
     switchView(savedView);
     
-    // Bulk selection functionality
-    const toggleBulkBtn = document.getElementById('toggleBulkSelect');
-    const bulkActions = document.getElementById('bulkActions');
-    const resourceCheckboxes = document.querySelectorAll('.resource-checkbox');
-    const selectedCount = document.getElementById('selectedCount');
-    let bulkMode = false;
-
-    if (toggleBulkBtn && bulkActions && selectedCount) {
-        toggleBulkBtn.addEventListener('click', function() {
-            bulkMode = !bulkMode;
-            if (bulkMode) {
-                resourceCheckboxes.forEach(cb => cb.style.display = 'block');
-                toggleBulkBtn.innerHTML = '<i class="fas fa-times me-2"></i>Cancel Selection';
-                toggleBulkBtn.className = 'btn btn-warning';
-            } else {
-                resourceCheckboxes.forEach(cb => {
-                    cb.style.display = 'none';
-                    cb.checked = false;
-                });
-                bulkActions.classList.remove('show');
-                toggleBulkBtn.innerHTML = '<i class="fas fa-check-square me-2"></i>Bulk Select';
-                toggleBulkBtn.className = 'btn btn-secondary';
-            }
-            updateSelectedCount();
-        });
-
-        function updateSelectedCount() {
-            const selected = document.querySelectorAll('.resource-checkbox:checked').length;
-            selectedCount.textContent = `${selected} resources selected`;
-            if (selected > 0 && bulkMode) {
-                bulkActions.classList.add('show');
-            } else {
-                bulkActions.classList.remove('show');
-            }
-        }
-
-        resourceCheckboxes.forEach(cb => {
-            cb.addEventListener('change', updateSelectedCount);
-        });
-    }
+    // The resource list has no bulk actions, so the selection checkboxes stay
+    // hidden and out of the way.
+    document.querySelectorAll('.resource-checkbox').forEach(function(cb) {
+        cb.style.display = 'none';
+    });
 
     // Share functionality
     const shareBtns = document.querySelectorAll('.share-btn');

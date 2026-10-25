@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from accounts.validators import document_upload_validators
 from .models import (
     ExamType, Exam, ExamSubject, Grade, StudentExamResult,
     Assignment, StudentAssignment
@@ -62,7 +63,11 @@ class AssignmentSerializer(serializers.ModelSerializer):
     # Replaces ``attachment``: the raw MEDIA_URL is never serialised, so the
     # attachment can only be reached through the authenticated inline viewer.
     attachment_url = serializers.SerializerMethodField()
-    attachment = serializers.FileField(write_only=True, required=False)
+    # The validators mirror the model field: declaring the field here would
+    # otherwise discard them and let the API accept any file type or size.
+    attachment = serializers.FileField(
+        write_only=True, required=False, validators=document_upload_validators,
+    )
 
     class Meta:
         model = Assignment
@@ -85,8 +90,11 @@ class StudentAssignmentSerializer(serializers.ModelSerializer):
     # reachable through the authenticated inline viewer.
     submission_file_url = serializers.SerializerMethodField()
     # Required on create, optional on update so a student can revise their text
-    # without re-uploading the file.
-    submission_file = serializers.FileField(write_only=True, required=False)
+    # without re-uploading the file. The validators mirror the model field so
+    # the API cannot be used to bypass the upload restrictions.
+    submission_file = serializers.FileField(
+        write_only=True, required=False, validators=document_upload_validators,
+    )
 
     class Meta:
         model = StudentAssignment

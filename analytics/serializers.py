@@ -1,3 +1,4 @@
+from django.urls import reverse
 from rest_framework import serializers
 from .models import (
     AnalyticsEvent, StudentPerformance, ClassPerformance, 
@@ -106,11 +107,13 @@ class ReportSerializer(serializers.ModelSerializer):
         read_only_fields = ['generated_at', 'generation_time', 'file_size', 'created_at']
     
     def get_file_url(self, obj):
-        if obj.file_path:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.file_path.url)
-        return None
+        if not obj.file_path:
+            return None
+        # Never expose the raw MEDIA_URL: reports are served through the
+        # authenticated inline viewer instead.
+        url = reverse('analytics:report_file', kwargs={'pk': obj.pk})
+        request = self.context.get('request')
+        return request.build_absolute_uri(url) if request else url
 
 
 # Specialized serializers for analytics dashboard

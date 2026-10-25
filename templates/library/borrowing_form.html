@@ -266,11 +266,11 @@
         <!-- Form -->
         <form method="post" id="borrowingForm">
             {% csrf_token %}
-            
+
             <!-- User Selection Section -->
             <div class="form-section">
                 <h5><i class="fas fa-user me-2"></i>Select Borrower</h5>
-                
+
                 <!-- Barcode Scanner -->
                 <div class="barcode-scanner">
                     <i class="fas fa-barcode fa-2x mb-2"></i>
@@ -278,7 +278,7 @@
                     <input type="text" class="form-control bg-transparent border-light text-white" 
                            id="userBarcodeInput" placeholder="Scan user ID card or enter user ID..." style="max-width: 300px; margin: 10px auto;">
                 </div>
-                
+
                 <!-- Manual Search -->
                 <div class="search-area" id="userSearchArea">
                     <i class="fas fa-search fa-2x text-muted mb-3"></i>
@@ -289,7 +289,7 @@
                         <ul class="suggestions-list" id="userSuggestions" style="display: none;"></ul>
                     </div>
                 </div>
-                
+
                 <!-- Selected User Display -->
                 <div id="selectedUserDisplay" style="display: none;">
                     <div class="selection-card selected">
@@ -306,17 +306,17 @@
                         </div>
                     </div>
                 </div>
-                
-                {{ form.user }}
-                {% if form.user.errors %}
-                    <div class="text-danger mt-2">{{ form.user.errors }}</div>
+
+                {{ form.borrower }}
+                {% if form.borrower.errors %}
+                    <div class="text-danger mt-2">{{ form.borrower.errors }}</div>
                 {% endif %}
             </div>
 
             <!-- Book Selection Section -->
             <div class="form-section">
                 <h5><i class="fas fa-book me-2"></i>Select Book</h5>
-                
+
                 <!-- Barcode Scanner -->
                 <div class="barcode-scanner">
                     <i class="fas fa-barcode fa-2x mb-2"></i>
@@ -324,7 +324,7 @@
                     <input type="text" class="form-control bg-transparent border-light text-white" 
                            id="bookBarcodeInput" placeholder="Scan book barcode or enter ISBN..." style="max-width: 300px; margin: 10px auto;">
                 </div>
-                
+
                 <!-- Manual Search -->
                 <div class="search-area" id="bookSearchArea">
                     <i class="fas fa-search fa-2x text-muted mb-3"></i>
@@ -335,7 +335,7 @@
                         <ul class="suggestions-list" id="bookSuggestions" style="display: none;"></ul>
                     </div>
                 </div>
-                
+
                 <!-- Quick Select Popular Books -->
                 <div class="mt-3">
                     <small class="text-muted d-block mb-2">Quick Select - Popular Books:</small>
@@ -352,7 +352,7 @@
                         {% endfor %}
                     </div>
                 </div>
-                
+
                 <!-- Selected Book Display -->
                 <div id="selectedBookDisplay" style="display: none;">
                     <div class="selection-card selected">
@@ -371,7 +371,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 {{ form.book }}
                 {% if form.book.errors %}
                     <div class="text-danger mt-2">{{ form.book.errors }}</div>
@@ -381,7 +381,7 @@
             <!-- Borrowing Details Section -->
             <div class="form-section">
                 <h5><i class="fas fa-calendar me-2"></i>Borrowing Details</h5>
-                
+
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
@@ -393,7 +393,7 @@
                                 <div class="text-danger mt-1">{{ form.due_date.errors }}</div>
                             {% endif %}
                             <div class="field-help">Book must be returned by this date</div>
-                            
+
                             <div class="date-calculator">
                                 <small class="text-muted d-block mb-2">Quick Date Selection:</small>
                                 <div class="btn-group" role="group">
@@ -404,8 +404,27 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6">
+                        <div class="mb-3">
+                            {% if form.fulfillment_method.field.widget.input_type != 'hidden' %}
+                            <label for="{{ form.fulfillment_method.id_for_label }}" class="form-label">How the Borrower Gets It</label>
+                            {% endif %}
+                            {{ form.fulfillment_method }}
+                            {% if form.fulfillment_method.errors %}
+                                <div class="text-danger mt-1">{{ form.fulfillment_method.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3" id="deliveryAddressBlock">
+                            <label for="{{ form.delivery_address.id_for_label }}" class="form-label">Delivery Address</label>
+                            {{ form.delivery_address }}
+                            {% if form.delivery_address.errors %}
+                                <div class="text-danger mt-1">{{ form.delivery_address.errors }}</div>
+                            {% endif %}
+                            <div class="field-help">Only needed when the book is delivered</div>
+                        </div>
+
                         <div class="mb-3">
                             <label for="{{ form.notes.id_for_label }}" class="form-label">Notes (Optional)</label>
                             {{ form.notes }}
@@ -421,7 +440,7 @@
             <!-- Summary Section -->
             <div class="summary-section" id="borrowingSummary" style="display: none;">
                 <h5><i class="fas fa-clipboard-check me-2"></i>Borrowing Summary</h5>
-                
+
                 <div class="summary-item">
                     <span>Borrower:</span>
                     <span id="summaryBorrower">-</span>
@@ -458,49 +477,65 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('borrowingForm');
-    const userInput = document.querySelector('#{{ form.user.id_for_label }}');
+    const userInput = document.querySelector('#{{ form.borrower.id_for_label }}');
     const bookInput = document.querySelector('#{{ form.book.id_for_label }}');
     const dueDateInput = document.querySelector('#{{ form.due_date.id_for_label }}');
+    const methodInput = document.querySelector('#{{ form.fulfillment_method.id_for_label }}');
+    const deliveryBlock = document.getElementById('deliveryAddressBlock');
     const submitBtn = document.getElementById('submitBtn');
-    
+
     let selectedUser = null;
     let selectedBook = null;
-    
+
     // Hide original inputs
     userInput.style.display = 'none';
     bookInput.style.display = 'none';
-    
+
+    // The delivery address only matters when the book is delivered.
+    function toggleDeliveryAddress() {
+        if (!methodInput || !deliveryBlock) {
+            return;
+        }
+        const isDelivery = methodInput.value === 'delivery';
+        deliveryBlock.style.display = isDelivery ? 'block' : 'none';
+    }
+    if (methodInput) {
+        methodInput.addEventListener('change', toggleDeliveryAddress);
+    }
+    toggleDeliveryAddress();
+
     // Set default due date (2 weeks from today)
     const today = new Date();
     const twoWeeksLater = new Date(today.getTime() + (14 * 24 * 60 * 60 * 1000));
-    dueDateInput.value = twoWeeksLater.toISOString().split('T')[0];
-    dueDateInput.min = today.toISOString().split('T')[0];
-    
+    // datetime-local expects "YYYY-MM-DDTHH:MM".
+    dueDateInput.value = twoWeeksLater.toISOString().slice(0, 16);
+    dueDateInput.min = today.toISOString().slice(0, 16);
+
     // User search functionality
     const userSearchInput = document.getElementById('userSearchInput');
     const userSuggestions = document.getElementById('userSuggestions');
     let userSearchTimeout;
-    
+
     userSearchInput.addEventListener('input', function() {
         clearTimeout(userSearchTimeout);
         const query = this.value.trim();
-        
+
         if (query.length < 2) {
             userSuggestions.style.display = 'none';
             return;
         }
-        
+
         userSearchTimeout = setTimeout(() => {
             searchUsers(query);
         }, 300);
     });
-    
+
     function searchUsers(query) {
         fetch(`/library/search/users/?q=${encodeURIComponent(query)}`)
             .then(response => response.json())
             .then(data => {
                 userSuggestions.innerHTML = '';
-                
+
                 if (data.users && data.users.length > 0) {
                     data.users.forEach(user => {
                         const li = document.createElement('li');
@@ -528,25 +563,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error searching users:', error);
             });
     }
-    
+
     function selectUser(user) {
         selectedUser = user;
         userInput.value = user.id;
-        
+
         // Update display
         document.getElementById('selectedUserAvatar').textContent = user.first_name.charAt(0) + user.last_name.charAt(0);
         document.getElementById('selectedUserName').textContent = user.full_name;
         document.getElementById('selectedUserDetails').textContent = `${user.username} • ${user.user_type}`;
         document.getElementById('selectedUserStats').textContent = `Active Borrowings: ${user.active_borrowings || 0} • Total Borrowed: ${user.total_borrowed || 0}`;
-        
+
         document.getElementById('userSearchArea').style.display = 'none';
         document.getElementById('selectedUserDisplay').style.display = 'block';
         userSuggestions.style.display = 'none';
-        
+
         updateSummary();
         checkFormCompletion();
     }
-    
+
     window.clearUserSelection = function() {
         selectedUser = null;
         userInput.value = '';
@@ -556,32 +591,32 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSummary();
         checkFormCompletion();
     };
-    
+
     // Book search functionality
     const bookSearchInput = document.getElementById('bookSearchInput');
     const bookSuggestions = document.getElementById('bookSuggestions');
     let bookSearchTimeout;
-    
+
     bookSearchInput.addEventListener('input', function() {
         clearTimeout(bookSearchTimeout);
         const query = this.value.trim();
-        
+
         if (query.length < 2) {
             bookSuggestions.style.display = 'none';
             return;
         }
-        
+
         bookSearchTimeout = setTimeout(() => {
             searchBooks(query);
         }, 300);
     });
-    
+
     function searchBooks(query) {
         fetch(`/library/search/books/?q=${encodeURIComponent(query)}`)
             .then(response => response.json())
             .then(data => {
                 bookSuggestions.innerHTML = '';
-                
+
                 if (data.books && data.books.length > 0) {
                     data.books.forEach(book => {
                         const li = document.createElement('li');
@@ -612,11 +647,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error searching books:', error);
             });
     }
-    
+
     function selectBookFromSearch(book) {
         selectBook(book.id, book.title, book.author, book.is_available, book.isbn, book.available_copies, book.total_copies);
     }
-    
+
     window.selectBook = function(id, title, author, isAvailable, isbn = '', availableCopies = 0, totalCopies = 0) {
         selectedBook = {
             id: id,
@@ -627,26 +662,26 @@ document.addEventListener('DOMContentLoaded', function() {
             available_copies: availableCopies,
             total_copies: totalCopies
         };
-        
+
         bookInput.value = id;
-        
+
         // Update display
         document.getElementById('selectedBookTitle').textContent = title;
         document.getElementById('selectedBookAuthor').textContent = author;
         document.getElementById('selectedBookDetails').textContent = `ISBN: ${isbn || 'N/A'} • Available: ${availableCopies || 0}/${totalCopies || 0}`;
-        
+
         document.getElementById('bookSearchArea').style.display = 'none';
         document.getElementById('selectedBookDisplay').style.display = 'block';
         bookSuggestions.style.display = 'none';
-        
+
         updateSummary();
         checkFormCompletion();
-        
+
         if (!isAvailable) {
             alert('This book is currently not available for borrowing.');
         }
     };
-    
+
     window.clearBookSelection = function() {
         selectedBook = null;
         bookInput.value = '';
@@ -656,7 +691,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSummary();
         checkFormCompletion();
     };
-    
+
     // Barcode functionality
     document.getElementById('userBarcodeInput').addEventListener('input', function() {
         const barcode = this.value.trim();
@@ -664,14 +699,14 @@ document.addEventListener('DOMContentLoaded', function() {
             searchUserByBarcode(barcode);
         }
     });
-    
+
     document.getElementById('bookBarcodeInput').addEventListener('input', function() {
         const barcode = this.value.trim();
         if (barcode.length > 3) {
             searchBookByBarcode(barcode);
         }
     });
-    
+
     function searchUserByBarcode(barcode) {
         fetch(`/library/barcode-scan/user/?barcode=${encodeURIComponent(barcode)}`)
             .then(response => response.json())
@@ -685,7 +720,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error scanning user barcode:', error);
             });
     }
-    
+
     function searchBookByBarcode(barcode) {
         fetch(`/library/barcode-scan/?barcode=${encodeURIComponent(barcode)}`)
             .then(response => response.json())
@@ -700,7 +735,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error scanning book barcode:', error);
             });
     }
-    
+
     // Due date quick selection
     window.setDueDate = function(days) {
         const date = new Date();
@@ -708,18 +743,18 @@ document.addEventListener('DOMContentLoaded', function() {
         dueDateInput.value = date.toISOString().split('T')[0];
         updateSummary();
     };
-    
+
     // Update summary
     function updateSummary() {
         const summarySection = document.getElementById('borrowingSummary');
-        
+
         if (selectedUser && selectedBook && dueDateInput.value) {
             summarySection.style.display = 'block';
-            
+
             document.getElementById('summaryBorrower').textContent = selectedUser.full_name;
             document.getElementById('summaryBook').textContent = selectedBook.title;
             document.getElementById('summaryDueDate').textContent = new Date(dueDateInput.value).toLocaleDateString();
-            
+
             const dueDate = new Date(dueDateInput.value);
             const today = new Date();
             const daysDiff = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
@@ -728,12 +763,12 @@ document.addEventListener('DOMContentLoaded', function() {
             summarySection.style.display = 'none';
         }
     }
-    
+
     // Check form completion
     function checkFormCompletion() {
         const isComplete = selectedUser && selectedBook && dueDateInput.value;
         submitBtn.disabled = !isComplete;
-        
+
         if (isComplete && selectedBook && !selectedBook.is_available) {
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-times me-2"></i>Book Not Available';
@@ -743,10 +778,10 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.className = 'btn btn-primary';
         }
     }
-    
+
     // Listen for due date changes
     dueDateInput.addEventListener('change', updateSummary);
-    
+
     // Hide suggestions when clicking outside
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.position-relative')) {
@@ -754,7 +789,7 @@ document.addEventListener('DOMContentLoaded', function() {
             bookSuggestions.style.display = 'none';
         }
     });
-    
+
     // Form validation
     form.addEventListener('submit', function(e) {
         if (!selectedUser || !selectedBook || !dueDateInput.value) {
@@ -762,13 +797,13 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please select both a user and a book, and set a due date.');
             return;
         }
-        
+
         if (selectedBook && !selectedBook.is_available) {
             e.preventDefault();
             alert('The selected book is not available for borrowing.');
             return;
         }
-        
+
         const dueDate = new Date(dueDateInput.value);
         const today = new Date();
         if (dueDate <= today) {
@@ -777,12 +812,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
     });
-    
+
     // Check for pre-selected values from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const preSelectedBook = urlParams.get('book');
     const preSelectedUser = urlParams.get('user');
-    
+
     if (preSelectedBook) {
         fetch(`/library/books/${preSelectedBook}/details/`)
             .then(response => response.json())
@@ -796,7 +831,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error loading pre-selected book:', error);
             });
     }
-    
+
     if (preSelectedUser) {
         fetch(`/library/users/${preSelectedUser}/details/`)
             .then(response => response.json())

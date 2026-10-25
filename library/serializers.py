@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from accounts.validators import resource_upload_validators
 from .models import (
     Book, BookCategory, DigitalResource, BookBorrowing, BookReservation,
     DigitalResourceAccess, CourseResource, LibrarySettings, LibraryReport,
@@ -9,15 +10,28 @@ from .models import (
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
-    """Serializer for User model"""
+    """Serializer for User model
+
+    The account model signs people in with their email address and has no
+    ``username`` column, so ``username`` is derived from the email address to
+    keep older clients working.
+    """
     full_name = serializers.SerializerMethodField()
+    username = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'full_name']
     
     def get_full_name(self, obj):
+        if isinstance(obj, dict):
+            return obj.get('full_name', '')
         return obj.get_full_name()
+
+    def get_username(self, obj):
+        if isinstance(obj, dict):
+            return obj.get('email', '')
+        return getattr(obj, 'username', None) or obj.email
 
 class BookCategorySerializer(serializers.ModelSerializer):
     """Serializer for BookCategory model"""
@@ -72,13 +86,16 @@ class DigitalResourceSerializer(serializers.ModelSerializer):
     download_available = serializers.ReadOnlyField()
     file_url = serializers.SerializerMethodField()
     # Write-only: uploads still work through the API, but the stored path is
-    # never handed back to a client.
-    file = serializers.FileField(write_only=True, required=True)
+    # never handed back to a client. The validators mirror the model field so
+    # the API cannot be used to bypass the upload restrictions.
+    file = serializers.FileField(
+        write_only=True, required=True, validators=resource_upload_validators,
+    )
 
     class Meta:
         model = DigitalResource
         fields = [
-            'id', 'title', 'description', 'resource_type', 'file_url',
+            'id', 'title', 'description', 'resource_type', 'file_url', 'file',
             'file_size', 'file_size_mb', 'author', 'subject', 'grade_level',
             'tags', 'access_level', 'is_downloadable', 'download_limit',
             'current_downloads', 'download_available', 'uploaded_by',
@@ -120,7 +137,9 @@ class BookReservationSerializer(serializers.ModelSerializer):
     book = BookSerializer(read_only=True)
     book_id = serializers.IntegerField(write_only=True)
     user = UserSerializer(read_only=True)
-    user_id = serializers.IntegerField(write_only=True)
+    # Optional: a member raises a request for themselves and the view pins it
+    # to the signed-in account. Staff may name the member they act for.
+    user_id = serializers.IntegerField(write_only=True, required=False)
     is_expired = serializers.ReadOnlyField()
     is_open = serializers.ReadOnlyField()
     reviewed_by = UserSerializer(read_only=True)

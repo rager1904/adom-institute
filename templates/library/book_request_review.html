@@ -25,7 +25,7 @@
                         <div class="focus-category">{{ reservation.get_status_display }}</div>
                         <div class="focus-title">{{ reservation.book.title }}</div>
                         <div class="metric-detail">
-                            {{ reservation.user.get_full_name|default:reservation.user.username }}
+                            {{ reservation.user.get_full_name|default:reservation.user.email }}
                             - asked {{ reservation.reservation_date|date:"d M Y" }}
                         </div>
                         <div class="metric-detail">

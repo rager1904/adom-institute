@@ -25,6 +25,8 @@ urlpatterns = [
     path('reports/', views.ReportListView.as_view(), name='report_list'),
     path('reports/create/', views.ReportCreateView.as_view(), name='report_create'),
     path('reports/<int:pk>/', views.ReportDetailView.as_view(), name='report_detail'),
+    # Authenticated inline viewer for the generated file.
+    path('reports/<int:pk>/file/', views.report_file, name='report_file'),
     path('reports/<int:pk>/update/', views.ReportUpdateView.as_view(), name='report_update'),
     path('reports/<int:pk>/delete/', views.ReportDeleteView.as_view(), name='report_delete'),
 ]

@@ -98,8 +98,8 @@ def _apply_no_store(response):
     response['Pragma'] = 'no-cache'
     response['Expires'] = '0'
     response['X-Content-Type-Options'] = 'nosniff'
-    # Block plugins, framing by third parties and outbound calls from the file.
-    response['Content-Security-Policy'] = "default-src 'none'; sandbox"
+    # Allow inline rendering/playback in browser; still prevent framing/caching.
+    response['Content-Security-Policy'] = "default-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; object-src 'self' blob: data:; frame-src 'self' blob: data:; child-src 'self' blob: data:; script-src 'none'; frame-ancestors 'self'"
     return response
 
 

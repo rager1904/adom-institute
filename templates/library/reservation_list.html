@@ -13,6 +13,7 @@
         transition: all 0.3s ease;
         margin-bottom: 20px;
         border-left: 5px solid #007bff;
+        height: 100%;
     }
     .reservation-card:hover {
         transform: translateY(-2px);
@@ -56,6 +57,7 @@
         font-weight: bold;
         font-size: 1.2rem;
         margin-right: 15px;
+        flex-shrink: 0;
     }
     .book-thumbnail {
         width: 60px;
@@ -68,12 +70,15 @@
         color: white;
         font-size: 1.5rem;
         margin-right: 15px;
+        flex-shrink: 0;
+        overflow: hidden;
     }
     .status-badge {
         padding: 6px 12px;
         border-radius: 20px;
         font-size: 0.875rem;
         font-weight: 500;
+        display: inline-block;
     }
     .status-badge.active {
         background: #28a745;
@@ -95,40 +100,7 @@
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
-    }
-    .quick-action-btn {
-        padding: 6px 12px;
-        border-radius: 15px;
-        border: none;
-        font-size: 0.875rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    .priority-indicator {
-        display: inline-flex;
         align-items: center;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        margin-left: 8px;
-    }
-    .priority-indicator.high {
-        background: #dc3545;
-        color: white;
-    }
-    .priority-indicator.normal {
-        background: #28a745;
-        color: white;
-    }
-    .queue-position {
-        background: #e9ecef;
-        color: #495057;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        margin-left: 8px;
     }
 </style>
 {% endblock %}
@@ -138,20 +110,23 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-0 text-gray-800">
-                <i class="fas fa-bookmark me-2"></i>Book Reservations
+                <i class="fas fa-bookmark me-2"></i>Book Requests
             </h1>
-            <p class="text-muted">Manage book reservations and waitlists</p>
+            <p class="text-muted">{% if can_review %}Manage the book requests and waitlists{% else %}The books you have asked the library for{% endif %}</p>
         </div>
         <div class="btn-group">
-            <a href="{% url 'library:reservation_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i>New Reservation
-            </a>
-            <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#notifyModal">
-                <i class="fas fa-bell me-2"></i>Notify Ready
-            </button>
-            <button type="button" class="btn btn-secondary" id="toggleBulkSelect">
-                <i class="fas fa-check-square me-2"></i>Bulk Actions
-            </button>
+            {% if can_review %}
+                <a href="{% url 'library:reservation_review' %}" class="btn btn-info">
+                    <i class="fas fa-inbox me-2"></i>Review queue
+                </a>
+                <a href="{% url 'library:reservation_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Raise for a member
+                </a>
+            {% else %}
+                <a href="{% url 'library:request_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Ask for a book
+                </a>
+            {% endif %}
         </div>
     </div>
 
@@ -161,14 +136,14 @@
             <div class="stats-card">
                 <i class="fas fa-bookmark fa-2x mb-2"></i>
                 <h4>{{ total_reservations|default:0 }}</h4>
-                <p class="mb-0">Total Active</p>
+                <p class="mb-0">Still Open</p>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stats-card" style="background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%);">
                 <i class="fas fa-bell fa-2x mb-2"></i>
                 <h4>{{ ready_count|default:0 }}</h4>
-                <p class="mb-0">Ready to Borrow</p>
+                <p class="mb-0">Ready to Collect</p>
             </div>
         </div>
         <div class="col-md-3">
@@ -182,7 +157,7 @@
             <div class="stats-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
                 <i class="fas fa-check-circle fa-2x mb-2"></i>
                 <h4>{{ fulfilled_today|default:0 }}</h4>
-                <p class="mb-0">Fulfilled Today</p>
+                <p class="mb-0">Handed Over Today</p>
             </div>
         </div>
     </div>
@@ -194,18 +169,18 @@
                 <label for="search" class="form-label">Search</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" class="form-control" id="search" name="search" 
-                           value="{{ request.GET.search }}" placeholder="Search by user, book, ISBN...">
+                    <input type="text" class="form-control" id="search" name="search"
+                           value="{{ request.GET.search }}" placeholder="Search by member, book, ISBN...">
                 </div>
             </div>
             <div class="col-md-2">
                 <label for="status" class="form-label">Status</label>
                 <select class="form-select" id="status" name="status">
                     <option value="">All Status</option>
-                    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Open</option>
                     <option value="ready" {% if request.GET.status == 'ready' %}selected{% endif %}>Ready</option>
                     <option value="expired" {% if request.GET.status == 'expired' %}selected{% endif %}>Expired</option>
-                    <option value="fulfilled" {% if request.GET.status == 'fulfilled' %}selected{% endif %}>Fulfilled</option>
+                    <option value="fulfilled" {% if request.GET.status == 'fulfilled' %}selected{% endif %}>Handed over</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -236,47 +211,44 @@
         {% for reservation in reservations %}
         <div class="col-lg-6 col-xl-4 mb-3">
             <div class="card reservation-card 
-                {% if reservation.is_expired %}expired{% elif reservation.is_ready %}ready{% else %}active{% endif %}" 
+                {% if reservation.is_expired %}expired{% elif reservation.status == 'available' %}ready{% else %}active{% endif %}"
                 data-reservation-id="{{ reservation.id }}">
                 
                 <div class="card-body">
                     <div class="d-flex align-items-start mb-3">
-                        <input type="checkbox" class="form-check-input reservation-checkbox me-3" 
-                               value="{{ reservation.id }}" style="display: none; margin-top: 20px;">
-                        
                         <div class="user-avatar">
                             {{ reservation.user.first_name|first }}{{ reservation.user.last_name|first }}
                         </div>
                         
                         <div class="flex-grow-1">
-                            <h6 class="card-title mb-1">{{ reservation.user.get_full_name }}</h6>
-                            <p class="text-muted small mb-2">{{ reservation.user.username }}</p>
+                            <h6 class="card-title mb-1">{{ reservation.user.get_full_name|default:reservation.user.email }}</h6>
+                            <p class="text-muted small mb-2">{{ reservation.user.email }}</p>
                             
                             <span class="status-badge 
-                                {% if reservation.is_expired %}expired{% elif reservation.is_ready %}ready{% elif reservation.status == 'fulfilled' %}fulfilled{% else %}active{% endif %}">
+                                {% if reservation.is_expired %}expired{% elif reservation.status == 'available' %}ready{% elif reservation.status == 'fulfilled' %}fulfilled{% else %}active{% endif %}">
                                 {% if reservation.is_expired %}
                                     <i class="fas fa-clock me-1"></i>Expired
-                                {% elif reservation.is_ready %}
-                                    <i class="fas fa-bell me-1"></i>Ready to Borrow
+                                {% elif reservation.status == 'available' %}
+                                    <i class="fas fa-bell me-1"></i>Ready to Collect
                                 {% elif reservation.status == 'fulfilled' %}
-                                    <i class="fas fa-check me-1"></i>Fulfilled
+                                    <i class="fas fa-check me-1"></i>Handed Over
+                                {% elif reservation.status == 'rejected' %}
+                                    <i class="fas fa-times me-1"></i>Rejected
+                                {% elif reservation.status == 'cancelled' %}
+                                    <i class="fas fa-times me-1"></i>Cancelled
+                                {% elif reservation.status == 'approved' %}
+                                    <i class="fas fa-hourglass-half me-1"></i>Approved - Awaiting Handover
                                 {% else %}
-                                    <i class="fas fa-hourglass-half me-1"></i>Waiting
+                                    <i class="fas fa-hourglass-half me-1"></i>Waiting for Approval
                                 {% endif %}
                             </span>
-                            
-                            {% if reservation.queue_position %}
-                            <span class="queue-position">
-                                #{{ reservation.queue_position }} in queue
-                            </span>
-                            {% endif %}
                         </div>
                     </div>
 
                     <div class="d-flex align-items-center mb-3">
                         <div class="book-thumbnail">
                             {% if reservation.book.cover_image %}
-                                <img src="{{ reservation.book.cover_image.url }}" alt="{{ reservation.book.title }}" 
+                                <img src="{{ reservation.book.cover_image.url }}" alt="{{ reservation.book.title }}"
                                      class="img-fluid h-100 w-100" style="object-fit: cover; border-radius: 8px;">
                             {% else %}
                                 <i class="fas fa-book"></i>
@@ -287,59 +259,56 @@
                             <h6 class="mb-1">{{ reservation.book.title|truncatechars:40 }}</h6>
                             <p class="text-muted small mb-1">{{ reservation.book.author }}</p>
                             <p class="text-muted small mb-0">
-                                Available: {{ reservation.book.available_copies }}/{{ reservation.book.total_copies }}
+                                On the shelf: {{ reservation.book.available_copies }} of {{ reservation.book.total_copies }}
                             </p>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <p class="mb-1"><strong>Reserved:</strong> {{ reservation.reserved_date|date:"M d, Y H:i" }}</p>
+                        <p class="mb-1"><strong>Requested:</strong> {{ reservation.reservation_date|date:"M d, Y H:i" }}</p>
                         {% if reservation.expiry_date %}
                         <p class="mb-1">
                             <strong>Expires:</strong> {{ reservation.expiry_date|date:"M d, Y H:i" }}
                             {% if reservation.is_expired %}
                                 <span class="text-danger ms-2">(Expired)</span>
-                            {% elif reservation.hours_until_expiry <= 24 %}
-                                <span class="text-warning ms-2">({{ reservation.hours_until_expiry }}h left)</span>
                             {% endif %}
                         </p>
                         {% endif %}
+                        <p class="mb-1"><strong>Collection:</strong> {{ reservation.get_fulfillment_method_display }}</p>
                         {% if reservation.notes %}
                         <p class="text-muted small mb-0">{{ reservation.notes|truncatechars:50 }}</p>
                         {% endif %}
                     </div>
 
                     <div class="quick-actions">
-                        {% if reservation.is_ready %}
-                            <button type="button" class="quick-action-btn btn-success" 
-                                    onclick="fulfillReservation({{ reservation.id }})"
-                                    title="Fulfill Reservation">
-                                <i class="fas fa-check me-1"></i>Fulfill
-                            </button>
-                            <button type="button" class="quick-action-btn btn-info" 
-                                    onclick="notifyUser({{ reservation.id }})"
-                                    title="Notify User">
-                                <i class="fas fa-bell me-1"></i>Notify
-                            </button>
-                        {% elif not reservation.is_expired %}
-                            <button type="button" class="quick-action-btn btn-warning" 
-                                    onclick="extendReservation({{ reservation.id }})"
-                                    title="Extend Expiry">
-                                <i class="fas fa-calendar-plus me-1"></i>Extend
-                            </button>
+                        {% if can_review %}
+                            {% if reservation.status == 'pending' %}
+                                <a href="{% url 'library:reservation_review' %}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-inbox me-1"></i>Review
+                                </a>
+                            {% elif reservation.status == 'approved' or reservation.status == 'available' %}
+                                <form method="post" action="{% url 'library:reservation_fulfil' reservation.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" name="confirm" value="1" class="btn btn-sm btn-success">
+                                        <i class="fas fa-check me-1"></i>Hand over
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'library:cancel_reservation' reservation.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-times me-1"></i>Cancel
+                                    </button>
+                                </form>
+                            {% else %}
+                                <a href="{% url 'library:book_detail' reservation.book.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye me-1"></i>Book
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <a href="{% url 'library:book_detail' reservation.book.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>Book
+                            </a>
                         {% endif %}
-                        
-                        <button type="button" class="quick-action-btn btn-danger" 
-                                onclick="cancelReservation({{ reservation.id }})"
-                                title="Cancel Reservation">
-                            <i class="fas fa-times me-1"></i>Cancel
-                        </button>
-                        
-                        <button type="button" class="quick-action-btn btn-outline-secondary" 
-                                onclick="viewDetails({{ reservation.id }})"
-                                title="View Details">
-                            <i class="fas fa-eye me-1"></i>Details
-                        </button>
                     </div>
                 </div>
             </div>
@@ -348,12 +317,12 @@
         <div class="col-12">
             <div class="text-center py-5">
                 <i class="fas fa-bookmark fa-4x text-muted mb-3"></i>
-                <h4 class="text-muted">No reservations found</h4>
+                <h4 class="text-muted">No requests found</h4>
                 <p class="text-muted">
                     {% if request.GET.search or request.GET.status %}
                         Try adjusting your search criteria or <a href="{% url 'library:reservation_list' %}">clear filters</a>.
                     {% else %}
-                        No active reservations at the moment. <a href="{% url 'library:reservation_create' %}">Create a new reservation</a>.
+                        {% if can_review %}No book requests at the moment.{% else %}You have not asked for a book yet. <a href="{% url 'library:request_create' %}">Ask for one</a>.{% endif %}
                     {% endif %}
                 </p>
             </div>
@@ -367,12 +336,12 @@
         <ul class="pagination justify-content-center">
             {% if page_obj.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page=1">
+                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.date_range %}date_range={{ request.GET.date_range }}&{% endif %}page=1">
                         <i class="fas fa-angle-double-left"></i>
                     </a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.date_range %}date_range={{ request.GET.date_range }}&{% endif %}page={{ page_obj.previous_page_number }}">
                         <i class="fas fa-angle-left"></i>
                     </a>
                 </li>
@@ -385,19 +354,19 @@
                     </li>
                 {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                     <li class="page-item">
-                        <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ num }}">{{ num }}</a>
+                        <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.date_range %}date_range={{ request.GET.date_range }}&{% endif %}page={{ num }}">{{ num }}</a>
                     </li>
                 {% endif %}
             {% endfor %}
 
             {% if page_obj.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.next_page_number }}">
+                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.date_range %}date_range={{ request.GET.date_range }}&{% endif %}page={{ page_obj.next_page_number }}">
                         <i class="fas fa-angle-right"></i>
                     </a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
+                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.date_range %}date_range={{ request.GET.date_range }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
                         <i class="fas fa-angle-double-right"></i>
                     </a>
                 </li>
@@ -406,90 +375,4 @@
     </nav>
     {% endif %}
 </div>
-
-<!-- Modals and JavaScript here... -->
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // JavaScript functionality for reservations management
-    
-    window.fulfillReservation = function(reservationId) {
-        if (confirm('Fulfill this reservation and create a borrowing record?')) {
-            fetch(`/library/reservations/${reservationId}/fulfill/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.error || 'Failed to fulfill reservation'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while fulfilling the reservation');
-            });
-        }
-    };
-
-    window.cancelReservation = function(reservationId) {
-        if (confirm('Cancel this reservation?')) {
-            fetch(`/library/reservations/${reservationId}/cancel/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.error || 'Failed to cancel reservation'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while canceling the reservation');
-            });
-        }
-    };
-
-    window.notifyUser = function(reservationId) {
-        if (confirm('Send notification to user that their book is ready?')) {
-            fetch(`/library/reservations/${reservationId}/notify/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Notification sent successfully!');
-                } else {
-                    alert('Error: ' + (data.error || 'Failed to send notification'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while sending the notification');
-            });
-        }
-    };
-
-    window.viewDetails = function(reservationId) {
-        window.location.href = `/library/reservations/${reservationId}/`;
-    };
-});
-</script>
 {% endblock %}

@@ -223,9 +223,9 @@
                                 <li><a class="dropdown-item" href="{% url 'analytics:report_detail' report.id %}">
                                     <i class="fas fa-eye me-2"></i>View
                                 </a></li>
-                                {% if report.status == 'completed' %}
-                                <li><a class="dropdown-item" href="{{ report.file.url }}" target="_blank">
-                                    <i class="fas fa-download me-2"></i>Download
+                                {% if report.is_successful and report.file_path %}
+                                <li><a class="dropdown-item" href="{% url 'analytics:report_file' report.id %}" target="_blank">
+                                    <i class="fas fa-file-lines me-2"></i>Open file
                                 </a></li>
                                 {% endif %}
                                 <li><a class="dropdown-item" href="{% url 'analytics:report_update' report.id %}">

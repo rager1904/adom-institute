@@ -59,7 +59,7 @@
                         <div class="focus-category">{{ item.get_status_display }} - {{ item.get_return_method_display }}</div>
                         <div class="focus-title">{{ item.book.title }}</div>
                         <div class="metric-detail">
-                            {{ item.user.get_full_name|default:item.user.username }}
+                            {{ item.user.get_full_name|default:item.user.email }}
                             - requested {{ item.requested_at|date:"d M Y" }}
                         </div>
                         <div class="metric-detail">

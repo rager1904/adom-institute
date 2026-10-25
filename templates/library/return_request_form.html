@@ -21,13 +21,8 @@
                 </div>
             </article>
         </section>
-    {% else %}
-        <div class="alert alert-warning">
-            Choose a book from <a href="{% url 'library:borrowing_list' %}">the books you are holding</a> first.
-        </div>
     {% endif %}
 
-    {% if borrowing %}
     <section class="panel mb-3">
         <div class="panel-heading">
             <h2 class="panel-title">How should we get it back?</h2>
@@ -39,6 +34,20 @@
             {% if form.non_field_errors %}
                 <div class="alert alert-danger">
                     {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                </div>
+            {% endif %}
+
+            {% if borrowing %}
+                {{ form.borrowing }}
+            {% else %}
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.borrowing.id_for_label }}">{{ form.borrowing.label }}</label>
+                    {{ form.borrowing }}
+                    {% for error in form.borrowing.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    <div class="form-text">
+                        Only the books you are still holding can be handed back.
+                        <a href="{% url 'library:borrowing_list' %}">See everything you are holding</a>.
+                    </div>
                 </div>
             {% endif %}
 
@@ -78,6 +87,5 @@
             </div>
         </form>
     </section>
-    {% endif %}
 </div>
 {% endblock %}
