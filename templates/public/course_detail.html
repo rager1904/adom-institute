@@ -1,0 +1,44 @@
+{% extends 'public/base_courses.html' %}
+{% load static %}
+{% block seo %}{% include 'seo/meta.html' with title=course.title description=course.summary %}{% endblock %}
+{% block course_content %}
+<div class="course-wrap detail-page">
+    <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="{% url 'public_courses' %}">Courses</a><span>/</span><a href="{% url 'public_courses' %}?category={{ course.category }}">{{ course.category_label }}</a><span>/</span><span aria-current="page">{{ course.title }}</span></nav>
+    <div class="detail-layout">
+        <div class="detail-content">
+            <div class="detail-intro">
+                <h1>{{ course.title }}</h1>
+                <p class="detail-lede">{{ course.summary }}</p>
+                <div class="course-meta detail-meta"><span><i class="far fa-calendar" aria-hidden="true"></i>{{ course.duration|default:'Enquire for details' }}</span><span><i class="fas fa-signal" aria-hidden="true"></i>{{ course.level }}</span><span><i class="fas fa-award" aria-hidden="true"></i>{{ course.credential }}</span></div>
+            </div>
+            <nav class="detail-tabs" aria-label="Course sections"><a href="#overview" class="active" aria-current="location">Overview</a><a href="#outcomes">What you’ll learn</a><a href="#outline">Course outline</a><a href="#requirements">Requirements</a></nav>
+            <section class="detail-section" id="overview">
+                <h2>About this course</h2>
+                {% if course.slug == 'ai-chatgpt-for-beginners' %}
+                <p>This course offers a practical introduction to AI and, in particular, ChatGPT, showing you how to use these tools confidently in everyday life, work and business.</p>
+                <p>You will learn through hands-on examples and real-world scenarios, with a focus on responsible and ethical use of AI.</p>
+                {% else %}<p>{{ course.summary }}</p><p>Contact our team to discuss your learning goals, the programme content and the next available intake.</p>{% endif %}
+                {% if course.category == 'finance' %}<p class="risk-note">Forex and investment training is educational. Trading involves financial risk and does not guarantee profits.</p>{% endif %}
+            </section>
+            <section class="detail-section" id="outcomes">
+                <h2>What you’ll learn</h2>
+                {% if course.outcomes %}<p>By the end of this course, you will be able to:</p><ul class="outcome-list">{% for outcome in course.outcomes %}<li><i class="fas fa-circle-check" aria-hidden="true"></i><span>{{ outcome }}</span></li>{% endfor %}</ul>
+                {% else %}<p>Discuss the learning outcomes for this programme with our team before enrolment.</p>{% endif %}
+            </section>
+            <section class="detail-section" id="outline">
+                <div class="section-heading"><h2>Course outline</h2><small>Proposed outline — subject to confirmation.</small></div>
+                {% for title, description in course.outline %}<details class="outline-item"><summary><span class="lesson-number">{{ forloop.counter }}</span><span>{{ title }}</span><i class="fas fa-chevron-down" aria-hidden="true"></i></summary><p>{{ description }}</p></details>{% empty %}<p>Contact us for the current course outline and session plan.</p>{% endfor %}
+            </section>
+            <section class="detail-section requirements-section" id="requirements"><div class="section-heading"><h2>Requirements</h2><small>Proposed requirements — subject to confirmation.</small></div><ul class="requirement-list">{% for requirement in course.requirements %}<li><i class="fas fa-circle-check" aria-hidden="true"></i>{{ requirement }}</li>{% endfor %}</ul></section>
+        </div>
+        <aside class="enrol-card" aria-label="Course fee and enrolment">
+            <img src="{% static course.image %}" alt="{{ course.title }} training" width="600" height="380">
+            <p class="fee-label">Course fee</p><p class="course-fee{% if not course.fee %} fee-unconfirmed{% endif %}">{{ course.fee|default:'Enquire for details' }}</p>
+            <div class="enrol-facts"><div><i class="far fa-calendar" aria-hidden="true"></i><span>Duration<strong>{{ course.duration|default:'Please enquire' }}</strong></span></div><div><i class="fas fa-signal" aria-hidden="true"></i><span>Level<strong>{{ course.level }}</strong></span></div></div>
+            <a class="course-button" href="{{ enrol_url }}" target="_blank" rel="noopener">Enrol for this course <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+            <a class="ask-question" href="{{ question_url }}" target="_blank" rel="noopener">Ask a question</a>
+            <p class="intake-note">Contact us to confirm the next intake and schedule.</p>
+        </aside>
+    </div>
+</div>
+{% endblock %}

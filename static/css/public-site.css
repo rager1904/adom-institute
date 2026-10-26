@@ -389,6 +389,40 @@ table.price td strong { color: var(--navy); }
 }
 .notice i { color: var(--navy); margin-top: 3px; }
 
+/* ---------- Tuition ---------- */
+.tuition-levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.tuition-level { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; display: flex; gap: 18px; }
+.tuition-level-featured { border-top: 4px solid var(--green); padding-top: 25px; box-shadow: 0 16px 38px rgba(12, 35, 64, .08); }
+.tuition-level-number { width: 58px; height: 58px; flex: 0 0 58px; display: grid; place-items: center; border-radius: 15px; background: var(--green-soft); color: var(--green); font-weight: 800; font-size: 16px; }
+.tuition-level h3 { font-size: 22px; margin-bottom: 8px; }
+.tuition-level p { color: var(--muted); font-size: 14px; }
+.tuition-level ul { margin: 16px 0 0; padding: 0; list-style: none; }
+.tuition-level li { position: relative; padding-left: 20px; margin-top: 7px; color: #47566a; font-size: 13.5px; }
+.tuition-level li:before { content: '\f00c'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; left: 0; top: 2px; color: var(--green); font-size: 10px; }
+.tuition-enrol-section { scroll-margin-top: 120px; background: linear-gradient(145deg, #edf3ef, var(--cream)); }
+.tuition-enrol-layout { display: grid; grid-template-columns: .75fr 1.25fr; gap: 64px; align-items: start; }
+.tuition-enrol-copy { position: sticky; top: 130px; }
+.enrol-assurance { display: flex; gap: 13px; margin-top: 26px; padding: 16px 18px; border-left: 3px solid var(--gold); background: #fff; color: var(--muted); font-size: 13.5px; }
+.enrol-assurance i { color: var(--green); margin-top: 4px; }
+.tuition-form-card { background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 34px; box-shadow: var(--shadow); }
+.tuition-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.form-field-wide { grid-column: 1 / -1; }
+.form-field label { display: block; color: var(--navy); font-size: 13px; font-weight: 700; margin-bottom: 7px; }
+.form-field label span { color: #b23939; }
+.form-field input, .form-field select, .form-field textarea { width: 100%; min-height: 48px; border: 1px solid #cdd6d0; border-radius: 10px; background: #fff; color: var(--ink); padding: 11px 13px; font: 500 14px/1.45 'DM Sans', system-ui, sans-serif; transition: border-color .16s, box-shadow .16s; }
+.form-field textarea { min-height: 108px; resize: vertical; }
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus { outline: 0; border-color: var(--green); box-shadow: 0 0 0 3px rgba(28, 122, 74, .13); }
+.field-error { color: #9f2828; font-size: 12.5px; margin-top: 6px !important; }
+.form-errors, .form-success { display: flex; gap: 11px; padding: 14px 16px; border-radius: 10px; margin-bottom: 22px; font-size: 14px; }
+.form-errors { display: block; background: #fff0f0; border: 1px solid #efcaca; color: #8a2020; }
+.form-success { background: var(--green-soft); border: 1px solid #bcd8c6; color: #125c36; }
+.form-success i { margin-top: 4px; }
+.form-consent { display: flex; gap: 10px; align-items: flex-start; margin: 22px 0 18px; }
+.form-consent input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--green); flex: 0 0 auto; }
+.form-consent label { color: #425269; font-size: 13px; }
+.required-note { color: var(--muted); font-size: 12px; margin-top: 12px !important; }
+.required-note span { color: #b23939; }
+
 /* ---------- Footer ---------- */
 .site-footer { background: var(--navy-3); color: #aebdcb; padding: 56px 0 26px; margin-top: 0; }
 .footer-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1.2fr; gap: 34px; }
@@ -465,6 +499,9 @@ table.price td strong { color: var(--navy); }
     .stats { grid-template-columns: repeat(3, 1fr); }
     .contact-grid { grid-template-columns: 1fr; }
     .footer-grid { grid-template-columns: 1fr 1fr; }
+    .tuition-levels { grid-template-columns: 1fr; }
+    .tuition-enrol-layout { grid-template-columns: 1fr; gap: 38px; }
+    .tuition-enrol-copy { position: static; }
 }
 @media (max-width: 700px) {
     .wrap { padding: 0 19px; }
@@ -488,6 +525,10 @@ table.price td strong { color: var(--navy); }
     .header-inner { gap: 8px; }
     .site-mark { width: 64px; height: 64px; }
     .nav-search input { font-size: 13px; }
+    .tuition-level { padding: 22px; }
+    .tuition-form-card { padding: 24px 20px; }
+    .tuition-form-grid { grid-template-columns: 1fr; }
+    .form-field-wide { grid-column: auto; }
 }
 @media (max-width: 420px) {
     .hero-cta .btn { width: 100%; }

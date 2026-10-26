@@ -11,6 +11,19 @@ When blog/article models are added, register an additional ``Sitemap`` subclass
 
 from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
+from accounts.course_catalog import COURSES
+
+
+class PublicCourseSitemap(Sitemap):
+    protocol = 'https'
+    changefreq = 'monthly'
+    priority = 0.8
+
+    def items(self):
+        return [course['slug'] for course in COURSES]
+
+    def location(self, item):
+        return reverse('public_course_detail', kwargs={'slug': item})
 
 
 class PublicStaticSitemap(Sitemap):

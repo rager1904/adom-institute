@@ -1,15 +1,93 @@
 from decimal import Decimal
 
-from django.test import TestCase
+from django.core.cache import cache
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from academics.models import Exam, ExamSubject, ExamType, Grade, StudentExamResult
 from accounts.dashboard_services import build_dashboard_context
 from .forms import InstitutionRegistrationForm, TeacherRegistrationForm, UserRegistrationForm
-from .models import Institution, InstitutionMembership, User
+from .models import Institution, InstitutionMembership, TuitionEnquiry, User
 from students.models import AcademicYear, Class, Student
 from teachers.models import Subject, Teacher, TeacherSubject
 from timetable.models import ClassSchedule, Room, TimeSlot
+
+
+class PublicTuitionViewTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.url = reverse('public_tuition')
+        self.valid_data = {
+            'guardian_name': 'Mary Banda',
+            'learner_name': 'Chanda Banda',
+            'current_school': 'Example Secondary School',
+            'phone_number': '+260 970 000 000',
+            'email': 'mary@example.com',
+            'learning_level': TuitionEnquiry.LearningLevel.FORM_3,
+            'subjects': 'Mathematics and Science',
+            'tuition_format': TuitionEnquiry.TuitionFormat.GROUP,
+            'location': TuitionEnquiry.Location.LUSAKA,
+            'preferred_schedule': 'Weekday afternoons',
+            'notes': 'Needs examination preparation.',
+            'consent': 'on',
+            'website': '',
+        }
+
+    def test_page_lists_all_requested_curriculum_stages(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Early Childhood Education')
+        self.assertContains(response, 'Day Care (0–3 years)')
+        self.assertContains(response, 'Primary Grades 1–6')
+        self.assertContains(response, 'Secondary Forms 1–5')
+        self.assertContains(response, 'Advanced Level')
+        self.assertContains(response, "Learner&#x27;s current school")
+        self.assertContains(response, 'Submit tuition enquiry')
+
+    def test_valid_enquiry_is_saved_and_redirects_to_confirmation(self):
+        response = self.client.post(self.url, self.valid_data)
+
+        self.assertRedirects(response, f'{self.url}#enrol')
+        enquiry = TuitionEnquiry.objects.get()
+        self.assertEqual(enquiry.learner_name, 'Chanda Banda')
+        self.assertEqual(enquiry.current_school, 'Example Secondary School')
+        self.assertEqual(enquiry.phone_number, '+260970000000')
+        self.assertEqual(enquiry.status, TuitionEnquiry.Status.NEW)
+
+    def test_invalid_phone_is_not_saved(self):
+        data = {**self.valid_data, 'phone_number': 'not-a-phone'}
+
+        response = self.client.post(self.url, data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Enter a valid phone number')
+        self.assertFalse(TuitionEnquiry.objects.exists())
+
+    def test_honeypot_rejects_bot_submission(self):
+        data = {**self.valid_data, 'website': 'https://spam.example'}
+
+        response = self.client.post(self.url, data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(TuitionEnquiry.objects.exists())
+
+    def test_csrf_is_required(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+
+        response = csrf_client.post(self.url, self.valid_data)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(TuitionEnquiry.objects.exists())
+
+    def test_repeated_submission_is_rate_limited(self):
+        self.client.post(self.url, self.valid_data, REMOTE_ADDR='203.0.113.10')
+
+        response = self.client.post(self.url, self.valid_data, REMOTE_ADDR='203.0.113.10')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Please wait a minute')
+        self.assertEqual(TuitionEnquiry.objects.count(), 1)
 
 
 class UserRegistrationFormTests(TestCase):

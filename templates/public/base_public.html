@@ -84,7 +84,7 @@
                 <li><a href="{% url 'home' %}" {% if current == 'home' %}class="active"{% endif %}>Home</a></li>
                 <li><a href="{% url 'public_about' %}" {% if current == 'public_about' %}class="active"{% endif %}>About</a></li>
                 <li class="has-drop">
-                    <a href="{% url 'public_courses' %}" {% if current == 'public_courses' %}class="active"{% endif %}>Courses <i class="fas fa-chevron-down"></i></a>
+                    <a href="{% url 'public_courses' %}" {% if current == 'public_courses' or current == 'public_course_detail' %}class="active"{% endif %}>Courses <i class="fas fa-chevron-down"></i></a>
                     <div class="drop">
                         <a href="{% url 'public_courses' %}#ai">School of AI &amp; Digital Skills</a>
                         <a href="{% url 'public_courses' %}#finance">School of Finance, Investment &amp; Business</a>

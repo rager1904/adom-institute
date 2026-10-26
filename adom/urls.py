@@ -21,11 +21,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from adom.protected_media import serve_public_media
-from adom.sitemaps import PublicStaticSitemap
+from adom.sitemaps import PublicStaticSitemap, PublicCourseSitemap
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from accounts.views import HomeView, PublicPageView, public_search
+from accounts.views import HomeView, PublicPageView, PublicTuitionView, public_search
+from accounts.course_views import PublicCourseListView, PublicCourseDetailView
 from adom.views import health_check, robots_txt
 from academics.urls import router as academics_router
 from accounts.urls import router as accounts_router
@@ -56,6 +57,7 @@ schema_view = get_schema_view(
 # content types (e.g. blog articles) are introduced.
 sitemaps = {
     'static': PublicStaticSitemap,
+    'courses': PublicCourseSitemap,
 }
 
 urlpatterns = [
@@ -69,8 +71,9 @@ urlpatterns = [
     path('contact/', PublicPageView.as_view(), {'page': 'contact'}, name='public_contact'),
 
     # Public website pages (templates only, no models or dashboard logic)
-    path('courses/', TemplateView.as_view(template_name='public/courses.html'), name='public_courses'),
-    path('tuition/', TemplateView.as_view(template_name='public/tuition.html'), name='public_tuition'),
+    path('courses/', PublicCourseListView.as_view(), name='public_courses'),
+    path('courses/<slug:slug>/', PublicCourseDetailView.as_view(), name='public_course_detail'),
+    path('tuition/', PublicTuitionView.as_view(), name='public_tuition'),
     path('books/', TemplateView.as_view(template_name='public/books.html'), name='public_books'),
     path('computers-ict/', TemplateView.as_view(template_name='public/ict.html'), name='public_ict'),
     path('school-solutions/', TemplateView.as_view(template_name='public/school_solutions.html'), name='public_school_solutions'),

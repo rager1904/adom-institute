@@ -372,3 +372,71 @@ class AuditLog(models.Model):
     
     def __str__(self):
         return f"{self.user.get_full_name()} - {self.action} - {self.timestamp}"
+
+
+class TuitionEnquiry(models.Model):
+    """A public request to enrol a learner in an ADOM tuition programme."""
+
+    class LearningLevel(models.TextChoices):
+        DAY_CARE = 'day_care', _('Day Care (0–3 years)')
+        NURSERY = 'nursery', _('Nursery (3–4 years)')
+        PRE_SCHOOL = 'pre_school', _('Pre-school (4–5 years)')
+        PRIMARY_1 = 'primary_1', _('Primary Grade 1')
+        PRIMARY_2 = 'primary_2', _('Primary Grade 2')
+        PRIMARY_3 = 'primary_3', _('Primary Grade 3')
+        PRIMARY_4 = 'primary_4', _('Primary Grade 4')
+        PRIMARY_5 = 'primary_5', _('Primary Grade 5')
+        PRIMARY_6 = 'primary_6', _('Primary Grade 6')
+        FORM_1 = 'form_1', _('Secondary Form 1')
+        FORM_2 = 'form_2', _('Secondary Form 2')
+        FORM_3 = 'form_3', _('Secondary Form 3')
+        FORM_4 = 'form_4', _('Secondary Form 4')
+        FORM_5 = 'form_5', _('Secondary Form 5')
+        ADVANCED_LEVEL = 'advanced_level', _('Advanced Level')
+
+    class TuitionFormat(models.TextChoices):
+        GROUP = 'group', _('Group tuition')
+        ONE_TO_ONE = 'one_to_one', _('One-to-one tuition')
+        EITHER = 'either', _('Either option')
+
+    class Location(models.TextChoices):
+        LUSAKA = 'lusaka', _('Liberty Mall, Lusaka')
+        NDOLA = 'ndola', _('Mitengo, Ndola')
+        DISCUSS = 'discuss', _('Please advise me')
+
+    class Status(models.TextChoices):
+        NEW = 'new', _('New')
+        CONTACTED = 'contacted', _('Contacted')
+        ENROLLED = 'enrolled', _('Enrolled')
+        CLOSED = 'closed', _('Closed')
+
+    guardian_name = models.CharField(max_length=120)
+    learner_name = models.CharField(max_length=120)
+    current_school = models.CharField(max_length=180)
+    phone_number = models.CharField(max_length=20)
+    email = models.EmailField(blank=True)
+    learning_level = models.CharField(max_length=20, choices=LearningLevel.choices)
+    subjects = models.CharField(max_length=300)
+    tuition_format = models.CharField(
+        max_length=20,
+        choices=TuitionFormat.choices,
+        default=TuitionFormat.EITHER,
+    )
+    location = models.CharField(max_length=20, choices=Location.choices)
+    preferred_schedule = models.CharField(max_length=120, blank=True)
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.NEW)
+    source_ip = models.GenericIPAddressField(blank=True, null=True)
+    user_agent = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['phone_number', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.learner_name} — {self.get_learning_level_display()}'

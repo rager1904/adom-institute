@@ -3,8 +3,18 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 from .models import (
     Institution, InstitutionMembership, User, UserProfile, Permission, Role,
-    UserRole, AuditLog
+    UserRole, AuditLog, TuitionEnquiry
 )
+
+
+@admin.register(TuitionEnquiry)
+class TuitionEnquiryAdmin(admin.ModelAdmin):
+    list_display = ('learner_name', 'current_school', 'guardian_name', 'learning_level', 'location', 'phone_number', 'status', 'created_at')
+    list_filter = ('status', 'learning_level', 'tuition_format', 'location', 'created_at')
+    search_fields = ('learner_name', 'current_school', 'guardian_name', 'phone_number', 'email', 'subjects')
+    list_editable = ('status',)
+    readonly_fields = ('source_ip', 'user_agent', 'created_at', 'updated_at')
+    date_hierarchy = 'created_at'
 
 
 @admin.register(Institution)

@@ -10,7 +10,9 @@ from django.views.generic import (
     TemplateView, CreateView, UpdateView, ListView, DetailView,
 )
 from django.contrib import messages
+from django.core.cache import cache
 from django.urls import reverse, reverse_lazy
+from django.views.generic.edit import FormView
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -32,12 +34,39 @@ from .forms import (
     UserProfileForm, InstitutionProfileForm, InstitutionSearchForm,
     OnboardingAcademicYearForm, OnboardingClassForm, OnboardingFeeCategoryForm,
     OnboardingFeeStructureForm,
+    TuitionEnquiryForm,
 )
 from .dashboard_services import build_dashboard_context
 from adom_institute.agents import list_agent_definitions
 from students.models import AcademicYear, Class, Student
 from teachers.models import Teacher
 from fees.models import FeeCategory, FeeStructure
+
+
+class PublicTuitionView(FormView):
+    template_name = 'public/tuition.html'
+    form_class = TuitionEnquiryForm
+    success_url = reverse_lazy('public_tuition')
+
+    def form_valid(self, form):
+        source_ip = self.request.META.get('REMOTE_ADDR')
+        rate_key = f'tuition-enquiry:{source_ip or "unknown"}'
+        if not cache.add(rate_key, True, timeout=60):
+            form.add_error(None, 'Please wait a minute before submitting another request.')
+            return self.form_invalid(form)
+
+        enquiry = form.save(commit=False)
+        enquiry.source_ip = source_ip
+        enquiry.user_agent = self.request.META.get('HTTP_USER_AGENT', '')[:300]
+        enquiry.save()
+        messages.success(
+            self.request,
+            'Thank you. Your tuition enrolment request has been received. Our team will contact you shortly.',
+        )
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return f'{reverse("public_tuition")}#enrol'
 
 
 class UserViewSet(viewsets.ModelViewSet):

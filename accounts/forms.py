@@ -4,10 +4,62 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Institution, InstitutionMembership, User, UserProfile
+from .models import Institution, InstitutionMembership, TuitionEnquiry, User, UserProfile
 from students.models import AcademicYear, Class, Student
 from teachers.models import Teacher
 from fees.models import FeeCategory, FeeStructure
+
+
+class TuitionEnquiryForm(forms.ModelForm):
+    consent = forms.BooleanField(
+        required=True,
+        label='I consent to ADOM Institute contacting me about this tuition request.',
+    )
+    website = forms.CharField(required=False, widget=forms.HiddenInput)
+
+    class Meta:
+        model = TuitionEnquiry
+        fields = (
+            'guardian_name', 'learner_name', 'current_school', 'phone_number', 'email',
+            'learning_level', 'subjects', 'tuition_format', 'location',
+            'preferred_schedule', 'notes',
+        )
+        labels = {
+            'guardian_name': 'Parent or guardian name',
+            'learner_name': 'Learner name',
+            'current_school': "Learner's current school",
+            'phone_number': 'Phone or WhatsApp number',
+            'learning_level': 'Current learning level',
+            'subjects': 'Subjects requiring tuition',
+            'tuition_format': 'Preferred class format',
+            'preferred_schedule': 'Preferred days and times',
+            'notes': 'Anything else we should know?',
+        }
+        widgets = {
+            'guardian_name': forms.TextInput(attrs={'autocomplete': 'name'}),
+            'learner_name': forms.TextInput(attrs={'autocomplete': 'off'}),
+            'current_school': forms.TextInput(attrs={'autocomplete': 'organization', 'placeholder': 'Enter the school name'}),
+            'phone_number': forms.TextInput(attrs={'autocomplete': 'tel', 'inputmode': 'tel', 'placeholder': '+260 ...'}),
+            'email': forms.EmailInput(attrs={'autocomplete': 'email'}),
+            'learning_level': forms.Select,
+            'subjects': forms.TextInput(attrs={'placeholder': 'e.g. Mathematics, English and Science'}),
+            'tuition_format': forms.Select,
+            'location': forms.Select,
+            'preferred_schedule': forms.TextInput(attrs={'placeholder': 'e.g. Weekdays after 15:00'}),
+            'notes': forms.Textarea(attrs={'rows': 4}),
+        }
+
+    def clean_website(self):
+        if self.cleaned_data.get('website'):
+            raise ValidationError('Your request could not be submitted.')
+        return ''
+
+    def clean_phone_number(self):
+        value = ''.join(self.cleaned_data['phone_number'].split())
+        allowed = value.lstrip('+').replace('-', '')
+        if not allowed.isdigit() or not 9 <= len(allowed) <= 15:
+            raise ValidationError('Enter a valid phone number, including the country code where applicable.')
+        return value
 
 
 class UserRegistrationForm(UserCreationForm):

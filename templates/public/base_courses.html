@@ -1,0 +1,20 @@
+{% extends 'public/base_public.html' %}
+{% load static %}
+
+{% block seo %}{% include 'seo/meta.html' with title='Courses | ADOM Institute' description='Find practical courses in AI, finance, accounting and computer skills at ADOM Institute.' %}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/course-catalog.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="course-content">
+    {% block course_content %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="{% static 'js/course-catalog.js' %}" defer></script>
+{% endblock %}

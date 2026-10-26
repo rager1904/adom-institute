@@ -1,91 +1,66 @@
 {% extends 'public/base_public.html' %}
 
-{% block seo %}{% include "seo/meta.html" with title="Tuition Classes | ADOM Institute" description="New Zambian Curriculum tuition classes, homework assistance, revision, examination preparation and holiday tuition for learners at ADOM Institute." %}{% endblock %}
+{% block seo %}{% include "seo/meta.html" with title="New Curriculum Tuition | ECE, Primary & Secondary | ADOM Institute" description="Enrol for New Zambian Curriculum tuition at ADOM Institute. Classes are available from Day Care through Primary, Secondary and Advanced Level." %}{% endblock %}
 
 {% block content %}
 {% url 'public_courses' as courses_url %}
-{% include "public/_page_hero.html" with hero_image="images/tuition.png" hero_alt="Tuition classes and academic support at ADOM Institute" crumb="Tuition Classes" crumb_parent="Schools &amp; Courses" crumb_parent_url=courses_url eyebrow="School of Tuition &amp; Academic Support" title="Extra support that helps learners succeed" lede="Structured tuition aligned to the New Zambian Curriculum — in small groups or one-to-one, with a focus on understanding, confidence and exam readiness." %}
+{% include "public/_page_hero.html" with hero_image="images/tuition.png" hero_alt="Learners receiving New Curriculum tuition at ADOM Institute" crumb="Tuition" crumb_parent="Schools &amp; Courses" crumb_parent_url=courses_url eyebrow="New Curriculum Tuition" title="Strong foundations. Confident learners." lede="Focused support from Day Care and Early Childhood Education through Primary Grades 1–6, Secondary Forms 1–5 and Advanced Level." cta1_href="#enrol" cta1_label="Enrol for Tuition" hide_cta2=True %}
 
-<section class="section">
-    <div class="wrap">
-        <div class="grid grid-2" style="align-items:start;gap:40px">
-            <div>
-                <div class="section-head" style="margin-bottom:22px">
-                    <span class="eyebrow">What we offer</span>
-                    <h2 class="section-title">Tuition for every stage</h2>
-                </div>
-                <ul class="pill-list" style="margin-top:0">
-                    <li>New Zambian Curriculum tuition classes</li>
-                    <li>Homework assistance</li>
-                    <li>Revision classes</li>
-                    <li>Examination preparation</li>
-                    <li>Holiday tuition</li>
-                    <li>Individual tutoring</li>
-                    <li>Group learning</li>
-                </ul>
-                <p class="section-sub" style="margin-top:22px">Classes cover the core subjects of the New Zambian Curriculum and are delivered by experienced tutors who track each learner's progress.</p>
-            </div>
-
-            <div class="grid" style="gap:18px">
-                <div class="feature-row">
-                    <div class="ico"><i class="fas fa-users"></i></div>
-                    <div><h3>Small groups or one-to-one</h3><p>Choose group learning for peer support or individual tutoring for focused attention on specific subjects.</p></div>
-                </div>
-                <div class="feature-row">
-                    <div class="ico"><i class="fas fa-pen-ruler"></i></div>
-                    <div><h3>Exam and revision focus</h3><p>Targeted revision, past-paper practice and examination preparation to build confidence before assessments.</p></div>
-                </div>
-                <div class="feature-row">
-                    <div class="ico"><i class="fas fa-sun"></i></div>
-                    <div><h3>Holiday tuition</h3><p>Keep learners engaged and ahead during school holidays with structured holiday programmes.</p></div>
-                </div>
-                <div class="feature-row">
-                    <div class="ico"><i class="fas fa-location-dot"></i></div>
-                    <div><h3>Lusaka &amp; Ndola</h3><p>Tuition is available at our Liberty Mall, Lusaka and Mitengo, Ndola locations.</p></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="section alt">
+<section class="section" aria-labelledby="levels-title">
     <div class="wrap">
         <div class="section-head center">
-            <span class="eyebrow">How it works</span>
-            <h2 class="section-title">Getting started is simple</h2>
+            <span class="eyebrow">Learning levels</span>
+            <h2 class="section-title" id="levels-title">Tuition from Day Care to Advanced Level</h2>
+            <p class="section-sub">Choose the learner's current level. Our team will recommend the right subjects, class format and timetable.</p>
         </div>
-        <div class="grid grid-3">
-            <article class="card">
-                <div class="card-icon"><i class="fas fa-phone"></i></div>
-                <h3>1. Enquire</h3>
-                <p>Contact us by WhatsApp or phone and tell us the learner's grade, subjects and preferred times.</p>
+        <div class="tuition-levels">
+            <article class="tuition-level">
+                <div class="tuition-level-number">ECE</div>
+                <div><h3>Early Childhood Education</h3><p>Age-appropriate care and learning that develops communication, confidence and school readiness.</p><ul><li>Day Care — 0–3 years</li><li>Nursery — 3–4 years</li><li>Pre-school — 4–5 years</li></ul></div>
             </article>
-            <article class="card">
-                <div class="card-icon"><i class="fas fa-calendar-check"></i></div>
-                <h3>2. Get a schedule</h3>
-                <p>We recommend a group or one-to-one plan and confirm the class schedule and fees.</p>
+            <article class="tuition-level tuition-level-featured">
+                <div class="tuition-level-number">1–6</div>
+                <div><h3>Primary School</h3><p>New Curriculum tuition for Grades 1–6, from strong foundations through upper-primary preparation.</p><ul><li>Literacy and English</li><li>Mathematics and Science</li><li>Homework, revision and assessments</li></ul></div>
             </article>
-            <article class="card">
-                <div class="card-icon"><i class="fas fa-book-open-reader"></i></div>
-                <h3>3. Start learning</h3>
-                <p>Learners join structured classes with ongoing revision, practice and progress feedback.</p>
+            <article class="tuition-level">
+                <div class="tuition-level-number">1–5</div>
+                <div><h3>Secondary &amp; Advanced Level</h3><p>Subject-focused tuition for Forms 1–5 and Advanced Level, including revision, examination practice and study skills.</p><ul><li>Mathematics, English and Sciences</li><li>Business and selected humanities</li><li>Exam preparation and past-paper practice</li></ul></div>
             </article>
         </div>
-        <div class="notice" style="margin-top:28px"><i class="fas fa-circle-info"></i><span>Tuition schedules and fees depend on the grade, subjects and class format. Contact us for the current term's timetable.</span></div>
     </div>
 </section>
 
-<section class="section">
-    <div class="wrap">
-        <div class="cta">
-            <div>
-                <h2>Enrol a learner in tuition</h2>
-                <p>Share the learner's grade and subjects, and we will help you choose the right class.</p>
-            </div>
-            <div class="cta-actions">
-                <a class="btn btn-wa btn-lg" href="https://wa.me/260967920605?text=Hello%20ADOM%20Institute%2C%20I%20would%20like%20to%20enquire%20about%20tuition%20classes" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> Enquire on WhatsApp</a>
-                <a class="btn btn-outline btn-lg" href="{% url 'public_admissions' %}">Admissions</a>
-            </div>
+<section class="section tuition-enrol-section" id="enrol" aria-labelledby="enrol-title">
+    <div class="wrap tuition-enrol-layout">
+        <div class="tuition-enrol-copy">
+            <span class="eyebrow">Enrolment enquiry</span>
+            <h2 class="section-title" id="enrol-title">Find the right tuition class</h2>
+            <p class="section-sub">Tell us about the learner and the support they need. This is an enquiry, not a confirmed placement. Our team will contact you to confirm availability, timetable and fees.</p>
+            <div class="enrol-assurance"><i class="fas fa-shield-heart" aria-hidden="true"></i><p>Your details are used only to respond to this tuition request. Please do not include sensitive medical or financial information.</p></div>
+        </div>
+        <div class="tuition-form-card">
+            {% if messages %}{% for message in messages %}<div class="form-success" role="status"><i class="fas fa-circle-check" aria-hidden="true"></i><span>{{ message }}</span></div>{% endfor %}{% endif %}
+            {% if form.non_field_errors %}<div class="form-errors" role="alert">{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}
+            <form method="post" action="{% url 'public_tuition' %}#enrol" class="tuition-form" novalidate>
+                {% csrf_token %}
+                {{ form.website }}
+                <div class="tuition-form-grid">
+                    {% for field in form %}
+                        {% if field.name != 'website' and field.name != 'consent' %}
+                            <div class="form-field{% if field.name == 'subjects' or field.name == 'preferred_schedule' or field.name == 'notes' %} form-field-wide{% endif %}">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>
+                                {{ field }}
+                                {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                {% for error in field.errors %}<p class="field-error" id="{{ field.auto_id }}_error">{{ error }}</p>{% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="form-consent">{{ form.consent }}<label for="{{ form.consent.id_for_label }}">{{ form.consent.label }}</label></div>
+                {% for error in form.consent.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+                <button class="btn btn-green btn-lg" type="submit">Submit tuition enquiry <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+                <p class="required-note"><span aria-hidden="true">*</span> Required fields</p>
+            </form>
         </div>
     </div>
 </section>
